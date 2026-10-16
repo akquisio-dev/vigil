@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.12.0
 
 - Kernel: new modules (`kernel.module`), out-of-tree or unsigned modules (`kernel.module_unsigned`), modules hidden from `/proc/modules` (`kernel.module_hidden`), new taint flags (`kernel.tainted`), eBPF programs that hook the kernel or packets (`kernel.bpf`). Agent options `kernel`, `bpf`.
 - Processes: programs run from memory only (`process.memfd_exec`), `LD_PRELOAD` injection (`process.preload`).
