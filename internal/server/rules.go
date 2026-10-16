@@ -17,12 +17,32 @@ type ruleDef struct {
 
 // rules is the full catalogue. Titles are templates over the alert params.
 var rules = map[string]ruleDef{
-	"ssh.password_login": {"high", "T1078", "Password login as {user} from {ip}", "Passwort-Anmeldung als {user} von {ip}"},
-	"ssh.new_source":     {"medium", "T1078", "{user} logged in from new address {ip}", "{user} hat sich von neuer Adresse {ip} angemeldet"},
-	"ssh.unknown_key":    {"high", "T1098.004", "Login as {user} with a key not in authorized_keys ({fingerprint})", "Anmeldung als {user} mit Schlüssel außerhalb von authorized_keys ({fingerprint})"},
-	"ssh.bruteforce":     {"low", "T1110", "{count} failed SSH logins from {ip}", "{count} fehlgeschlagene SSH-Anmeldungen von {ip}"},
-	"ssh.key_added":      {"high", "T1098.004", "SSH key added to {file}: {comment}", "SSH-Schlüssel hinzugefügt in {file}: {comment}"},
-	"ssh.key_removed":    {"low", "", "SSH key removed from {file}: {comment}", "SSH-Schlüssel entfernt aus {file}: {comment}"},
+	"process.reverse_shell":    {"critical", "T1059.004", "Reverse shell: {exe} started by {parent} (uid {uid})", "Reverse-Shell: {exe} gestartet von {parent} (uid {uid})"},
+	"process.miner":            {"critical", "T1496", "Crypto miner started: {exe} (uid {uid})", "Krypto-Miner gestartet: {exe} (uid {uid})"},
+	"process.service_shell":    {"high", "T1505.003", "{parent} started {exe} (uid {uid})", "{parent} hat {exe} gestartet (uid {uid})"},
+	"process.download_exec":    {"high", "T1105", "Download and run: {cmdline}", "Herunterladen und ausführen: {cmdline}"},
+	"process.deleted_exe":      {"high", "T1070.004", "Program running from a deleted file: {exe}", "Programm läuft aus gelöschter Datei: {exe}"},
+	"process.tmp_exec":         {"medium", "T1204.002", "Program started from a temporary directory: {exe} (uid {uid})", "Programm aus temporärem Verzeichnis gestartet: {exe} (uid {uid})"},
+	"process.decode_exec":      {"medium", "T1140", "Decoded command run in a shell: {cmdline}", "Dekodierter Befehl in einer Shell ausgeführt: {cmdline}"},
+	"updates.security_pending": {"medium", "", "{count} security updates pending for {days} days: {packages}", "{count} Sicherheitsupdates seit {days} Tagen offen: {packages}"},
+	"updates.reboot_pending":   {"low", "", "Reboot pending for {days} days ({packages})", "Neustart seit {days} Tagen ausstehend ({packages})"},
+	"updates.disabled":         {"low", "", "Automatic security updates are off", "Automatische Sicherheitsupdates sind aus"},
+	"updates.lists_stale":      {"low", "", "Package lists not refreshed for {days} days", "Paketlisten seit {days} Tagen nicht aktualisiert"},
+	"net.c2":                   {"critical", "T1071", "{process} connected to {ip}:{port}, listed as command and control ({list})", "{process} hat sich mit {ip}:{port} verbunden, gelistet als Command-and-Control ({list})"},
+	"net.blocklisted":          {"high", "T1071", "{process} connected to {ip}:{port} on a block list ({list})", "{process} hat sich mit {ip}:{port} auf einer Sperrliste verbunden ({list})"},
+	"net.tor":                  {"medium", "T1090.003", "{process} connected to Tor exit {ip}:{port}", "{process} hat sich mit Tor-Ausgang {ip}:{port} verbunden"},
+	"net.miner_pool":           {"high", "T1496", "{process} connected to {ip}:{port}, a common mining pool port", "{process} hat sich mit {ip}:{port} verbunden, ein üblicher Mining-Pool-Port"},
+	"net.service_outbound":     {"high", "T1572", "{process} opened a connection to the internet: {ip}:{port}", "{process} hat eine Verbindung ins Internet geöffnet: {ip}:{port}"},
+	"web.exploit_success":      {"high", "T1190", "Attack on {log} from {ip} answered with 2xx ({kinds})", "Angriff auf {log} von {ip} mit 2xx beantwortet ({kinds})"},
+	"web.shell_access":         {"high", "T1505.003", "Web shell path answered with 2xx for {ip}: {sample}", "Webshell-Pfad für {ip} mit 2xx beantwortet: {sample}"},
+	"web.login_bruteforce":     {"medium", "T1110", "{logins} login attempts in one minute from {ip}", "{logins} Anmeldeversuche in einer Minute von {ip}"},
+	"process.rate_limited":     {"low", "", "{dropped} suspicious program starts not reported (limit reached)", "{dropped} auffällige Programmstarts nicht gemeldet (Grenze erreicht)"},
+	"ssh.password_login":       {"high", "T1078", "Password login as {user} from {ip}", "Passwort-Anmeldung als {user} von {ip}"},
+	"ssh.new_source":           {"medium", "T1078", "{user} logged in from new address {ip}", "{user} hat sich von neuer Adresse {ip} angemeldet"},
+	"ssh.unknown_key":          {"high", "T1098.004", "Login as {user} with a key not in authorized_keys ({fingerprint})", "Anmeldung als {user} mit Schlüssel außerhalb von authorized_keys ({fingerprint})"},
+	"ssh.bruteforce":           {"low", "T1110", "{count} failed SSH logins from {ip}", "{count} fehlgeschlagene SSH-Anmeldungen von {ip}"},
+	"ssh.key_added":            {"high", "T1098.004", "SSH key added to {file}: {comment}", "SSH-Schlüssel hinzugefügt in {file}: {comment}"},
+	"ssh.key_removed":          {"low", "", "SSH key removed from {file}: {comment}", "SSH-Schlüssel entfernt aus {file}: {comment}"},
 
 	"user.added":   {"high", "T1136.001", "New account {user} (uid {uid})", "Neues Konto {user} (uid {uid})"},
 	"user.root":    {"critical", "T1078.003", "Account {user} now has uid 0", "Konto {user} hat jetzt uid 0"},
@@ -275,6 +295,87 @@ func (s *Server) evaluate(a *AgentRec, r *Record) []finding {
 		add("agent.stopped", "", nil)
 	case "agent.config_rejected":
 		add("agent.config_rejected", str(d, "reason"), map[string]string{"reason": str(d, "reason")})
+	case "process.exec":
+		p := map[string]string{"exe": str(d, "exe"), "cmdline": str(d, "cmdline"), "uid": str(d, "uid"),
+			"parent": str(d, "parent_comm"), "parent_exe": str(d, "parent_exe"), "cwd": str(d, "cwd"), "pid": str(d, "pid")}
+		key := str(d, "exe") + "|" + str(d, "parent_exe")
+		seen := map[string]bool{}
+		for _, sig := range strSlice(d["signals"]) {
+			rule := map[string]string{"shell_socket": "process.reverse_shell", "cmd_reverse_shell": "process.reverse_shell",
+				"cmd_miner": "process.miner", "service_shell": "process.service_shell", "cmd_download_exec": "process.download_exec",
+				"deleted_exe": "process.deleted_exe", "tmp_exe": "process.tmp_exec", "cmd_decode_exec": "process.decode_exec"}[sig]
+			if rule != "" && !seen[rule] {
+				seen[rule] = true
+				add(rule, key, p)
+			}
+		}
+	case "system.updates":
+		cp := map[string]any{}
+		for k, v := range d {
+			cp[k] = v
+		}
+		a.Updates = cp
+		pk := strSlice(d["security_packages"])
+		if len(pk) > 5 {
+			pk = append(pk[:5], "…")
+		}
+		if num(d, "security") > 0 && num(d, "security_oldest_days") >= 7 {
+			add("updates.security_pending", "", map[string]string{"count": str(d, "security"), "days": str(d, "security_oldest_days"), "packages": strings.Join(pk, ", ")})
+		}
+		if b, _ := d["reboot_required"].(bool); b && num(d, "reboot_days") >= 7 {
+			rp := strSlice(d["reboot_packages"])
+			if len(rp) > 3 {
+				rp = append(rp[:3], "…")
+			}
+			add("updates.reboot_pending", "", map[string]string{"days": str(d, "reboot_days"), "packages": strings.Join(rp, ", ")})
+		}
+		if b, ok := d["unattended_upgrades"].(bool); ok && !b {
+			add("updates.disabled", "", nil)
+		}
+		if num(d, "lists_age_days") >= 7 {
+			add("updates.lists_stale", "", map[string]string{"days": str(d, "lists_age_days")})
+		}
+	case "net.connection":
+		ip, port, proc := str(d, "remote_ip"), str(d, "remote_port"), str(d, "process")
+		p := map[string]string{"ip": ip, "port": port, "process": proc, "exe": str(d, "exe"), "uid": str(d, "uid")}
+		key := ip + "|" + proc
+		if list, ok := s.intel.lookup(ip); ok {
+			p["list"] = list
+			switch list {
+			case "feodo", "threatfox":
+				add("net.c2", key, p)
+			case "tor-exit":
+				add("net.tor", key, p)
+			default:
+				add("net.blocklisted", key, p)
+			}
+		}
+		if netPublic(ip) {
+			if minerPorts[int(num(d, "remote_port"))] {
+				add("net.miner_pool", key, p)
+			}
+			if serviceProcesses[proc] {
+				add("net.service_outbound", key, p)
+			}
+		}
+	case "web.activity":
+		samples := strSlice(d["samples"])
+		p := map[string]string{"ip": str(d, "ip"), "log": str(d, "log"), "kinds": strings.Join(strSlice(d["exploit_kinds"]), ", "),
+			"logins": str(d, "logins"), "requests": str(d, "requests"), "user_agent": str(d, "user_agent"), "sample": strings.Join(samples, "  ")}
+		if num(d, "exploits_ok") > 0 {
+			add("web.exploit_success", str(d, "ip"), p)
+		}
+		if num(d, "shells") > 0 {
+			if len(samples) > 0 {
+				p["sample"] = samples[len(samples)-1]
+			}
+			add("web.shell_access", str(d, "ip"), p)
+		}
+		if num(d, "logins") >= 20 {
+			add("web.login_bruteforce", str(d, "ip"), p)
+		}
+	case "process.rate_limited":
+		add("process.rate_limited", "", map[string]string{"dropped": str(d, "dropped")})
 	case "log.spoofed":
 		add("log.spoofed", str(d, "comm")+"|"+str(d, "uid"), map[string]string{"identifier": str(d, "identifier"), "comm": str(d, "comm"), "uid": str(d, "uid")})
 	case "agent.dropped":
@@ -386,4 +487,15 @@ func decodeParams(s string) map[string]string {
 		}
 	}
 	return p
+}
+
+func strSlice(v any) []string {
+	list, _ := v.([]any)
+	out := make([]string, 0, len(list))
+	for _, x := range list {
+		if s, ok := x.(string); ok {
+			out = append(out, s)
+		}
+	}
+	return out
 }

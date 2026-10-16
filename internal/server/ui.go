@@ -146,6 +146,9 @@ func (s *Server) uiHandler() http.Handler {
 		custom, errs := CustomInfo()
 		writeJSON(w, map[string]any{"builtin": Catalog(), "custom": custom, "errors": errs, "suppressible": suppressibleList()})
 	}))
+	mux.HandleFunc("GET /api/ui/intel", s.auth(func(w http.ResponseWriter, r *http.Request, sess *session) {
+		writeJSON(w, map[string]any{"enabled": s.cfg.ThreatIntel, "lists": s.intel.status()})
+	}))
 	mux.HandleFunc("GET /api/ui/incidents", s.auth(s.handleIncidents))
 	mux.HandleFunc("GET /api/ui/incidents/{id}", s.auth(s.handleIncident))
 	mux.HandleFunc("POST /api/ui/incidents/{id}/{action}", s.analyst(s.handleIncidentAction))
@@ -231,6 +234,7 @@ type agentView struct {
 	CanaryRoots []string       `json:"canary_roots"`
 	ConfigSync  bool           `json:"config_sync"`
 	Maintenance *time.Time     `json:"maintenance_until,omitempty"`
+	Updates     map[string]any `json:"updates,omitempty"`
 }
 
 func (s *Server) viewAgent(a *AgentRec) agentView {
@@ -245,7 +249,7 @@ func (s *Server) viewAgent(a *AgentRec) agentView {
 	}
 	v := agentView{ID: a.ID, Name: a.Name, Hostname: a.Hostname, Version: a.Version, Status: status,
 		LastSeen: a.LastSeen, LastIP: a.LastIP, Enrolled: a.Enrolled, Ports: len(a.Ports),
-		CanaryRoots: a.CanaryRoots, ConfigSync: a.AckedVersion >= a.ConfigVersion, OpenBySev: map[string]int{}}
+		CanaryRoots: a.CanaryRoots, ConfigSync: a.AckedVersion >= a.ConfigVersion, OpenBySev: map[string]int{}, Updates: a.Updates}
 	if time.Now().Before(a.MaintenanceUntil) {
 		until := a.MaintenanceUntil
 		v.Maintenance = &until

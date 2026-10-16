@@ -20,6 +20,16 @@ var tactics = map[string]string{
 	"T1546.004": "persistence",
 	"T1574.006": "persistence",
 	"T1548.003": "privilege-escalation",
+	"T1059.004": "execution",
+	"T1204.002": "execution",
+	"T1505.003": "persistence",
+	"T1140":     "defense-evasion",
+	"T1105":     "command-and-control",
+	"T1190":     "initial-access",
+	"T1071":     "command-and-control",
+	"T1090.003": "command-and-control",
+	"T1572":     "command-and-control",
+	"T1496":     "impact",
 	"T1070":     "defense-evasion",
 	"T1070.004": "defense-evasion",
 	"T1562.001": "defense-evasion",
@@ -32,7 +42,7 @@ var tactics = map[string]string{
 }
 
 // TacticOrder is the kill chain order of the tactics vigil covers.
-var TacticOrder = []string{"initial-access", "persistence", "privilege-escalation", "defense-evasion", "credential-access", "impact"}
+var TacticOrder = []string{"initial-access", "execution", "persistence", "privilege-escalation", "defense-evasion", "credential-access", "command-and-control", "impact"}
 
 type countItem struct {
 	Key   string `json:"key"`
@@ -114,6 +124,8 @@ func (s *Server) dashboard(now time.Time, events []Record) map[string]any {
 	failedIP := map[string]int{}
 	failedUsers := map[string]map[string]bool{}
 	failedTotal, sudo := 0, 0
+	webIP := map[string]int{}
+	webPaths := map[string]map[string]bool{}
 	var logins []loginView
 	since := now.Add(-24 * time.Hour)
 	for _, rec := range events {
@@ -148,6 +160,21 @@ func (s *Server) dashboard(now time.Time, events []Record) map[string]any {
 			logins = append(logins, loginView{TS: rec.Event.TS, Host: host, User: str(d, "user"), IP: str(d, "ip"), Method: str(d, "method"), Key: key})
 		case "sudo.command":
 			sudo++
+		case "web.activity":
+			ip := str(d, "ip")
+			webIP[ip] += int(num(d, "requests"))
+			if webPaths[ip] == nil {
+				webPaths[ip] = map[string]bool{}
+			}
+			for _, sm := range strSlice(d["samples"]) {
+				if f := strings.Fields(sm); len(f) > 0 {
+					path := f[len(f)-1]
+					if i := strings.IndexByte(path, '?'); i > 0 {
+						path = path[:i]
+					}
+					webPaths[ip][path] = true
+				}
+			}
 		}
 	}
 	sort.Slice(logins, func(i, j int) bool { return logins[i].TS.After(logins[j].TS) })
@@ -165,8 +192,53 @@ func (s *Server) dashboard(now time.Time, events []Record) map[string]any {
 	return map[string]any{
 		"day_start": dayStart, "alerts_per_day": perDay,
 		"tactics": tacticList, "top_rules": topN(ruleCount, nil, 6),
-		"ssh_failed_24h": failedTotal, "ssh_failed_ips": len(failedIP), "top_attackers": topN(failedIP, failedUsers, 6),
+		"ssh_failed_24h": failedTotal, "ssh_failed_ips": len(failedIP), "top_attackers": attackers(failedIP, failedUsers, webIP, webPaths),
+		"web_flagged_24h": sumValues(webIP), "web_ips": len(webIP),
 		"logins": logins, "logins_24h": loginCount, "sudo_24h": sudo,
 		"mtta_seconds": mtta, "acked_30d": len(ackTimes),
 	}
+}
+
+func sumValues(m map[string]int) int {
+	n := 0
+	for _, v := range m {
+		n += v
+	}
+	return n
+}
+
+// attackers ranks addresses by failed SSH logins plus flagged web requests,
+// with the users or paths they tried.
+func attackers(ssh map[string]int, users map[string]map[string]bool, web map[string]int, paths map[string]map[string]bool) []countItem {
+	all := map[string]int{}
+	for ip, n := range ssh {
+		all[ip] += n
+	}
+	for ip, n := range web {
+		all[ip] += n
+	}
+	top := topN(all, nil, 6)
+	for i := range top {
+		var parts []string
+		if u := users[top[i].Key]; len(u) > 0 {
+			parts = append(parts, "SSH: "+joinSet(u, 4))
+		}
+		if p := paths[top[i].Key]; len(p) > 0 {
+			parts = append(parts, "Web: "+joinSet(p, 3))
+		}
+		top[i].Extra = strings.Join(parts, "  ·  ")
+	}
+	return top
+}
+
+func joinSet(m map[string]bool, n int) string {
+	xs := make([]string, 0, len(m))
+	for x := range m {
+		xs = append(xs, x)
+	}
+	sort.Strings(xs)
+	if len(xs) > n {
+		xs = append(xs[:n], "…")
+	}
+	return strings.Join(xs, ", ")
 }

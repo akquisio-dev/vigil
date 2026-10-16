@@ -29,10 +29,33 @@ the defaults below.
 | `ssh` | true | read SSH and sudo entries from the journal |
 | `ports` | true | watch listening sockets |
 | `docker` | true | read Docker NAT publications with `iptables-save` |
+| `processes` | true | watch program starts and report suspicious ones |
+| `outbound` | true | report new outbound TCP destinations with their process |
+| `updates` | true | report pending (security) updates and pending reboots, Debian and Ubuntu |
+| `web_logs` | none | access logs to watch, see below |
 | `max_queue` | 5000 | events kept while the server is unreachable |
 
 Everything that limits what the server may ask of an agent lives in this file
 and only here. The dashboard cannot widen `canary_roots`.
+
+### Web server logs
+
+```json
+"web_logs": [
+  { "path": "/var/log/nginx/access.log", "login_paths": ["/api/login", "/wp-login.php"] }
+]
+```
+
+`format` is `combined` (the nginx and Apache default) or `json` with the keys
+`remote_addr`, `request_method`, `request_uri`, `status` and
+`http_user_agent`. The agent follows the file across rotation and sends, once
+a minute, one summary per address that probed for known files, matched an
+attack signature, requested a web shell path or posted to a `login_paths`
+entry often. Normal visitors are not reported.
+
+Behind a proxy or CDN, make the web server log the client's address (for
+nginx: `set_real_ip_from` and `real_ip_header`), or every request looks like
+it came from the proxy.
 
 ### The built-in watch list
 
@@ -79,6 +102,7 @@ and only here. The dashboard cannot widen `canary_roots`.
 | `notifiers` | none | see below |
 | `brand` | none | your own name and logo, see below |
 | `rules_dir` | none | directory with [custom rules](custom-rules.md) |
+| `threat_intel` | false | download public block lists (abuse.ch Feodo Tracker and ThreatFox, Spamhaus DROP, Tor exits) twice a day and match outbound connections against them. Only plain downloads, nothing about this installation is sent |
 
 Only enable `trust_proxy` when the dashboard listener is reachable through the
 proxy alone. Otherwise clients can choose their own address for rate limits

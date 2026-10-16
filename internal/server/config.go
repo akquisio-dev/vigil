@@ -48,6 +48,9 @@ type Config struct {
 	// that run vigil under their own name.
 	Brand *BrandConfig `json:"brand,omitempty"`
 
+	// ThreatIntel downloads public block lists (abuse.ch, Spamhaus DROP, Tor
+	// exits) twice a day and matches outbound connections against them.
+	ThreatIntel bool `json:"threat_intel,omitempty"`
 	// RulesDir holds custom rules (*.json), loaded at start.
 	RulesDir string `json:"rules_dir,omitempty"`
 

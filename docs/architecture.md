@@ -21,7 +21,8 @@ Both binaries use only the Go standard library.
 ## Agent
 
 The agent runs as root with a reduced capability set. It never listens on a
-socket and runs only two external programs: `journalctl` and `iptables-save`.
+socket and runs only three external programs: `journalctl`, `iptables-save`
+and `apt list --upgradable`.
 
 | Collector | Source | Interval |
 |---|---|---|
@@ -31,6 +32,15 @@ socket and runs only two external programs: `journalctl` and `iptables-save`.
 | Ports | `/proc/net/{tcp,tcp6,udp,udp6}`, owners via `/proc/*/fd` | `scan_seconds` |
 | Docker | DNAT rules in the `DOCKER` chain of `iptables-save -t nat` | `scan_seconds` |
 | Canaries | fanotify `FAN_OPEN` marks, notification class only | continuous |
+| Processes | kernel process events connector (netlink), details from `/proc/<pid>` | continuous |
+| Outbound | established TCP sockets in `/proc/net/{tcp,tcp6}` that are not to a listening port | 10 seconds |
+| Web logs | configured access logs, followed across rotation | continuous, one summary per minute |
+| Updates | `apt list --upgradable`, `/var/run/reboot-required`, `/boot/vmlinuz-*` | 6 hours |
+
+Program starts are only reported when something about them is suspicious
+(see the `process.*` rules); everything else is dropped on the host, and at
+most 60 reports per minute leave it. New outbound destinations are reported
+once per network (/24 or /48) and port.
 
 Journal entries are only trusted when journald's own `_COMM` and `_UID` fields
 say they come from sshd or sudo running as root. `SYSLOG_IDENTIFIER` is chosen
@@ -142,5 +152,10 @@ can use. Fields in brackets are only present when known.
 | `canary.opened` | `canary_id`, `path`, `pid`, (`exe`, `comm`, `cmdline`, `uid`, `loginuid`, `sessionid`) |
 | `canary.placed`, `canary.removed`, `canary.tampered`, `canary.error` | `canary_id`, `path`, (`type`, `hash`, `problem`, `error`) |
 | `log.spoofed` | `identifier`, `comm`, `uid`, `message` |
+| `process.exec` | `pid`, `ppid`, `uid`, `exe`, `comm`, `cmdline`, `cwd`, `parent_exe`, `parent_comm`, `signals` (list: `tmp_exe`, `deleted_exe`, `shell_socket`, `service_shell`, `cmd_reverse_shell`, `cmd_download_exec`, `cmd_decode_exec`, `cmd_miner`) |
+| `process.rate_limited` | `dropped` |
+| `net.connection` | `remote_ip`, `remote_port`, `local_port`, `process`, `exe`, `uid`, `private` |
+| `web.activity` | `log`, `ip`, `requests`, `status_2xx` … `status_5xx`, `probes`, `exploit_kinds` (list), `exploits_ok`, `shells`, `logins`, `samples` (list), `user_agent` |
+| `system.updates` | `pending`, `security`, `security_packages` (list), `security_oldest_days`, `reboot_required`, (`reboot_days`), `reboot_packages`, `kernel_running`, `kernel_newest`, `unattended_upgrades`, `lists_age_days` |
 | `agent.started` | `version`, `hostname`, `canary_roots` |
 | `agent.stopping`, `agent.dropped`, `agent.warning`, `agent.config_rejected` | details of the agent's own state |

@@ -42,6 +42,7 @@ type Server struct {
 
 	users      userCache
 	challenges challenges
+	intel      intelSet
 }
 
 func New(cfg *Config) (*Server, error) {
@@ -116,6 +117,7 @@ func (s *Server) Run(ctx context.Context) error {
 		s.chainBroken(s.store.ChainError)
 	}
 	s.record("server", "", "", proto.NewEvent("server.started", map[string]any{"version": Version}))
+	go s.refreshIntel()
 	if s.cfg.RulesDir != "" {
 		n, errs := LoadCustomRules(s.cfg.RulesDir)
 		log.Printf("custom rules: %d loaded from %s", n, s.cfg.RulesDir)
@@ -196,6 +198,7 @@ func (s *Server) loop(ctx context.Context) {
 			}
 		case <-hourly.C:
 			s.daily()
+			go s.refreshIntel()
 		}
 	}
 }

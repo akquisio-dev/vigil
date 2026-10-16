@@ -21,6 +21,15 @@ type State struct {
 	// JournalCursor lets the agent pick up SSH and sudo entries that were
 	// written while it was not running.
 	JournalCursor string `json:"journal_cursor,omitempty"`
+	// Offsets of followed log files, so lines written while the agent was
+	// down are read on start.
+	Offsets map[string]LogOffset `json:"offsets,omitempty"`
+	Updates UpdateState          `json:"updates"`
+}
+
+type LogOffset struct {
+	Inode  uint64 `json:"inode"`
+	Offset int64  `json:"offset"`
 }
 
 type FileState struct {
@@ -38,6 +47,7 @@ func LoadState(dir string) (*State, error) {
 		Keys:     map[string][]AuthKey{},
 		Users:    map[string]int{},
 		Canaries: map[string]*CanaryState{},
+		Offsets:  map[string]LogOffset{},
 	}
 	raw, err := os.ReadFile(statePath(dir))
 	if errors.Is(err, os.ErrNotExist) {
@@ -60,6 +70,9 @@ func LoadState(dir string) (*State, error) {
 	}
 	if s.Canaries == nil {
 		s.Canaries = map[string]*CanaryState{}
+	}
+	if s.Offsets == nil {
+		s.Offsets = map[string]LogOffset{}
 	}
 	return s, nil
 }

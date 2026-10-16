@@ -174,7 +174,7 @@ func TestDashboardAggregates(t *testing.T) {
 		t.Fatalf("failed logins: %v from %v addresses", d["ssh_failed_24h"], d["ssh_failed_ips"])
 	}
 	top := d["top_attackers"].([]countItem)
-	if top[0].Key != "203.0.113.9" || top[0].Count != 50 || top[0].Extra != "admin, root" {
+	if top[0].Key != "203.0.113.9" || top[0].Count != 50 || top[0].Extra != "SSH: admin, root" {
 		t.Fatalf("top attacker: %+v", top[0])
 	}
 	perDay := d["alerts_per_day"].([]map[string]int)
@@ -347,5 +347,38 @@ func TestCustomRules(t *testing.T) {
 	}
 	if !Suppressible("custom.sudo_shell") {
 		t.Fatal("non-critical custom rules can be suppressed")
+	}
+}
+
+func TestIntelAndNetRules(t *testing.T) {
+	s := &Server{state: &State{Agents: map[string]*AgentRec{}, Canaries: map[string]*CanaryRec{}, KnownLogins: map[string]time.Time{}}}
+	set := &s.intel
+	set.set("feodo", parseIPLines([]byte("# comment\n203.0.113.9\n")), time.Now())
+	set.set("spamhaus-drop", parseSpamhausJSON([]byte(`{"cidr":"198.51.100.0/24","sblid":"SBL1"}`+"\n"+`{"type":"metadata"}`)), time.Now())
+	set.set("tor-exit", parseIPLines([]byte("192.0.2.5\n")), time.Now())
+	for ip, want := range map[string]string{"203.0.113.9": "feodo", "198.51.100.77": "spamhaus-drop", "192.0.2.5": "tor-exit", "192.0.2.6": "", "::ffff:203.0.113.9": "feodo"} {
+		if got, _ := set.lookup(ip); got != want {
+			t.Errorf("%s: got %q want %q", ip, got, want)
+		}
+	}
+	a := &AgentRec{ID: "a1", Name: "web"}
+	rulesFor := func(d map[string]any) []string {
+		var out []string
+		for _, f := range s.evaluate(a, &Record{Event: proto.Event{Type: "net.connection", TS: time.Now(), Data: d}}) {
+			out = append(out, f.Rule)
+		}
+		return out
+	}
+	if r := rulesFor(map[string]any{"remote_ip": "203.0.113.9", "remote_port": float64(443), "process": "kworker"}); len(r) != 1 || r[0] != "net.c2" {
+		t.Fatalf("c2: %v", r)
+	}
+	if r := rulesFor(map[string]any{"remote_ip": "8.8.8.8", "remote_port": float64(6379), "process": "redis-server"}); len(r) != 1 || r[0] != "net.service_outbound" {
+		t.Fatalf("redis outbound: %v", r)
+	}
+	if r := rulesFor(map[string]any{"remote_ip": "10.90.0.1", "remote_port": float64(5432), "process": "postgres"}); len(r) != 0 {
+		t.Fatalf("private replication must not alert: %v", r)
+	}
+	if r := rulesFor(map[string]any{"remote_ip": "8.8.4.4", "remote_port": float64(3333), "process": "x"}); len(r) != 1 || r[0] != "net.miner_pool" {
+		t.Fatalf("miner port: %v", r)
 	}
 }

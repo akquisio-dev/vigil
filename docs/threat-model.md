@@ -88,6 +88,16 @@ a password change ends the user's other sessions.
   with an outside service so a dead server is noticed.
 - **Kernel-level rootkits.** A rootkit can hide files, sockets and processes
   from the agent.
+- **Every malicious program start.** Process monitoring sees each exec, but
+  reports only starts with a known suspicious trait. Code that runs inside an
+  existing process (an exploited interpreter, injected shellcode) starts
+  nothing new. Reverse shells in containers are found by their command line;
+  the socket check only sees the host's network namespace.
+- **Every outbound connection.** Connections are sampled every ten seconds,
+  so very short ones can be missed, and a destination network already used
+  by a legitimate program on the same port is not reported again.
+- **Vulnerability matching.** vigil reports pending security updates and
+  reboots, not which CVEs apply to the installed versions.
 - **Secrecy of the detection logic.** The code is public by design. Canary
   locations, thresholds and ignore lists belong in your private
   configuration; knowing *that* canaries exist does not tell anyone *which*

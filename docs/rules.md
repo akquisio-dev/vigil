@@ -2,7 +2,7 @@
 
 # Detection rules
 
-vigil ships 33 rules. Every alert carries the rule id, so an alert can be looked up here.
+vigil ships 53 rules. Every alert carries the rule id, so an alert can be looked up here.
 
 Severity decides who is woken up: each notifier has a `min_severity`, `high` by default.
 
@@ -11,6 +11,9 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 | [`canary.opened`](#canary-opened) | critical | [T1552.001](https://attack.mitre.org/techniques/T1552/001/) |
 | [`chain.broken`](#chain-broken) | critical | [T1565.001](https://attack.mitre.org/techniques/T1565/001/) |
 | [`file.preload`](#file-preload) | critical | [T1574.006](https://attack.mitre.org/techniques/T1574/006/) |
+| [`net.c2`](#net-c2) | critical | [T1071](https://attack.mitre.org/techniques/T1071/) |
+| [`process.miner`](#process-miner) | critical | [T1496](https://attack.mitre.org/techniques/T1496/) |
+| [`process.reverse_shell`](#process-reverse_shell) | critical | [T1059.004](https://attack.mitre.org/techniques/T1059/004/) |
 | [`user.root`](#user-root) | critical | [T1078.003](https://attack.mitre.org/techniques/T1078/003/) |
 | [`agent.config_rejected`](#agent-config_rejected) | high | [T1557](https://attack.mitre.org/techniques/T1557/) |
 | [`agent.forged`](#agent-forged) | high | [T1557](https://attack.mitre.org/techniques/T1557/) |
@@ -22,24 +25,41 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 | [`file.pam`](#file-pam) | high | [T1556.003](https://attack.mitre.org/techniques/T1556/003/) |
 | [`file.sudo`](#file-sudo) | high | [T1548.003](https://attack.mitre.org/techniques/T1548/003/) |
 | [`log.spoofed`](#log-spoofed) | high | [T1070](https://attack.mitre.org/techniques/T1070/) |
+| [`net.blocklisted`](#net-blocklisted) | high | [T1071](https://attack.mitre.org/techniques/T1071/) |
+| [`net.miner_pool`](#net-miner_pool) | high | [T1496](https://attack.mitre.org/techniques/T1496/) |
+| [`net.service_outbound`](#net-service_outbound) | high | [T1572](https://attack.mitre.org/techniques/T1572/) |
 | [`port.docker`](#port-docker) | high |  |
+| [`process.deleted_exe`](#process-deleted_exe) | high | [T1070.004](https://attack.mitre.org/techniques/T1070/004/) |
+| [`process.download_exec`](#process-download_exec) | high | [T1105](https://attack.mitre.org/techniques/T1105/) |
+| [`process.service_shell`](#process-service_shell) | high | [T1505.003](https://attack.mitre.org/techniques/T1505/003/) |
 | [`ssh.key_added`](#ssh-key_added) | high | [T1098.004](https://attack.mitre.org/techniques/T1098/004/) |
 | [`ssh.password_login`](#ssh-password_login) | high | [T1078](https://attack.mitre.org/techniques/T1078/) |
 | [`ssh.unknown_key`](#ssh-unknown_key) | high | [T1098.004](https://attack.mitre.org/techniques/T1098/004/) |
 | [`user.added`](#user-added) | high | [T1136.001](https://attack.mitre.org/techniques/T1136/001/) |
+| [`web.exploit_success`](#web-exploit_success) | high | [T1190](https://attack.mitre.org/techniques/T1190/) |
+| [`web.shell_access`](#web-shell_access) | high | [T1505.003](https://attack.mitre.org/techniques/T1505/003/) |
 | [`canary.overflow`](#canary-overflow) | medium |  |
 | [`canary.remove_failed`](#canary-remove_failed) | medium |  |
 | [`file.accounts`](#file-accounts) | medium | [T1098](https://attack.mitre.org/techniques/T1098/) |
 | [`file.shell_init`](#file-shell_init) | medium | [T1546.004](https://attack.mitre.org/techniques/T1546/004/) |
 | [`file.sshd`](#file-sshd) | medium | [T1098](https://attack.mitre.org/techniques/T1098/) |
 | [`file.systemd`](#file-systemd) | medium | [T1543.002](https://attack.mitre.org/techniques/T1543/002/) |
+| [`net.tor`](#net-tor) | medium | [T1090.003](https://attack.mitre.org/techniques/T1090/003/) |
 | [`port.public`](#port-public) | medium |  |
+| [`process.decode_exec`](#process-decode_exec) | medium | [T1140](https://attack.mitre.org/techniques/T1140/) |
+| [`process.tmp_exec`](#process-tmp_exec) | medium | [T1204.002](https://attack.mitre.org/techniques/T1204/002/) |
 | [`ssh.new_source`](#ssh-new_source) | medium | [T1078](https://attack.mitre.org/techniques/T1078/) |
+| [`updates.security_pending`](#updates-security_pending) | medium |  |
+| [`web.login_bruteforce`](#web-login_bruteforce) | medium | [T1110](https://attack.mitre.org/techniques/T1110/) |
 | [`agent.dropped`](#agent-dropped) | low |  |
 | [`file.other`](#file-other) | low |  |
 | [`port.local`](#port-local) | low |  |
+| [`process.rate_limited`](#process-rate_limited) | low |  |
 | [`ssh.bruteforce`](#ssh-bruteforce) | low | [T1110](https://attack.mitre.org/techniques/T1110/) |
 | [`ssh.key_removed`](#ssh-key_removed) | low |  |
+| [`updates.disabled`](#updates-disabled) | low |  |
+| [`updates.lists_stale`](#updates-lists_stale) | low |  |
+| [`updates.reboot_pending`](#updates-reboot_pending) | low |  |
 | [`user.removed`](#user-removed) | low | [T1531](https://attack.mitre.org/techniques/T1531/) |
 
 ## SSH access
@@ -366,6 +386,42 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 
 **What to do:** Assume someone edited the log on the server. Compare with the daily chain anchors sent to your notifiers.
 
+### `net.c2` {#net-c2}
+
+**Severity:** critical · **ATT&CK:** [T1071](https://attack.mitre.org/techniques/T1071/)
+
+**Alert:** `{process} connected to {ip}:{port}, listed as command and control ({list})`
+
+**Fires when:** A process connected to an address on the abuse.ch Feodo Tracker or ThreatFox lists, which track botnet command and control and malware delivery servers. Needs `threat_intel`.
+
+**Known false positives:** Very rare. Lists can be wrong for a short time when an address changes hands.
+
+**What to do:** Treat as an active compromise: find the process (`exe`, `uid`), how it was started, and isolate the host.
+
+### `process.miner` {#process-miner}
+
+**Severity:** critical · **ATT&CK:** [T1496](https://attack.mitre.org/techniques/T1496/)
+
+**Alert:** `Crypto miner started: {exe} (uid {uid})`
+
+**Fires when:** A program with a known miner name or miner arguments (`stratum+tcp://`, `--donate-level`, `--randomx`).
+
+**Known false positives:** None on servers that are not meant to mine.
+
+**What to do:** Find how it got there (the parent process, cron, systemd units, `authorized_keys`), remove the persistence first, then the miner. Assume the credentials on the host are known.
+
+### `process.reverse_shell` {#process-reverse_shell}
+
+**Severity:** critical · **ATT&CK:** [T1059.004](https://attack.mitre.org/techniques/T1059/004/)
+
+**Alert:** `Reverse shell: {exe} started by {parent} (uid {uid})`
+
+**Fires when:** A shell started with its input or output connected to a network socket, or a command line that builds a reverse shell (`/dev/tcp/…`, `nc -e`, `socat exec:`, Python `pty.spawn`).
+
+**Known false positives:** Rare. Some remote administration scripts pipe a shell through `socat` on purpose.
+
+**What to do:** Treat as an active intrusion: note the parent process and the remote address (`ss -tnp`), isolate the host, preserve memory and disk if you can, then kill the process.
+
 ### `agent.config_rejected` {#agent-config_rejected}
 
 **Severity:** high · **ATT&CK:** [T1557](https://attack.mitre.org/techniques/T1557/)
@@ -438,6 +494,162 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 
 **What to do:** Someone is trying to plant fake log entries. Find the process named in the alert.
 
+### `net.blocklisted` {#net-blocklisted}
+
+**Severity:** high · **ATT&CK:** [T1071](https://attack.mitre.org/techniques/T1071/)
+
+**Alert:** `{process} connected to {ip}:{port} on a block list ({list})`
+
+**Fires when:** A process connected to an address on the Spamhaus DROP list (networks run by criminals). Needs `threat_intel`.
+
+**Known false positives:** Rare.
+
+**What to do:** Find the process and why it connects there.
+
+### `net.miner_pool` {#net-miner_pool}
+
+**Severity:** high · **ATT&CK:** [T1496](https://attack.mitre.org/techniques/T1496/)
+
+**Alert:** `{process} connected to {ip}:{port}, a common mining pool port`
+
+**Fires when:** An outbound connection to a public address on a port typical for mining pools (3333, 14433, 14444, 45560, 45700).
+
+**Known false positives:** Other software using these ports.
+
+**What to do:** Check the process; look for `process.miner` alerts on the same host.
+
+### `net.service_outbound` {#net-service_outbound}
+
+**Severity:** high · **ATT&CK:** [T1572](https://attack.mitre.org/techniques/T1572/)
+
+**Alert:** `{process} opened a connection to the internet: {ip}:{port}`
+
+**Fires when:** `sshd` or a database (PostgreSQL, MySQL/MariaDB, Redis, MongoDB, Memcached) opened a connection to a public address. Databases do not do that on their own; an attacker using `REPLICAOF`, `COPY … PROGRAM` or SSH tunneling does.
+
+**Known false positives:** Database replication to a public address, SSH port forwarding used on purpose.
+
+**What to do:** Check the connection (`ss -tnp`), the service's log and its configuration. For Redis, check `CONFIG GET replicaof` and `dir`.
+
+### `process.deleted_exe` {#process-deleted_exe}
+
+**Severity:** high · **ATT&CK:** [T1070.004](https://attack.mitre.org/techniques/T1070/004/)
+
+**Alert:** `Program running from a deleted file: {exe}`
+
+**Fires when:** A program started from a file that was already deleted, a common way to hide a dropped binary.
+
+**Known false positives:** Rare. A package upgrade that replaces a binary while a service restarts at the same moment.
+
+**What to do:** Copy the binary from `/proc/<pid>/exe` before killing the process, then investigate it.
+
+### `process.download_exec` {#process-download_exec}
+
+**Severity:** high · **ATT&CK:** [T1105](https://attack.mitre.org/techniques/T1105/)
+
+**Alert:** `Download and run: {cmdline}`
+
+**Fires when:** A command line that downloads and runs code in one go (`curl … | sh`, `wget … && chmod +x`, `chmod +x /tmp/…`).
+
+**Known false positives:** Installers that are run this way on purpose, for example during a deploy.
+
+**What to do:** Check who ran it (`uid`, parent) and what was downloaded. If nobody did, treat as an intrusion.
+
+### `process.service_shell` {#process-service_shell}
+
+**Severity:** high · **ATT&CK:** [T1505.003](https://attack.mitre.org/techniques/T1505/003/)
+
+**Alert:** `{parent} started {exe} (uid {uid})`
+
+**Fires when:** A web server, PHP-FPM or a database started a shell or a script interpreter. This is what a web shell or an exploited service does.
+
+**Known false positives:** CGI setups and some PHP applications that call `exec()` on purpose. Application runtimes like node, java and python are not watched as parents, because they start shells in normal operation.
+
+**What to do:** Look at the command line and the web server's access log at that time; search the web root for recently changed files.
+
+### `web.exploit_success` {#web-exploit_success}
+
+**Severity:** high · **ATT&CK:** [T1190](https://attack.mitre.org/techniques/T1190/)
+
+**Alert:** `Attack on {log} from {ip} answered with 2xx ({kinds})`
+
+**Fires when:** A request from one address matched an attack signature (SQL injection, path traversal, Log4Shell `${jndi:`, command injection, PHP wrappers, Shellshock) and the server answered with 2xx. Scans that end in 404 do not alert; they show up under attacking addresses.
+
+**Known false positives:** Applications that answer every path with 200 (single page apps with a catch-all route) turn harmless probes into 2xx. Suppress per log with a reason.
+
+**What to do:** Check the request in the access log and what the application did with it. A real hit usually leaves traces in the application log or the database.
+
+### `web.shell_access` {#web-shell_access}
+
+**Severity:** high · **ATT&CK:** [T1505.003](https://attack.mitre.org/techniques/T1505/003/)
+
+**Alert:** `Web shell path answered with 2xx for {ip}: {sample}`
+
+**Fires when:** A request to a path named like a web shell (`shell.php`, `wso.php`, `c99.php`, …) was answered with 2xx.
+
+**Known false positives:** Rare. A file with such a name on purpose.
+
+**What to do:** Look at the file on disk, its owner and change time, and search the web root for other recently changed files. Treat as an intrusion until proven otherwise.
+
+### `net.tor` {#net-tor}
+
+**Severity:** medium · **ATT&CK:** [T1090.003](https://attack.mitre.org/techniques/T1090/003/)
+
+**Alert:** `{process} connected to Tor exit {ip}:{port}`
+
+**Fires when:** A process connected to a Tor exit node. Malware uses Tor to hide its command and control. Needs `threat_intel`.
+
+**Known false positives:** Hosts that run Tor or talk to services through it on purpose.
+
+**What to do:** Check the process. Suppress for hosts where this is expected.
+
+### `process.decode_exec` {#process-decode_exec}
+
+**Severity:** medium · **ATT&CK:** [T1140](https://attack.mitre.org/techniques/T1140/)
+
+**Alert:** `Decoded command run in a shell: {cmdline}`
+
+**Fires when:** Base64-encoded content decoded and piped into a shell, a way to hide commands from logs.
+
+**Known false positives:** Rare in normal operation.
+
+**What to do:** Decode the payload from the command line and check what it does.
+
+### `process.tmp_exec` {#process-tmp_exec}
+
+**Severity:** medium · **ATT&CK:** [T1204.002](https://attack.mitre.org/techniques/T1204/002/)
+
+**Alert:** `Program started from a temporary directory: {exe} (uid {uid})`
+
+**Fires when:** A program started from `/tmp`, `/dev/shm` or `/var/tmp`. Attackers drop tools there because every user can write to them.
+
+**Known false positives:** Build tools that run test binaries from `/tmp` (for example `go test`), installers. Suppress them per host with a reason.
+
+**What to do:** Check the file (`sha256sum`, `strings`), its owner and how it got there.
+
+### `updates.security_pending` {#updates-security_pending}
+
+**Severity:** medium
+
+**Alert:** `{count} security updates pending for {days} days: {packages}`
+
+**Fires when:** Security updates have been waiting for at least seven days (from `apt list --upgradable`, packages from a `-security` suite).
+
+**Known false positives:** Updates held back on purpose.
+
+**What to do:** Install them (`apt upgrade`) and reboot if `updates.reboot_pending` follows.
+
+### `web.login_bruteforce` {#web-login_bruteforce}
+
+**Severity:** medium · **ATT&CK:** [T1110](https://attack.mitre.org/techniques/T1110/)
+
+**Alert:** `{logins} login attempts in one minute from {ip}`
+
+**Fires when:** 20 or more POST requests within one minute from one address to a path listed in `login_paths`.
+
+**Known false positives:** Load tests, or many users behind one address (a company NAT).
+
+**What to do:** Rate limit the login path in the web server or block the address.
+
 ### `agent.dropped` {#agent-dropped}
 
 **Severity:** low
@@ -449,3 +661,51 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 **Known false positives:** Long server outages.
 
 **What to do:** Restore the connection; consider raising `max_queue`.
+
+### `process.rate_limited` {#process-rate_limited}
+
+**Severity:** low
+
+**Alert:** `{dropped} suspicious program starts not reported (limit reached)`
+
+**Fires when:** The agent saw more suspicious program starts in one minute than it reports (60) and dropped the rest.
+
+**Known false positives:** A build or a loop that repeatedly matches a process rule.
+
+**What to do:** Look at the process alerts from the same minute; a flood can also hide one real event.
+
+### `updates.disabled` {#updates-disabled}
+
+**Severity:** low
+
+**Alert:** `Automatic security updates are off`
+
+**Fires when:** `APT::Periodic::Unattended-Upgrade` is not enabled, so security updates wait for a person.
+
+**Known false positives:** Hosts where updates are rolled out by other tooling.
+
+**What to do:** Enable unattended-upgrades (`dpkg-reconfigure -plow unattended-upgrades`) or suppress with the name of the tooling that does it.
+
+### `updates.lists_stale` {#updates-lists_stale}
+
+**Severity:** low
+
+**Alert:** `Package lists not refreshed for {days} days`
+
+**Fires when:** The package lists have not been refreshed for at least seven days, so pending security updates are not even known.
+
+**Known false positives:** Hosts without internet access that get updates another way.
+
+**What to do:** Check `apt update` and the apt timers (`systemctl list-timers apt*`).
+
+### `updates.reboot_pending` {#updates-reboot_pending}
+
+**Severity:** low
+
+**Alert:** `Reboot pending for {days} days ({packages})`
+
+**Fires when:** `/var/run/reboot-required` has existed for at least seven days, so a patched kernel or library is not in use yet.
+
+**Known false positives:** Hosts that are rebooted only in planned windows.
+
+**What to do:** Plan the reboot. Start a maintenance window in vigil first, or the agent restart alerts.

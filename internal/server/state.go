@@ -38,6 +38,9 @@ type AgentRec struct {
 
 	ConfigVersion int64 `json:"config_version"`
 	AckedVersion  int64 `json:"acked_version"`
+
+	// Updates is the host's latest patch state as reported by the agent.
+	Updates map[string]any `json:"updates,omitempty"`
 }
 
 type EnrollToken struct {

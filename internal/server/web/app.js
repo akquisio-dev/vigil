@@ -51,6 +51,9 @@ const T = {
     saved: "saved", users: "Users", addUser: "Add user", name: "Name", created2: "Created", lastLogin: "Last login",
     codePrompt: "Current code from your authenticator app", newUserInfo: "Hand these over once, they are not shown again.",
     viewer: "viewer", analyst: "analyst", admin: "admin", noPasskeySupport: "This browser does not support passkeys",
+    updates: "Updates", securityShort: "security", rebootShort: "reboot", upToDate: "up to date", pendingShort: "pending",
+    kernel: "Kernel", unattended: "Automatic updates", listsAge: "Package lists", daysAgo: "days old", on: "on", off: "off",
+    securityPackages: "Security updates", newestInstalled: "newest installed",
   },
   de: {
     overview: "Lage", alerts: "Alarme", events: "Ereignisse", canaries: "Köder", settings: "Einstellungen",
@@ -99,6 +102,9 @@ const T = {
     saved: "gespeichert", users: "Benutzer", addUser: "Benutzer anlegen", name: "Name", created2: "Angelegt", lastLogin: "Letzte Anmeldung",
     codePrompt: "Aktueller Code aus deiner Authenticator-App", newUserInfo: "Einmal weitergeben, das wird nicht noch einmal angezeigt.",
     viewer: "Lesen", analyst: "Analyst", admin: "Admin", noPasskeySupport: "Dieser Browser kann keine Passkeys",
+    updates: "Updates", securityShort: "Sicherheit", rebootShort: "Neustart", upToDate: "aktuell", pendingShort: "offen",
+    kernel: "Kernel", unattended: "Automatische Updates", listsAge: "Paketlisten", daysAgo: "Tage alt", on: "an", off: "aus",
+    securityPackages: "Sicherheitsupdates", newestInstalled: "neuester installiert",
   },
 };
 
@@ -359,6 +365,7 @@ function alertRow(a) {
 const TACTICS = {
   "initial-access": "Initial Access", persistence: "Persistence", "privilege-escalation": "Privilege Escalation",
   "defense-evasion": "Defense Evasion", "credential-access": "Credential Access", impact: "Impact",
+  execution: "Execution", "command-and-control": "Command and Control", reconnaissance: "Reconnaissance",
 };
 
 function duration(sec) {
@@ -435,6 +442,16 @@ function rankList(items, opts = {}) {
   }));
 }
 
+function updatesCell(u) {
+  if (!u) return h("span", { class: "muted" }, "·");
+  const parts = [];
+  if (u.security) parts.push(h("span", { class: "sev high" }, u.security + " " + t("securityShort")));
+  if (u.reboot_required) parts.push(h("span", { class: "sev medium" }, t("rebootShort")));
+  if (!parts.length) parts.push(u.pending ? h("span", { class: "muted" }, u.pending + " " + t("pendingShort"))
+    : h("span", { class: "chip" }, h("span", { class: "dot ok" }), t("upToDate")));
+  return h("span", { class: "sevcounts" }, parts);
+}
+
 const sevCounts = (m) => h("span", { class: "sevcounts" }, SEVS.filter((s) => m && m[s]).map((s) => h("span", { class: "sev " + s }, m[s])));
 
 async function overview() {
@@ -456,13 +473,14 @@ async function overview() {
       o.chain.seq.toLocaleString(lang) + " " + t("records")));
 
   const hostTable = o.agents.length ? h("div", { class: "tablewrap" }, h("table", { class: "hosts" },
-    h("thead", null, h("tr", null, [t("host"), t("status"), t("lastSeen"), t("alertsOpen"), t("ports"), t("canaries"), t("configSync"), t("version")]
+    h("thead", null, h("tr", null, [t("host"), t("status"), t("lastSeen"), t("alertsOpen"), t("updates"), t("ports"), t("canaries"), t("configSync"), t("version")]
       .map((x) => h("th", null, x)))),
     h("tbody", null, o.agents.map((a) => h("tr", { class: "click", onclick: () => { location.hash = "#/hosts/" + a.id; } },
       h("td", null, h("a", { href: "#/hosts/" + a.id, class: "strong" }, a.name)),
       h("td", null, statusChip(a.status)),
       h("td", { class: "nowrap" }, timeEl(a.last_seen)),
       h("td", null, a.open_alerts ? sevCounts(a.open_by_severity) : h("span", { class: "muted" }, "0")),
+      h("td", null, updatesCell(a.updates)),
       h("td", null, a.ports),
       h("td", null, a.canaries),
       h("td", null, h("span", { class: "chip" }, h("span", { class: "dot " + (a.config_sync ? "ok" : "pending") }), t(a.config_sync ? "synced" : "waiting"))),
@@ -617,6 +635,12 @@ async function hostView(id) {
           h("a", { class: "btn ghost", href: "#/events?agent=" + a.id }, t("events")),
           h("a", { class: "btn ghost", href: "#/alerts" }, t("alerts")),
           h("button", { class: "btn danger", onclick: async () => { if (confirm(t("confirmDelete"))) { await post("/api/ui/agents/" + a.id + "/delete"); location.hash = "#/"; } } }, t("deleteHost"))))),
+    a.updates ? h("div", { class: "card mt" }, h("h3", null, t("updates")), h("dl", { class: "kv" },
+      h("dt", null, t("updates")), h("dd", null, updatesCell(a.updates)),
+      h("dt", null, t("securityPackages")), h("dd", { class: "mono" }, (a.updates.security_packages || []).join("  ") || "·"),
+      h("dt", null, t("kernel")), h("dd", { class: "mono" }, a.updates.kernel_running + (a.updates.kernel_newest && a.updates.kernel_newest !== a.updates.kernel_running ? "  (" + t("newestInstalled") + " " + a.updates.kernel_newest + ")" : "")),
+      h("dt", null, t("unattended")), h("dd", null, t(a.updates.unattended_upgrades ? "on" : "off")),
+      h("dt", null, t("listsAge")), h("dd", null, a.updates.lists_age_days >= 0 ? a.updates.lists_age_days + " " + t("daysAgo") : "·"))) : null,
     h("div", { class: "flex" }, h("h2", null, t("ports")),
       d.ports.some((p) => !p.expected) ? h("button", { class: "btn small right", onclick: action("accept-port", { key: "*" }) }, t("acceptAll")) : null),
     h("div", { class: "tablewrap" }, h("table", { class: "nowrap" },

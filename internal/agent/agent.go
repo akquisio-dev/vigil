@@ -41,6 +41,8 @@ type Agent struct {
 	lastSeq     int64
 	cursor      string
 	flushNow    chan struct{}
+	procLimit   procLimiter
+	outSeen     map[string]bool // remote network:port combinations already reported
 }
 
 func New(cfg *Config) (*Agent, error) {
@@ -109,11 +111,24 @@ func (a *Agent) Run(ctx context.Context) error {
 	if on(a.cfg.SSH) {
 		go a.runSSH(ctx)
 	}
+	if on(a.cfg.Processes) {
+		go a.runProcesses(ctx)
+	}
+	if on(a.cfg.Updates) {
+		go a.runUpdates(ctx)
+	}
+	for _, wl := range a.cfg.WebLogs {
+		go a.tailWebLog(ctx, wl)
+	}
 
 	send := time.NewTicker(a.cfg.interval())
 	scan := time.NewTicker(a.cfg.scan())
+	// Outbound connections are sampled more often than files, so short-lived
+	// ones are seen too; reading /proc/net is cheap.
+	out := time.NewTicker(10 * time.Second)
 	defer send.Stop()
 	defer scan.Stop()
+	defer out.Stop()
 	a.send(ctx)
 	for {
 		select {
@@ -129,6 +144,10 @@ func (a *Agent) Run(ctx context.Context) error {
 			a.saveState()
 		case <-send.C:
 			a.send(ctx)
+		case <-out.C:
+			if on(a.cfg.Outbound) {
+				a.scanOutbound()
+			}
 		case <-a.flushNow:
 			a.send(ctx)
 		}
@@ -142,9 +161,11 @@ func (a *Agent) scan() {
 }
 
 func (a *Agent) saveState() {
+	// Collectors in other goroutines (web logs, updates) write into state
+	// under a.mu, so it is serialized under the same lock.
 	a.mu.Lock()
+	defer a.mu.Unlock()
 	a.state.JournalCursor = a.cursor
-	a.mu.Unlock()
 	if err := a.state.Save(a.cfg.StateDir); err != nil {
 		log.Printf("state: %v", err)
 	}

@@ -34,6 +34,15 @@ type Config struct {
 	SSH    *bool `json:"ssh,omitempty"`
 	Ports  *bool `json:"ports,omitempty"`
 	Docker *bool `json:"docker,omitempty"`
+	// Processes watches program starts through the kernel's process events
+	// connector and reports the suspicious ones.
+	Processes *bool `json:"processes,omitempty"`
+	// Updates reports pending (security) updates and pending reboots.
+	Updates *bool `json:"updates,omitempty"`
+	// Outbound reports new outbound TCP destinations with their process.
+	Outbound *bool `json:"outbound,omitempty"`
+	// WebLogs are access logs to watch for scans and attacks.
+	WebLogs []WebLog `json:"web_logs,omitempty"`
 
 	MaxQueue int `json:"max_queue"`
 }
