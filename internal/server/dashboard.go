@@ -95,10 +95,11 @@ func (s *Server) dashboard(now time.Time, events []Record) map[string]any {
 		if al.Acked != nil && now.Sub(*al.Acked) < 30*24*time.Hour {
 			ackTimes = append(ackTimes, al.Acked.Sub(al.Created))
 		}
-		if al.Created.Before(dayStart) {
+		i := int(al.Created.Sub(dayStart) / (24 * time.Hour))
+		if al.Created.Before(dayStart) || i > 6 { // i > 6 only when the clock stepped back
 			continue
 		}
-		perDay[int(al.Created.Sub(dayStart)/(24*time.Hour))][al.Severity]++
+		perDay[i][al.Severity]++
 		ruleCount[al.Rule]++
 		if t := tactics[al.Technique]; t != "" {
 			tacticCount[t]++

@@ -5,6 +5,8 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -41,7 +43,10 @@ func TestWriteDemoData(t *testing.T) {
 	}
 	for i, a := range hosts {
 		a.Enrolled, a.LastSeen, a.StartedOnce, a.BaselineSet = start, now.Add(-time.Duration(5+i*7)*time.Second), true, true
-		a.Ports = make([]map[string]any, 6+i*9)
+		a.Ports, a.Baseline = demoPorts(i), map[string]bool{}
+		for _, p := range a.Ports {
+			a.Baseline[p["key"].(string)] = true
+		}
 		s.state.Agents[a.ID] = a
 	}
 	hosts[2].Silent, hosts[2].LastSeen = true, now.Add(-47*time.Minute)
@@ -99,7 +104,7 @@ func TestWriteDemoData(t *testing.T) {
 	add(day(1, 11), hosts[0], "ssh.failed", map[string]any{"ip": attackers[0], "count": float64(64), "users": []any{"root", "admin"}})
 	add(day(2, 16), hosts[1], "file.changed", map[string]any{"path": "/etc/crontab", "category": "cron"})
 	add(day(3, 10), hosts[0], "ssh.key_added", map[string]any{"file": "/root/.ssh/authorized_keys", "comment": "bob-desktop", "fingerprint": "SHA256:demoBob"})
-	add(day(4, 13), hosts[1], "port.opened", map[string]any{"proto": "tcp", "port": float64(9200), "addr": "0.0.0.0", "scope": "public", "via": "listen", "process": "java", "key": "tcp/0.0.0.0/9200"})
+	add(day(4, 13), hosts[1], "port.opened", map[string]any{"proto": "tcp", "port": float64(9200), "addr": "0.0.0.0", "scope": "any", "via": "listen", "process": "java", "key": "listen/tcp/0.0.0.0:9200"})
 	add(day(5, 2), hosts[1], "ssh.login", map[string]any{"user": "root", "ip": "198.51.100.23", "method": "password"})
 	add(day(5, 2).Add(4*time.Minute), hosts[1], "file.changed", map[string]any{"path": "/etc/systemd/system/update-checker.service", "category": "systemd"})
 	add(day(5, 2).Add(6*time.Minute), hosts[1], "canary.opened", map[string]any{"canary_id": "demo-canary", "path": "/srv/app/.env.backup", "exe": "/usr/bin/cat", "uid": "0", "pid": float64(48211)})
@@ -135,4 +140,26 @@ func TestWriteDemoData(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Logf("%d events, %d alerts in %s", len(evs), len(s.state.Alerts), dir)
+}
+
+func demoPorts(host int) []map[string]any {
+	sets := [][][4]string{
+		{{"tcp", "0.0.0.0", "22", "sshd"}, {"tcp", "0.0.0.0", "80", "nginx"}, {"tcp", "0.0.0.0", "443", "nginx"}, {"tcp", "127.0.0.1", "3000", "node"}, {"udp", "127.0.0.53", "53", "systemd-resolve"}},
+		{{"tcp", "0.0.0.0", "22", "sshd"}, {"tcp", "127.0.0.1", "8080", "java"}, {"tcp", "127.0.0.1", "6379", "redis-server"}, {"tcp", "10.90.0.2", "9100", "node_exporter"}, {"udp", "0.0.0.0", "51820", ""}, {"udp", "127.0.0.53", "53", "systemd-resolve"}},
+		{{"tcp", "0.0.0.0", "22", "sshd"}, {"tcp", "127.0.0.1", "5432", "postgres"}, {"tcp", "10.90.0.3", "5432", "postgres"}, {"udp", "127.0.0.53", "53", "systemd-resolve"}},
+	}
+	var out []map[string]any
+	for _, p := range sets[host] {
+		scope := "any"
+		switch {
+		case strings.HasPrefix(p[1], "127."):
+			scope = "loopback"
+		case p[1] != "0.0.0.0":
+			scope = "address"
+		}
+		port, _ := strconv.Atoi(p[2])
+		out = append(out, map[string]any{"proto": p[0], "addr": p[1], "port": float64(port), "scope": scope, "via": "listen",
+			"process": p[3], "key": fmt.Sprintf("listen/%s/%s:%d", p[0], p[1], port)})
+	}
+	return out
 }
