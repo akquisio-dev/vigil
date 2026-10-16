@@ -88,8 +88,43 @@ it applies to this host only, a reason and a duration (at most 90 days).
 - Expired suppressions stay listed under **Suppressions** for 30 days, so they
   can be renewed.
 - Rules an attacker would want silenced cannot be suppressed: every critical
-  rule, and all rules about agents, canaries, the event chain and log spoofing.
+  rule, and all rules about agents, canaries, the event chain, log spoofing,
+  notifiers and self tests.
   Use a maintenance window for planned agent restarts instead.
+
+## Self test
+
+A detection that never fires looks exactly like a quiet host. The self test
+proves that each host's sensors, the server's rules and your notifiers still
+work, end to end.
+
+On request, the agent leaves three harmless traces, each named after a random
+test id:
+
+| Step | Trace | Must raise |
+|---|---|---|
+| file | a comment-only file in `/var/spool/cron/crontabs` (or `/etc/cron.d`), removed right after the scan | `file.cron` |
+| process | a copy of `sleep` started from `/tmp` for one second | `process.tmp_exec` |
+| journal | a log line tagged `sshd`, written by the agent | `log.spoofed` |
+
+The server matches findings to the test by that id, never by time, so an
+attack during a test still raises its normal alert. Findings of the test raise
+no alert; they stay in the event log like everything else. The result goes to
+**every** notifier, whatever its `min_severity`, so each channel is tested too.
+
+- **passed**: every trace was detected.
+- **passed with warnings**: a step was skipped (for example `/tmp` is mounted
+  `noexec`, or a collector is turned off in `agent.json`) or its rule is
+  suppressed.
+- **failed**: a trace was not detected, a collector stopped, or the agent did
+  not run the test within ten minutes. This raises `selftest.failed` (high,
+  cannot be suppressed) with the missing steps and, where the agent knows it,
+  why the sensor is down.
+
+Every host is tested right after it first connects and then every
+`selftest_days` days (default 7). Admins start a test on the host page at any
+time. Hosts in a maintenance window, stopped or silent are skipped by the
+schedule. An agent with `"selftest": false` in `agent.json` refuses tests.
 
 ## Planned work on a host
 

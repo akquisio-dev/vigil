@@ -160,6 +160,18 @@ func (s *Server) uiHandler() http.Handler {
 	mux.HandleFunc("POST /api/ui/suppressions/{id}/{action}", s.analyst(s.handleSuppressionAction))
 	mux.HandleFunc("GET /api/ui/chain", s.auth(s.handleChain))
 	mux.HandleFunc("POST /api/ui/chain/verify", s.analyst(s.handleChainVerify))
+	mux.HandleFunc("GET /api/ui/selftests", s.auth(func(w http.ResponseWriter, r *http.Request, sess *session) {
+		agent := r.URL.Query().Get("agent")
+		s.mu.Lock()
+		out := []SelfTest{}
+		for i := len(s.state.SelfTests) - 1; i >= 0 && len(out) < 20; i-- {
+			if t := s.state.SelfTests[i]; agent == "" || t.Agent == agent {
+				out = append(out, *t)
+			}
+		}
+		s.mu.Unlock()
+		writeJSON(w, out)
+	}))
 	mux.HandleFunc("GET /api/ui/notifiers", s.auth(func(w http.ResponseWriter, r *http.Request, sess *session) {
 		writeJSON(w, map[string]any{"notifiers": s.notifierStatus(), "heartbeat": s.cfg.HeartbeatURL != ""})
 	}))
@@ -250,6 +262,7 @@ type agentView struct {
 	ConfigSync  bool           `json:"config_sync"`
 	Maintenance *time.Time     `json:"maintenance_until,omitempty"`
 	Updates     map[string]any `json:"updates,omitempty"`
+	SelfTest    bool           `json:"selftest"`
 }
 
 func (s *Server) viewAgent(a *AgentRec) agentView {
@@ -264,7 +277,7 @@ func (s *Server) viewAgent(a *AgentRec) agentView {
 	}
 	v := agentView{ID: a.ID, Name: a.Name, Hostname: a.Hostname, Version: a.Version, Status: status,
 		LastSeen: a.LastSeen, LastIP: a.LastIP, Enrolled: a.Enrolled, Ports: len(a.Ports),
-		CanaryRoots: a.CanaryRoots, ConfigSync: a.AckedVersion >= a.ConfigVersion, OpenBySev: map[string]int{}, Updates: a.Updates}
+		CanaryRoots: a.CanaryRoots, ConfigSync: a.AckedVersion >= a.ConfigVersion, OpenBySev: map[string]int{}, Updates: a.Updates, SelfTest: a.SelfTest}
 	if time.Now().Before(a.MaintenanceUntil) {
 		until := a.MaintenanceUntil
 		v.Maintenance = &until
@@ -521,6 +534,14 @@ func (s *Server) handleAgentAction(w http.ResponseWriter, r *http.Request, sess 
 		}
 		a.MaintenanceUntil = time.Now().UTC().Add(time.Duration(req.Minutes) * time.Minute)
 		data["minutes"] = req.Minutes
+	case "selftest":
+		t, err := s.startSelfTest(a, sess.User)
+		if err != nil {
+			s.mu.Unlock()
+			http.Error(w, err.Error(), http.StatusConflict)
+			return
+		}
+		data["selftest"] = t.ID
 	case "forget-port":
 		delete(a.Baseline, req.Key)
 		data["key"] = req.Key

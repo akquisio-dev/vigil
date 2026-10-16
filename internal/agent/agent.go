@@ -1,5 +1,6 @@
 // Package agent is the host sensor. It runs as root, opens no listening
-// socket, executes only journalctl and iptables-save, and talks to the
+// socket, executes only journalctl, iptables-save, nft (response actions,
+// when enabled) and its own copy of sleep (self test), and talks to the
 // server with outbound, signed requests.
 package agent
 
@@ -42,7 +43,8 @@ type Agent struct {
 	cursor      string
 	flushNow    chan struct{}
 	procLimit   procLimiter
-	outSeen     map[string]bool // remote network:port combinations already reported
+	outSeen     map[string]bool   // remote network:port combinations already reported
+	broken      map[string]string // collector -> why it stopped, for the self test
 }
 
 func New(cfg *Config) (*Agent, error) {
@@ -66,6 +68,25 @@ func New(cfg *Config) (*Agent, error) {
 		flushNow:    make(chan struct{}, 1),
 		cursor:      st.JournalCursor,
 	}, nil
+}
+
+// collectorFailed reports a collector that stopped and remembers why, so a
+// self test can say which sensor is down instead of only that a trace was
+// missed.
+func (a *Agent) collectorFailed(name, why string) {
+	a.mu.Lock()
+	if a.broken == nil {
+		a.broken = map[string]string{}
+	}
+	a.broken[name] = why
+	a.mu.Unlock()
+	a.emit(proto.NewEvent("agent.warning", map[string]any{"collector": name, "error": why}))
+}
+
+func (a *Agent) collectorDown(name string) string {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.broken[name]
 }
 
 // emit queues an event. When the server is unreachable for long, the oldest
@@ -105,7 +126,8 @@ func (a *Agent) Run(ctx context.Context) error {
 			allowed = append(allowed, t)
 		}
 	}
-	a.emit(proto.NewEvent("agent.started", map[string]any{"version": Version, "hostname": host, "canary_roots": a.cfg.CanaryRoots, "response": allowed}))
+	a.emit(proto.NewEvent("agent.started", map[string]any{"version": Version, "hostname": host, "canary_roots": a.cfg.CanaryRoots, "response": allowed, "selftest": on(a.cfg.SelfTest)}))
+	cleanSelfTests()
 
 	a.scan()
 	if !a.state.Initialized {

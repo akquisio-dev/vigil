@@ -43,6 +43,10 @@ type Config struct {
 	Outbound *bool `json:"outbound,omitempty"`
 	// Response allows response actions from the dashboard. Off by default.
 	Response *ResponseConfig `json:"response,omitempty"`
+	// SelfTest lets the server ask for a self test: a comment-only file in
+	// /etc/cron.d, a copy of `sleep` started from /tmp and an sshd-tagged log
+	// line, all removed right away. On by default.
+	SelfTest *bool `json:"selftest,omitempty"`
 	// WebLogs are access logs to watch for scans and attacks.
 	WebLogs []WebLog `json:"web_logs,omitempty"`
 

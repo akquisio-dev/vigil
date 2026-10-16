@@ -23,6 +23,9 @@ const T = {
     rename: "Rename", deleteHost: "Remove host", confirmDelete: "Remove this host and its canaries?",
     confirmCanary: "Remove this canary? The agent deletes the file.",
     enroll: "Enroll a host", newToken: "Create token", validUntil: "valid until", notifyTest: "Send test notification",
+    selftest: "Self test", runSelftest: "Run self test", noSelftests: "No self test yet.", selftestOff: "This agent does not offer self tests (older version, or selftest off in agent.json).",
+    st_pending: "waiting for the agent", st_running: "running", st_passed: "passed", st_warning: "passed with warnings", st_failed: "failed",
+    st_waiting: "waiting", st_ok: "detected", st_suppressed: "suppressed", st_skipped: "skipped", st_missing: "not detected", notifiedTo: "Sent to",
     notifiers: "Notifications", noNotifiers: "No notifier configured. Alerts only show up here.", delivered: "last delivered",
     neverDelivered: "nothing sent yet", failing: "failing", heartbeat: "Outside heartbeat", configured: "configured", notConfigured: "not configured",
     sent: "sent", loadMore: "Load more", filterType: "Type prefix", allHosts: "All hosts", time: "Time", details: "Details",
@@ -80,6 +83,9 @@ const T = {
     rename: "Umbenennen", deleteHost: "Host entfernen", confirmDelete: "Diesen Host und seine Köder entfernen?",
     confirmCanary: "Köder entfernen? Der Agent löscht die Datei.",
     enroll: "Host einschreiben", newToken: "Token erzeugen", validUntil: "gültig bis", notifyTest: "Testnachricht senden",
+    selftest: "Selbsttest", runSelftest: "Selbsttest starten", noSelftests: "Noch kein Selbsttest.", selftestOff: "Dieser Agent bietet keinen Selbsttest an (ältere Version oder selftest in agent.json aus).",
+    st_pending: "wartet auf den Agenten", st_running: "läuft", st_passed: "bestanden", st_warning: "bestanden mit Hinweisen", st_failed: "fehlgeschlagen",
+    st_waiting: "ausstehend", st_ok: "erkannt", st_suppressed: "unterdrückt", st_skipped: "übersprungen", st_missing: "nicht erkannt", notifiedTo: "Gesendet an",
     notifiers: "Benachrichtigungen", noNotifiers: "Keine Benachrichtigung eingerichtet. Alarme erscheinen nur hier.", delivered: "zuletzt zugestellt",
     neverDelivered: "noch nichts gesendet", failing: "fehlerhaft", heartbeat: "Herzschlag nach außen", configured: "eingerichtet", notConfigured: "nicht eingerichtet",
     sent: "gesendet", loadMore: "Mehr laden", filterType: "Typ-Präfix", allHosts: "Alle Hosts", time: "Zeit", details: "Details",
@@ -624,8 +630,26 @@ async function alertDetail(id) {
 }
 
 async function hostView(id) {
-  const [d, actions] = await Promise.all([api("/api/ui/agents/" + encodeURIComponent(id)), api("/api/ui/actions?agent=" + encodeURIComponent(id))]);
+  const [d, actions, tests] = await Promise.all([api("/api/ui/agents/" + encodeURIComponent(id)), api("/api/ui/actions?agent=" + encodeURIComponent(id)),
+    api("/api/ui/selftests?agent=" + encodeURIComponent(id))]);
   const a = d.agent;
+  selftestOpen = tests.some((x) => x.status === "pending" || x.status === "running");
+  const stErr = h("div", { class: "err" });
+  const stDot = { passed: "ok", warning: "medium", failed: "critical", pending: "stopped", running: "stopped", ok: "ok", suppressed: "medium", skipped: "medium", missing: "critical", waiting: "stopped" };
+  const testRow = (x) => h("div", { class: "row" },
+    h("span", { class: "chip" }, h("span", { class: "dot " + (stDot[x.status] || "") }), t("st_" + x.status)),
+    h("div", null,
+      h("div", { class: "title steps" }, x.steps.map((st) => h("span", { class: "chip", title: st.detail || "" }, h("span", { class: "dot " + (stDot[st.status] || "") }), st.rule + ": " + t("st_" + st.status)))),
+      h("div", { class: "sub" }, [x.by, x.error, x.notified ? t("notifiedTo") + " " + Object.entries(x.notified).map(([k, v]) => k + (v === "ok" ? "" : " (" + v + ")")).join(", ") : ""].filter(Boolean).join("  ·  "))),
+    h("div", { class: "meta" }, timeEl(x.created)));
+  const selftestCard = h("div", null, h("div", { class: "flex" }, h("h2", null, t("selftest")),
+      can("admin") && a.selftest ? h("button", { class: "btn small right", onclick: async () => {
+        stErr.textContent = "";
+        try { await post("/api/ui/agents/" + a.id + "/selftest"); render(); } catch (x) { stErr.textContent = x.message; }
+      } }, t("runSelftest")) : null),
+    stErr,
+    !a.selftest ? h("div", { class: "card empty" }, t("selftestOff"))
+      : tests.length ? h("div", { class: "list" }, tests.slice(0, 5).map(testRow)) : h("div", { class: "card empty" }, t("noSelftests")));
   const action = (name, body) => async () => { await post("/api/ui/agents/" + a.id + "/" + name, body || {}); render(); };
   const portRows = d.ports.map((p) => h("tr", null,
     h("td", { class: "mono" }, p.proto + "/" + p.port),
@@ -687,6 +711,7 @@ async function hostView(id) {
       actStatus(x.status),
       h("div", null, h("div", { class: "title" }, actLabel(x)), h("div", { class: "sub" }, [x.by, x.result].filter(Boolean).join("  ·  "))),
       h("div", { class: "meta" }, timeEl(x.created)))))] : null,
+    selftestCard,
     h("h2", null, t("logins")),
     d.logins.length ? h("div", { class: "tablewrap" }, h("table", null,
       h("thead", null, h("tr", null, [t("time"), t("user"), t("ip"), t("method"), t("key")].map((x) => h("th", null, x)))),
@@ -1036,6 +1061,7 @@ async function settingsView() {
 // ---------- router ----------
 
 let refreshTimer = null;
+let selftestOpen = false;
 async function render() {
   clearTimeout(refreshTimer);
   if (!me) {
@@ -1062,6 +1088,8 @@ async function render() {
   }
   // The overview and alert list refresh themselves; forms are left alone.
   if (!parts.length || (parts[0] === "alerts" && !parts[1])) refreshTimer = setTimeout(render, 30000);
+  // A running self test finishes within minutes; follow it on the host page.
+  if (parts[0] === "hosts" && selftestOpen) refreshTimer = setTimeout(render, 10000);
 }
 
 window.addEventListener("hashchange", render);

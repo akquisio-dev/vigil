@@ -189,6 +189,12 @@ func (s *Server) loop(ctx context.Context) {
 			return
 		case <-dead.C:
 			s.checkDeadman()
+			s.mu.Lock()
+			finished, started := s.checkSelfTests(), s.scheduleSelfTests()
+			if finished || started {
+				s.saveLocked()
+			}
+			s.mu.Unlock()
 		case <-beat.C:
 			s.expireSuppressions()
 			if s.cfg.HeartbeatURL != "" {
@@ -455,7 +461,8 @@ func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 		if rec.Source != "agent" {
 			continue
 		}
-		fresh = append(fresh, s.raise(append(s.evaluate(a, rec), s.evaluateCustom(a, rec)...), a.ID, rec.Seq)...)
+		fs := s.selfTestFindings(a, rec, append(s.evaluate(a, rec), s.evaluateCustom(a, rec)...))
+		fresh = append(fresh, s.raise(fs, a.ID, rec.Seq)...)
 	}
 	s.correlate(fresh)
 	resp := proto.BatchResponse{ConfigVersion: a.ConfigVersion}
@@ -486,7 +493,7 @@ func (s *Server) forgedRequest(a *AgentRec, ip, reason string) {
 
 // agentConfig builds and signs the canary set for one agent. Caller holds s.mu.
 func (s *Server) agentConfig(a *AgentRec) (json.RawMessage, string) {
-	cfg := proto.AgentConfig{AgentID: a.ID, Version: a.ConfigVersion, Canaries: []proto.Canary{}, Actions: s.pendingActions(a.ID)}
+	cfg := proto.AgentConfig{AgentID: a.ID, Version: a.ConfigVersion, Canaries: []proto.Canary{}, Actions: s.pendingActions(a.ID), SelfTest: s.pendingSelfTest(a.ID)}
 	for _, c := range s.state.Canaries {
 		if c.AgentID == a.ID {
 			cfg.Canaries = append(cfg.Canaries, proto.Canary{ID: c.ID, Type: c.Type, Path: c.Path, Params: c.Params})

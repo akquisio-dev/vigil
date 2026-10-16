@@ -41,7 +41,7 @@ type failures struct {
 func (a *Agent) runSSH(ctx context.Context) {
 	journalctl, err := exec.LookPath("journalctl")
 	if err != nil {
-		a.emit(proto.NewEvent("agent.warning", map[string]any{"collector": "ssh", "error": "journalctl not found"}))
+		a.collectorFailed("ssh", "journalctl not found")
 		return
 	}
 	backoff := time.Second

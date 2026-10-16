@@ -54,7 +54,10 @@ instruction the server can give is "place canary of type T at path P" or
 "remove canary C". The agent enforces locally configured roots, generates
 the content, refuses symlinks on the whole path, refuses names and suffixes
 that would be executed or used for login, never overwrites and deletes only
-its own unchanged files. Agents execute nothing the server sends.
+its own unchanged files. Agents execute nothing the server sends. A self test
+request carries only a random id: the agent writes a fixed comment into a cron
+directory (never replacing a file), runs its own copy of `sleep 1` and writes
+one log line, then removes both files.
 
 **Edits to the event log are detectable.** Each record carries the hash of
 the previous one. Changing, inserting or removing a record breaks every
@@ -126,3 +129,14 @@ them runs arbitrary commands. Hosts where this risk is not acceptable leave
 - Dashboard sessions live in memory; restarting the server logs everyone out.
 - The agent needs broad privileges (root with a reduced capability set) to
   read what it watches. The systemd unit drops everything it does not need.
+- A finding that carries the id of a running self test raises no alert. The
+  id is random and only known to the server, the agent and dashboard users,
+  and a test stays open for a few minutes at most. Someone who has it and
+  root on the host could hide one finding during that window; with root on
+  the host they could also stop the agent, which is never quiet.
+- Program starts are read from `/proc` after the kernel reports them. A
+  program that exits within a millisecond or two can be gone before the agent
+  looks, and is then not reported.
+- Notifiers are the only way alerts leave the server on their own. If all of
+  them fail, `notify.failed` is visible only in the dashboard; the outside
+  heartbeat does not cover delivery.

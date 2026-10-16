@@ -277,6 +277,11 @@ var ruleDocs = map[string]ruleDoc{
 		"Disk corruption.",
 		"Assume someone edited the log on the server. Compare with the daily chain anchors sent to your notifiers.",
 	},
+	"selftest.failed": {
+		"A self test left its harmless traces on a host (a comment-only file in the crontab spool or `/etc/cron.d`, a copy of `sleep` started from `/tmp`, an sshd log line written by the agent), and at least one of them was not detected, or the agent did not run the test at all.",
+		"A watch list without the cron directories, the process collector turned off, an agent older than the self test feature.",
+		"The alert names the step that went missing. Check the agent log (`journalctl -u vigil-agent`) for collector warnings, then run the test again from the host page. A sensor that stopped working silently, for example after a kernel update, is exactly what this catches.",
+	},
 	"notify.failed": {
 		"A notifier could not deliver a message after three attempts. The alert goes out through the other notifiers only, and resolves itself with the next successful delivery.",
 		"Short outages of the chat or mail service.",

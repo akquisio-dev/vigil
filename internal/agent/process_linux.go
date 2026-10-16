@@ -11,8 +11,6 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
-
-	"github.com/akquisio-dev/vigil/internal/proto"
 )
 
 // The process events connector (NETLINK_CONNECTOR, CN_IDX_PROC) tells the
@@ -56,7 +54,7 @@ func procConnector() (int, error) {
 func (a *Agent) runProcesses(ctx context.Context) {
 	fd, err := procConnector()
 	if err != nil {
-		a.emit(proto.NewEvent("agent.warning", map[string]any{"collector": "process", "error": err.Error()}))
+		a.collectorFailed("process", err.Error())
 		return
 	}
 	go func() {
@@ -74,7 +72,7 @@ func (a *Agent) runProcesses(ctx context.Context) {
 			if errors.Is(err, syscall.ENOBUFS) || errors.Is(err, syscall.EINTR) {
 				continue // a burst overflowed the socket; keep going
 			}
-			a.emit(proto.NewEvent("agent.warning", map[string]any{"collector": "process", "error": err.Error()}))
+			a.collectorFailed("process", err.Error())
 			return
 		}
 		for off := 0; off+16 <= n; {

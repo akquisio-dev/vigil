@@ -117,11 +117,7 @@ func expand(globs []string) []string {
 // scanFiles compares the watch list with the last known state. On the very
 // first run it only records a baseline.
 func (a *Agent) scanFiles() {
-	globs := a.cfg.WatchFiles
-	if len(globs) == 0 {
-		globs = DefaultWatch
-	}
-	globs = append(append([]string{}, globs...), a.cfg.ExtraWatch...)
+	globs := a.watchGlobs()
 
 	first := !a.state.Initialized
 	current := map[string]FileState{}

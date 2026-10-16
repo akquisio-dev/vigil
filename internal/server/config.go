@@ -67,6 +67,9 @@ type Config struct {
 	// day, leaving a copy outside this machine that later tampering cannot
 	// match.
 	AnchorDaily bool `json:"anchor_daily"`
+	// SelfTestDays runs a self test on every agent this often (default 7)
+	// and sends the result to all notifiers. -1 turns the schedule off.
+	SelfTestDays int `json:"selftest_days,omitempty"`
 }
 
 type NotifierConfig struct {
@@ -125,6 +128,9 @@ func LoadConfig(path string) (*Config, error) {
 	}
 	if c.RecentEvents <= 0 {
 		c.RecentEvents = 20000
+	}
+	if c.SelfTestDays == 0 {
+		c.SelfTestDays = 7
 	}
 	if c.SessionHours <= 0 {
 		c.SessionHours = 12

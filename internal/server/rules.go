@@ -75,6 +75,7 @@ var rules = map[string]ruleDef{
 	"agent.dropped":         {"low", "", "Agent {host} dropped {count} events", "Agent {host} hat {count} Ereignisse verworfen"},
 	"agent.forged":          {"high", "T1557", "Request with invalid signature for agent {agent} from {ip}", "Anfrage mit ungültiger Signatur für Agent {agent} von {ip}"},
 	"chain.broken":          {"critical", "T1565.001", "Event chain broken: {error}", "Ereigniskette gebrochen: {error}"},
+	"selftest.failed":       {"high", "T1562.001", "Self test on {host} failed: {missing}", "Selbsttest auf {host} fehlgeschlagen: {missing}"},
 	"notify.failed":         {"high", "", "Notifier {notifier} ({type}) failed: {error}", "Benachrichtigung {notifier} ({type}) fehlgeschlagen: {error}"},
 }
 
@@ -284,6 +285,7 @@ func (s *Server) evaluate(a *AgentRec, r *Record) []finding {
 			a.Version = v
 		}
 		a.ResponseTypes = strSlice(d["response"])
+		a.SelfTest, _ = d["selftest"].(bool)
 		a.CanaryRoots = a.CanaryRoots[:0]
 		if roots, ok := d["canary_roots"].([]any); ok {
 			for _, root := range roots {
@@ -378,6 +380,8 @@ func (s *Server) evaluate(a *AgentRec, r *Record) []finding {
 		}
 	case "response.result":
 		s.actionResult(a.ID, d)
+	case "selftest.started", "selftest.step", "selftest.done":
+		s.selfTestEvent(a, r.Event.Type, d)
 	case "process.rate_limited":
 		add("process.rate_limited", "", map[string]string{"dropped": str(d, "dropped")})
 	case "log.spoofed":

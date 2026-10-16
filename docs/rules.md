@@ -2,7 +2,7 @@
 
 # Detection rules
 
-vigil ships 54 rules. Every alert carries the rule id, so an alert can be looked up here.
+vigil ships 55 rules. Every alert carries the rule id, so an alert can be looked up here.
 
 Severity decides who is woken up: each notifier has a `min_severity`, `high` by default.
 
@@ -33,6 +33,7 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 | [`process.deleted_exe`](#process-deleted_exe) | high | [T1070.004](https://attack.mitre.org/techniques/T1070/004/) |
 | [`process.download_exec`](#process-download_exec) | high | [T1105](https://attack.mitre.org/techniques/T1105/) |
 | [`process.service_shell`](#process-service_shell) | high | [T1505.003](https://attack.mitre.org/techniques/T1505/003/) |
+| [`selftest.failed`](#selftest-failed) | high | [T1562.001](https://attack.mitre.org/techniques/T1562/001/) |
 | [`ssh.key_added`](#ssh-key_added) | high | [T1098.004](https://attack.mitre.org/techniques/T1098/004/) |
 | [`ssh.password_login`](#ssh-password_login) | high | [T1078](https://attack.mitre.org/techniques/T1078/) |
 | [`ssh.unknown_key`](#ssh-unknown_key) | high | [T1098.004](https://attack.mitre.org/techniques/T1098/004/) |
@@ -578,6 +579,18 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 **Known false positives:** CGI setups and some PHP applications that call `exec()` on purpose. Application runtimes like node, java and python are not watched as parents, because they start shells in normal operation.
 
 **What to do:** Look at the command line and the web server's access log at that time; search the web root for recently changed files.
+
+### `selftest.failed` {#selftest-failed}
+
+**Severity:** high · **ATT&CK:** [T1562.001](https://attack.mitre.org/techniques/T1562/001/)
+
+**Alert:** `Self test on {host} failed: {missing}`
+
+**Fires when:** A self test left its harmless traces on a host (a comment-only file in the crontab spool or `/etc/cron.d`, a copy of `sleep` started from `/tmp`, an sshd log line written by the agent), and at least one of them was not detected, or the agent did not run the test at all.
+
+**Known false positives:** A watch list without the cron directories, the process collector turned off, an agent older than the self test feature.
+
+**What to do:** The alert names the step that went missing. Check the agent log (`journalctl -u vigil-agent`) for collector warnings, then run the test again from the host page. A sensor that stopped working silently, for example after a kernel update, is exactly what this catches.
 
 ### `web.exploit_success` {#web-exploit_success}
 

@@ -34,6 +34,7 @@ the defaults below.
 | `updates` | true | report pending (security) updates and pending reboots, Debian and Ubuntu |
 | `web_logs` | none | access logs to watch, see below |
 | `response` | off | allow response actions from the dashboard, see below |
+| `selftest` | true | accept self tests from the server, see [Operations](operations.md#self-test) |
 | `max_queue` | 5000 | events kept while the server is unreachable |
 
 Everything that limits what the server may ask of an agent lives in this file
@@ -114,6 +115,7 @@ it came from the proxy.
 | `recent_events` | 20000 | events held in memory for the dashboard |
 | `session_hours` | 12 | dashboard session lifetime |
 | `anchor_daily` | false | post the head of the event chain to all notifiers once a day |
+| `selftest_days` | 7 | run a self test on every host this often and send the result to all notifiers; `-1` turns the schedule off |
 | `heartbeat_url` | | fetched every minute while the server is healthy, for an outside dead man's switch |
 | `notifiers` | none | see below |
 | `brand` | none | your own name and logo, see below |

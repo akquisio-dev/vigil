@@ -75,6 +75,14 @@ type AgentConfig struct {
 	// agent runs each id at most once, only before Expires, and only if its
 	// own configuration allows the type.
 	Actions []Action `json:"actions,omitempty"`
+	// SelfTest asks the agent to leave its fixed set of harmless traces,
+	// marked with the id. It carries no paths and no content.
+	SelfTest *SelfTest `json:"selftest,omitempty"`
+}
+
+type SelfTest struct {
+	ID      string    `json:"id"`
+	Expires time.Time `json:"expires"`
 }
 
 type Action struct {

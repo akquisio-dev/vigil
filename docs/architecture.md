@@ -22,8 +22,8 @@ Both binaries use only the Go standard library.
 
 The agent runs as root with a reduced capability set. It never listens on a
 socket and runs only these external programs: `journalctl`, `iptables-save`,
-`apt list --upgradable` and, for response actions that are enabled in
-`agent.json`, `nft`.
+`apt list --upgradable`, for response actions that are enabled in
+`agent.json` `nft`, and for the self test its own copy of `sleep` in `/tmp`.
 
 | Collector | Source | Interval |
 |---|---|---|

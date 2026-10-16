@@ -29,6 +29,13 @@ alert with the length of the gap, whatever the agent says about it; planned
 work is announced with a maintenance window in the dashboard, which is
 recorded in the log.
 
+Detections that never fire look like a quiet host, so vigil tests itself:
+every week (and on demand) each agent leaves harmless marked traces that the
+real sensors must catch, and the result goes to every notifier. Alerts reach
+you through Discord, Slack, Mattermost, ntfy push, Telegram, webhooks or
+mail; a channel that stops delivering raises an alert through the others,
+and an outside heartbeat stops when the server is down or unhealthy.
+
 ## Design
 
 ```

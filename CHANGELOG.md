@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Self test: on request and every `selftest_days` (default 7) each agent leaves three harmless marked traces (crontab spool file, `sleep` from `/tmp`, an sshd-tagged log line) that `file.cron`, `process.tmp_exec` and `log.spoofed` must catch; the result goes to every notifier, failures raise `selftest.failed` with the reason a sensor is down. Agent option `selftest` (default on).
+- Notifications: new types `ntfy`, `slack` (also Mattermost, Rocket.Chat) and `telegram`; Discord `mention` for critical alerts; `vigil-server notify test`; delivery status per notifier in the dashboard; a lost message raises `notify.failed` through the other notifiers; HTTP 429 waits for Retry-After; notifiers are validated at start.
+- `heartbeat_url` is only pinged while the event chain verifies, the log and data directory are writable and the server is not hung.
+- Fix: notifier errors in the log no longer contain the webhook URL with its secret.
+
 ## v0.10.0
 
 - Response actions from an alert: block an address (nftables, table `inet vigil`), end an SSH session, stop a process, remove an SSH key. Off unless `response` in agent.json enables them; fresh TOTP code, ten minute validity, at most once, audited.

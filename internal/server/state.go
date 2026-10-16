@@ -44,6 +44,10 @@ type AgentRec struct {
 
 	// Updates is the host's latest patch state as reported by the agent.
 	Updates map[string]any `json:"updates,omitempty"`
+
+	// SelfTest is true when the agent accepts self tests (from agent.json).
+	SelfTest     bool      `json:"selftest,omitempty"`
+	LastSelfTest time.Time `json:"last_selftest,omitempty"`
 }
 
 type EnrollToken struct {
@@ -108,6 +112,7 @@ type State struct {
 	Suppressions []*Suppression          `json:"suppressions"`
 	Incidents    []*Incident             `json:"incidents"`
 	Actions      []*ActionRec            `json:"actions,omitempty"`
+	SelfTests    []*SelfTest             `json:"selftests,omitempty"`
 	LastAnchor   time.Time               `json:"last_anchor"`
 }
 
