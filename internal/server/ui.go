@@ -40,10 +40,23 @@ func secure(h http.Handler) http.Handler {
 
 type authed func(w http.ResponseWriter, r *http.Request, sess *session)
 
-func (s *Server) auth(h authed) http.HandlerFunc {
+// auth lets any signed-in user through; analyst and admin need that role.
+// The user file is checked on every request, so a removed user or a lowered
+// role takes effect at once.
+func (s *Server) auth(h authed) http.HandlerFunc      { return s.authRole("viewer", h) }
+func (s *Server) analyst(h authed) http.HandlerFunc   { return s.authRole("analyst", h) }
+func (s *Server) adminOnly(h authed) http.HandlerFunc { return s.authRole("admin", h) }
+
+func (s *Server) authRole(role string, h authed) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		sess := s.sessionFor(r)
 		if sess == nil {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		u := s.user(sess.User)
+		if u == nil {
+			s.endSessions(sess.User, nil)
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -51,8 +64,20 @@ func (s *Server) auth(h authed) http.HandlerFunc {
 			http.Error(w, "csrf", http.StatusForbidden)
 			return
 		}
+		if roleRank[roleOf(u)] < roleRank[role] {
+			http.Error(w, "your role ("+roleOf(u)+") does not allow this", http.StatusForbidden)
+			return
+		}
 		h(w, r, sess)
 	}
+}
+
+func (s *Server) meJSON(sess *session) map[string]any {
+	role := "viewer"
+	if u := s.user(sess.User); u != nil {
+		role = roleOf(u)
+	}
+	return map[string]any{"user": sess.User, "csrf": sess.CSRF, "version": Version, "agent_url": s.cfg.AgentURL, "role": role}
 }
 
 func (s *Server) uiHandler() http.Handler {
@@ -95,31 +120,41 @@ func (s *Server) uiHandler() http.Handler {
 		writeJSON(w, map[string]bool{"ok": true})
 	}))
 	mux.HandleFunc("GET /api/ui/me", s.auth(func(w http.ResponseWriter, r *http.Request, sess *session) {
-		writeJSON(w, map[string]any{"user": sess.User, "csrf": sess.CSRF, "version": Version, "agent_url": s.cfg.AgentURL})
+		writeJSON(w, s.meJSON(sess))
 	}))
+	mux.HandleFunc("POST /api/ui/passkey/begin", s.handlePasskeyLoginBegin)
+	mux.HandleFunc("POST /api/ui/passkey/finish", s.handlePasskeyLoginFinish)
+	mux.HandleFunc("GET /api/ui/account", s.auth(s.handleAccount))
+	mux.HandleFunc("POST /api/ui/account/password", s.auth(s.handlePassword))
+	mux.HandleFunc("POST /api/ui/account/passkeys/begin", s.auth(s.handlePasskeyBegin))
+	mux.HandleFunc("POST /api/ui/account/passkeys/finish", s.auth(s.handlePasskeyFinish))
+	mux.HandleFunc("POST /api/ui/account/passkeys/{id}/delete", s.auth(s.handlePasskeyDelete))
+	mux.HandleFunc("GET /api/ui/users", s.adminOnly(s.handleUsers))
+	mux.HandleFunc("POST /api/ui/users", s.adminOnly(s.handleUserCreate))
+	mux.HandleFunc("POST /api/ui/users/{name}/{action}", s.adminOnly(s.handleUserAction))
 	mux.HandleFunc("GET /api/ui/overview", s.auth(s.handleOverview))
 	mux.HandleFunc("GET /api/ui/alerts", s.auth(s.handleAlerts))
-	mux.HandleFunc("POST /api/ui/alerts/{id}/{action}", s.auth(s.handleAlertAction))
+	mux.HandleFunc("POST /api/ui/alerts/{id}/{action}", s.analyst(s.handleAlertAction))
 	mux.HandleFunc("GET /api/ui/events", s.auth(s.handleEventsList))
 	mux.HandleFunc("GET /api/ui/agents/{id}", s.auth(s.handleAgent))
-	mux.HandleFunc("POST /api/ui/agents/{id}/{action}", s.auth(s.handleAgentAction))
-	mux.HandleFunc("POST /api/ui/tokens", s.auth(s.handleToken))
+	mux.HandleFunc("POST /api/ui/agents/{id}/{action}", s.adminOnly(s.handleAgentAction))
+	mux.HandleFunc("POST /api/ui/tokens", s.adminOnly(s.handleToken))
 	mux.HandleFunc("GET /api/ui/canaries", s.auth(s.handleCanaries))
-	mux.HandleFunc("POST /api/ui/canaries", s.auth(s.handleCanaryCreate))
-	mux.HandleFunc("POST /api/ui/canaries/{id}/delete", s.auth(s.handleCanaryDelete))
+	mux.HandleFunc("POST /api/ui/canaries", s.adminOnly(s.handleCanaryCreate))
+	mux.HandleFunc("POST /api/ui/canaries/{id}/delete", s.adminOnly(s.handleCanaryDelete))
 	mux.HandleFunc("GET /api/ui/rules", s.auth(func(w http.ResponseWriter, r *http.Request, sess *session) {
 		custom, errs := CustomInfo()
 		writeJSON(w, map[string]any{"builtin": Catalog(), "custom": custom, "errors": errs, "suppressible": suppressibleList()})
 	}))
 	mux.HandleFunc("GET /api/ui/incidents", s.auth(s.handleIncidents))
 	mux.HandleFunc("GET /api/ui/incidents/{id}", s.auth(s.handleIncident))
-	mux.HandleFunc("POST /api/ui/incidents/{id}/{action}", s.auth(s.handleIncidentAction))
+	mux.HandleFunc("POST /api/ui/incidents/{id}/{action}", s.analyst(s.handleIncidentAction))
 	mux.HandleFunc("GET /api/ui/suppressions", s.auth(s.handleSuppressions))
-	mux.HandleFunc("POST /api/ui/suppressions", s.auth(s.handleSuppressionCreate))
-	mux.HandleFunc("POST /api/ui/suppressions/{id}/{action}", s.auth(s.handleSuppressionAction))
+	mux.HandleFunc("POST /api/ui/suppressions", s.analyst(s.handleSuppressionCreate))
+	mux.HandleFunc("POST /api/ui/suppressions/{id}/{action}", s.analyst(s.handleSuppressionAction))
 	mux.HandleFunc("GET /api/ui/chain", s.auth(s.handleChain))
-	mux.HandleFunc("POST /api/ui/chain/verify", s.auth(s.handleChainVerify))
-	mux.HandleFunc("POST /api/ui/notify/test", s.auth(func(w http.ResponseWriter, r *http.Request, sess *session) {
+	mux.HandleFunc("POST /api/ui/chain/verify", s.analyst(s.handleChainVerify))
+	mux.HandleFunc("POST /api/ui/notify/test", s.adminOnly(func(w http.ResponseWriter, r *http.Request, sess *session) {
 		s.audit(sess.User, "admin.notify_test", nil)
 		s.notify(message{Severity: "info", Text: "vigil test notification from " + sess.User}, true)
 		writeJSON(w, map[string]int{"notifiers": len(s.cfg.Notifiers)})
@@ -177,7 +212,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	s.audit(sess.User, "admin.login", map[string]any{"ip": ip})
 	s.setCookie(w, tok, s.cfg.SessionHours*3600)
-	writeJSON(w, map[string]any{"user": sess.User, "csrf": sess.CSRF, "version": Version, "agent_url": s.cfg.AgentURL})
+	writeJSON(w, s.meJSON(sess))
 }
 
 type agentView struct {

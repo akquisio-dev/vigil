@@ -68,8 +68,10 @@ ufw allow in on wg0 from 10.0.0.0/24 to any port 8471 proto tcp
 vigil-server user add -config /etc/vigil/server.json alice
 ```
 
-The command asks for a password (at least 12 characters) and prints a TOTP
-secret. Add it to an authenticator app; every login needs the code. Run the
+The command asks for a password (at least 12 characters) and prints the TOTP
+secret as a QR code to scan with an authenticator app; every login needs the
+code. `-role viewer|analyst|admin` sets the role (default admin). After the
+first login, add a passkey under **Settings** and further users from there. Run the
 command in your own terminal so the password never lands in a log or a chat.
 
 ## Put the dashboard behind TLS

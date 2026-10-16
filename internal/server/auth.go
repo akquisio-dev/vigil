@@ -199,11 +199,7 @@ func (s *Server) login(name, password, code, ip string) (string, *session, error
 		return "", nil, errors.New("invalid credentials")
 	}
 	s.limit.reset("user:" + name)
-	tok := newID(32)
-	sess := &session{User: name, CSRF: newID(16), Expires: time.Now().Add(time.Duration(s.cfg.SessionHours) * time.Hour), IP: ip}
-	s.smu.Lock()
-	s.sessions[sha(tok)] = sess
-	s.smu.Unlock()
+	tok, sess := s.newSession(name, ip)
 	return tok, sess, nil
 }
 

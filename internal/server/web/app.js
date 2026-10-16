@@ -44,6 +44,13 @@ const T = {
     mttc: "Median time to close", alertsN: "alerts", unowned: "nobody", setStatus: "Status",
     rules: "Rules", customRules: "Custom rules", builtinRules: "Built-in rules", ruleErrors: "Not loaded", noCustom: "No custom rules (rules_dir in server.json)",
     rule: "Rule", file: "File", title: "Title", builtin: "built-in", customShort: "custom",
+    passkeyLogin: "Log in with a passkey", or: "or", passkeyCancelled: "Passkey cancelled", account: "Account", role: "Role",
+    passkeys: "Passkeys", noPasskeys: "No passkey yet", addPasskey: "Add passkey", passkeyName: "Name (e.g. laptop)",
+    totpCode: "Current code from your app", changePassword: "Change password", currentPassword: "Current password",
+    newPassword: "New password (at least 12 characters)", repeatPassword: "Repeat new password", passwordsDiffer: "The passwords differ",
+    saved: "saved", users: "Users", addUser: "Add user", name: "Name", created2: "Created", lastLogin: "Last login",
+    codePrompt: "Current code from your authenticator app", newUserInfo: "Hand these over once, they are not shown again.",
+    viewer: "viewer", analyst: "analyst", admin: "admin", noPasskeySupport: "This browser does not support passkeys",
   },
   de: {
     overview: "Lage", alerts: "Alarme", events: "Ereignisse", canaries: "Köder", settings: "Einstellungen",
@@ -85,6 +92,13 @@ const T = {
     mttc: "Median bis geschlossen", alertsN: "Alarme", unowned: "niemand", setStatus: "Status",
     rules: "Regeln", customRules: "Eigene Regeln", builtinRules: "Eingebaute Regeln", ruleErrors: "Nicht geladen", noCustom: "Keine eigenen Regeln (rules_dir in server.json)",
     rule: "Regel", file: "Datei", title: "Titel", builtin: "eingebaut", customShort: "eigene",
+    passkeyLogin: "Mit Passkey anmelden", or: "oder", passkeyCancelled: "Passkey abgebrochen", account: "Konto", role: "Rolle",
+    passkeys: "Passkeys", noPasskeys: "Noch kein Passkey", addPasskey: "Passkey hinzufügen", passkeyName: "Name (z. B. Laptop)",
+    totpCode: "Aktueller Code aus der App", changePassword: "Passwort ändern", currentPassword: "Aktuelles Passwort",
+    newPassword: "Neues Passwort (mindestens 12 Zeichen)", repeatPassword: "Neues Passwort wiederholen", passwordsDiffer: "Die Passwörter sind verschieden",
+    saved: "gespeichert", users: "Benutzer", addUser: "Benutzer anlegen", name: "Name", created2: "Angelegt", lastLogin: "Letzte Anmeldung",
+    codePrompt: "Aktueller Code aus deiner Authenticator-App", newUserInfo: "Einmal weitergeben, das wird nicht noch einmal angezeigt.",
+    viewer: "Lesen", analyst: "Analyst", admin: "Admin", noPasskeySupport: "Dieser Browser kann keine Passkeys",
   },
 };
 
@@ -129,6 +143,26 @@ async function api(path, opts = {}) {
 }
 
 const post = (path, body = {}) => api(path, { method: "POST", body });
+const RANK = { viewer: 1, analyst: 2, admin: 3 };
+const can = (role) => me && (RANK[me.role] || 3) >= RANK[role];
+const fromB64u = (s) => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0));
+const toB64u = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+
+// QR code from the server's module rows, always dark on light so phones scan it
+function qrSVG(rows) {
+  const n = rows.length, q = 4;
+  const svg = document.createElementNS(SVG, "svg");
+  svg.setAttribute("viewBox", `0 0 ${n + 2 * q} ${n + 2 * q}`);
+  svg.setAttribute("class", "qr");
+  const bg = document.createElementNS(SVG, "rect");
+  bg.setAttribute("width", n + 2 * q); bg.setAttribute("height", n + 2 * q); bg.setAttribute("fill", "#fff");
+  let d = "";
+  rows.forEach((row, y) => { for (let x = 0; x < row.length; x++) if (row[x] === "1") d += `M${x + q} ${y + q}h1v1h-1z`; });
+  const p = document.createElementNS(SVG, "path");
+  p.setAttribute("d", d); p.setAttribute("fill", "#000");
+  svg.append(bg, p);
+  return svg;
+}
 
 function ago(ts) {
   if (!ts || ts.startsWith("0001")) return "·";
@@ -156,7 +190,7 @@ function summary(data) {
 }
 
 // Tabler Icons (MIT, https://tabler.io/icons), outline paths.
-const ICONS = {"book": ["M3 19a9 9 0 0 1 9 0a9 9 0 0 1 9 0", "M3 6a9 9 0 0 1 9 0a9 9 0 0 1 9 0", "M3 6l0 13", "M12 6l0 13", "M21 6l0 13"], "stack-2": ["M12 4l-8 4l8 4l8 -4l-8 -4", "M4 12l8 4l8 -4", "M4 16l8 4l8 -4"], "bell-off": ["M9.346 5.353c.21 -.129 .428 -.246 .654 -.353a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3m-1 3h-13a4 4 0 0 0 2 -3v-3a6.996 6.996 0 0 1 1.273 -3.707", "M9 17v1a3 3 0 0 0 6 0v-1", "M3 3l18 18"], "clock": ["M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0", "M12 7v5l3 3"], "user-x": ["M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0", "M6 21v-2a4 4 0 0 1 4 -4h3.5", "M22 22l-5 -5", "M17 22l5 -5"], "plus": ["M12 5l0 14", "M5 12l14 0"], "alert-triangle": ["M12 9v4", "M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z", "M12 16h.01"], "fish-hook": ["M16 9v6a5 5 0 0 1 -10 0v-4l3 3", "M16 7m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0", "M16 5v-2"], "layout-dashboard": ["M5 4h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1", "M5 16h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1", "M15 12h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1", "M15 4h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1"], "list-details": ["M13 5h8", "M13 9h5", "M13 15h8", "M13 19h5", "M3 4m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z", "M3 14m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z"], "logout": ["M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2", "M9 12h12l-3 -3", "M18 15l3 -3"], "server": ["M3 4m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z", "M3 12m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z", "M7 8l0 .01", "M7 16l0 .01"], "settings": ["M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z", "M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"], "shield-check": ["M11.46 20.846a12 12 0 0 1 -7.96 -14.846a12 12 0 0 0 8.5 -3a12 12 0 0 0 8.5 3a12 12 0 0 1 -.09 7.06", "M15 19l2 2l4 -4"]};
+const ICONS = {"key": ["M16.555 3.843l3.602 3.602a2.877 2.877 0 0 1 0 4.069l-2.643 2.643a2.877 2.877 0 0 1 -4.069 0l-.301 -.301l-6.558 6.558a2 2 0 0 1 -1.239 .578l-.175 .008h-1.172a1 1 0 0 1 -.993 -.883l-.007 -.117v-1.172a2 2 0 0 1 .467 -1.284l.119 -.13l.414 -.414h2v-2h2v-2l2.144 -2.144l-.301 -.301a2.877 2.877 0 0 1 0 -4.069l2.643 -2.643a2.877 2.877 0 0 1 4.069 0z", "M15 9h.01"], "book": ["M3 19a9 9 0 0 1 9 0a9 9 0 0 1 9 0", "M3 6a9 9 0 0 1 9 0a9 9 0 0 1 9 0", "M3 6l0 13", "M12 6l0 13", "M21 6l0 13"], "stack-2": ["M12 4l-8 4l8 4l8 -4l-8 -4", "M4 12l8 4l8 -4", "M4 16l8 4l8 -4"], "bell-off": ["M9.346 5.353c.21 -.129 .428 -.246 .654 -.353a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3m-1 3h-13a4 4 0 0 0 2 -3v-3a6.996 6.996 0 0 1 1.273 -3.707", "M9 17v1a3 3 0 0 0 6 0v-1", "M3 3l18 18"], "clock": ["M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0", "M12 7v5l3 3"], "user-x": ["M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0", "M6 21v-2a4 4 0 0 1 4 -4h3.5", "M22 22l-5 -5", "M17 22l5 -5"], "plus": ["M12 5l0 14", "M5 12l14 0"], "alert-triangle": ["M12 9v4", "M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z", "M12 16h.01"], "fish-hook": ["M16 9v6a5 5 0 0 1 -10 0v-4l3 3", "M16 7m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0", "M16 5v-2"], "layout-dashboard": ["M5 4h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1", "M5 16h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1", "M15 12h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1", "M15 4h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1"], "list-details": ["M13 5h8", "M13 9h5", "M13 15h8", "M13 19h5", "M3 4m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z", "M3 14m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z"], "logout": ["M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2", "M9 12h12l-3 -3", "M18 15l3 -3"], "server": ["M3 4m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z", "M3 12m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z", "M7 8l0 .01", "M7 16l0 .01"], "settings": ["M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z", "M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"], "shield-check": ["M11.46 20.846a12 12 0 0 1 -7.96 -14.846a12 12 0 0 0 8.5 -3a12 12 0 0 0 8.5 3a12 12 0 0 1 -.09 7.06", "M15 19l2 2l4 -4"]};
 
 const SVG = "http://www.w3.org/2000/svg";
 function icon(name, viewBox = "0 0 24 24", paths = ICONS[name]) {
@@ -263,9 +297,20 @@ function loginView() {
     h("label", null, t("code"), h("input", { name: "code", inputmode: "numeric", autocomplete: "one-time-code", pattern: "[0-9]{6}", maxlength: 6, required: true, placeholder: "000000" })),
     err,
     h("button", { class: "btn", type: "submit" }, t("login")));
+  const passkey = window.PublicKeyCredential ? [h("div", { class: "divider" }, h("span", null, t("or"))),
+    h("button", { class: "btn ghost wide", type: "button", onclick: async () => {
+      err.textContent = "";
+      try {
+        const b = await post("/api/ui/passkey/begin");
+        const cred = await navigator.credentials.get({ publicKey: { challenge: fromB64u(b.challenge), rpId: b.rp_id, userVerification: "required", timeout: 60000 } });
+        me = await post("/api/ui/passkey/finish", { token: b.token, id: cred.id, clientData: toB64u(cred.response.clientDataJSON),
+          authenticatorData: toB64u(cred.response.authenticatorData), signature: toB64u(cred.response.signature) });
+        render();
+      } catch (x) { err.textContent = x.name === "NotAllowedError" ? t("passkeyCancelled") : x.message; }
+    } }, icon("key"), t("passkeyLogin"))] : null;
   document.title = brandName;
   mount(h("div", { class: "login-wrap" }, h("div", { class: "login" },
-    logo(), h("div", { class: "login-title" }, t("login")), h("div", { class: "login-sub" }, t("loginSub")), form)));
+    logo(), h("div", { class: "login-title" }, t("login")), h("div", { class: "login-sub" }, t("loginSub")), form, passkey)));
 }
 
 // ---------- charts ----------
@@ -511,7 +556,7 @@ async function alertDetail(id) {
         h("dt", null, t("created")), h("dd", null, abs(a.created)),
         h("dt", null, t("updated")), h("dd", null, abs(a.updated)),
         params.map(([k, v]) => [h("dt", null, k), h("dd", { class: "mono" }, v || "·")])),
-      h("div", { class: "actions" },
+      !can("analyst") ? null : h("div", { class: "actions" },
         a.status === "open" ? h("button", { class: "btn", onclick: act("ack") }, t("ack")) : null,
         a.status !== "resolved" ? h("button", { class: "btn ghost", onclick: act("resolve") }, t("resolve")) : null,
         a.status !== "open" ? h("button", { class: "btn ghost", onclick: act("reopen") }, t("reopen")) : null,
@@ -560,7 +605,7 @@ async function hostView(id) {
           h("dt", null, t("enrolled")), h("dd", null, abs(a.enrolled)),
           h("dt", null, t("canaryRoots")), h("dd", { class: "mono" }, (a.canary_roots || []).join("  ") || t("none")),
           h("dt", null, t("configSync")), h("dd", null, t(a.config_sync ? "synced" : "waiting")))),
-      h("div", { class: "card" },
+      !can("admin") ? null : h("div", { class: "card" },
         h("form", { class: "inline", onsubmit: async (e) => { e.preventDefault(); await post("/api/ui/agents/" + a.id + "/rename", { name: renameInput.value }); render(); } },
           h("label", null, t("rename"), renameInput), h("button", { class: "btn ghost", type: "submit" }, t("rename"))),
         a.maintenance_until
@@ -663,8 +708,8 @@ async function canariesView() {
       } }, t("remove")))));
 
   mount(shell("canaries", h("h1", null, t("canaries")), h("div", { class: "crumbs" }, canaries.length + " " + t("placed")),
-    h("div", { class: "page-actions" }, h("button", { class: "btn", onclick: () => pathIn.focus() }, icon("plus"), t("place"))),
-    h("div", { class: "card" }, form),
+    can("admin") ? h("div", { class: "page-actions" }, h("button", { class: "btn", onclick: () => pathIn.focus() }, icon("plus"), t("place"))) : null,
+    can("admin") ? h("div", { class: "card" }, form) : null,
     h("h2", null, t("canaries")),
     h("div", { class: "list" }, rows.length ? rows : h("div", { class: "empty" }, t("noCanaries")))));
 }
@@ -709,7 +754,7 @@ async function incidentDetail(id) {
   mount(shell("incidents",
     h("div", { class: "crumbs" }, h("a", { href: "#/incidents" }, t("incidents")), " / " + c.id),
     h("h1", null, c.title || c.id),
-    h("div", { class: "page-actions" }, c.owner !== me.user ? h("button", { class: "btn", onclick: act("assign") }, t("assignMe")) : null),
+    h("div", { class: "page-actions" }, c.owner !== me.user && can("analyst") ? h("button", { class: "btn", onclick: act("assign") }, t("assignMe")) : null),
     h("div", { class: "grid two" },
       h("div", { class: "card" }, h("dl", { class: "kv" },
         h("dt", null, t("status")), h("dd", null, incChip(c.status)),
@@ -719,14 +764,14 @@ async function incidentDetail(id) {
         h("dt", null, t("created")), h("dd", null, abs(c.created)),
         h("dt", null, t("updated")), h("dd", null, abs(c.last)),
         h("dt", null, t("alerts")), h("dd", null, c.count + (c.open_alerts ? " (" + c.open_alerts + " " + t("open").toLowerCase() + ")" : ""))),
-        h("div", { class: "actions" }, h("span", { class: "muted" }, t("setStatus")),
+        !can("analyst") ? null : h("div", { class: "actions" }, h("span", { class: "muted" }, t("setStatus")),
           h("div", { class: "tabs" }, ["open", "investigating", "contained", "closed"].map((st) =>
             h("button", { class: st === c.status ? "on" : null, onclick: act("status", { status: st }) }, t(st === "open" ? "openInc" : st)))))),
       h("div", { class: "card" }, h("h3", null, t("notes")),
         h("div", { class: "notes" }, (c.notes || []).map((n) => h("div", { class: "note" },
           h("div", { class: "note-head" }, h("span", { class: "strong" }, n.by), " ", h("span", { class: "muted" }, abs(n.at))),
           h("div", { class: "note-text" }, n.text)))),
-        h("form", { class: "stack mt", onsubmit: async (e) => { e.preventDefault(); await act("note", { note: note.value })(); } },
+        !can("analyst") ? null : h("form", { class: "stack mt", onsubmit: async (e) => { e.preventDefault(); await act("note", { note: note.value })(); } },
           note, h("div", null, h("button", { class: "btn ghost", type: "submit" }, t("addNote")))))),
     h("h2", null, t("timeline")), h("div", { class: "card" }, tl)));
 }
@@ -783,21 +828,126 @@ async function settingsView() {
     h("dt", null, t("verify")), h("dd", null, abs(c.verified_at))));
   drawChain(chain);
 
+  const acc = await api("/api/ui/account");
+  const users = can("admin") ? await api("/api/ui/users") : null;
+  const askCode = () => { const c = prompt(t("codePrompt")); return c && c.trim(); };
+  const fail = (box) => (x) => { box.textContent = x.message; };
+
+  // passkeys
+  const pkErr = h("div", { class: "err" });
+  const pkName = h("input", { maxlength: 60, placeholder: t("passkeyName") });
+  const pkCode = h("input", { inputmode: "numeric", maxlength: 6, pattern: "[0-9]{6}", required: true, placeholder: "000000", autocomplete: "one-time-code" });
+  const addPasskey = async (e) => {
+    e.preventDefault(); pkErr.textContent = "";
+    try {
+      const b = await post("/api/ui/account/passkeys/begin", { code: pkCode.value });
+      const cred = await navigator.credentials.create({ publicKey: {
+        challenge: fromB64u(b.challenge), rp: { id: b.rp_id, name: b.rp_name },
+        user: { id: fromB64u(b.user_id), name: b.user_name, displayName: b.user_name },
+        pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -8 }],
+        authenticatorSelection: { residentKey: "required", userVerification: "required" }, attestation: "none",
+        excludeCredentials: b.exclude.map((id) => ({ type: "public-key", id: fromB64u(id) })), timeout: 60000 } });
+      await post("/api/ui/account/passkeys/finish", { token: b.token, name: pkName.value, clientData: toB64u(cred.response.clientDataJSON),
+        attestationObject: toB64u(cred.response.attestationObject) });
+      render();
+    } catch (x) { pkErr.textContent = x.name === "NotAllowedError" ? t("passkeyCancelled") : x.message; }
+  };
+  const pkList = acc.passkeys.length ? h("div", { class: "feed" }, acc.passkeys.map((k) => h("div", { class: "feed-row" },
+    h("div", null, icon("key"), " ", h("span", { class: "strong" }, k.name)),
+    h("div", { class: "feed-sub" }, t("created2") + " " + abs(k.created).split(",")[0] + (k.last_used && !k.last_used.startsWith("0001") ? "  ·  " + t("lastLogin") + " " + abs(k.last_used) : "")),
+    h("div", { class: "feed-time" }, h("button", { class: "btn small ghost", onclick: async () => {
+      const code = askCode(); if (!code) return;
+      try { await post("/api/ui/account/passkeys/" + encodeURIComponent(k.id) + "/delete", { code }); render(); } catch (x) { pkErr.textContent = x.message; }
+    } }, t("remove")))))) : h("div", { class: "muted" }, t("noPasskeys"));
+
+  // password
+  const pwErr = h("div", { class: "err" });
+  const pwForm = h("form", { class: "stack", onsubmit: async (e) => {
+    e.preventDefault(); pwErr.textContent = "";
+    const f = new FormData(pwForm);
+    if (f.get("new") !== f.get("new2")) { pwErr.textContent = t("passwordsDiffer"); return; }
+    try { await post("/api/ui/account/password", { current: f.get("current"), new: f.get("new"), code: f.get("code") }); pwForm.reset(); pwErr.textContent = t("saved"); }
+    catch (x) { pwErr.textContent = x.message; }
+  } },
+    h("label", null, t("currentPassword"), h("input", { name: "current", type: "password", autocomplete: "current-password", required: true })),
+    h("div", { class: "grid two" },
+      h("label", null, t("newPassword"), h("input", { name: "new", type: "password", autocomplete: "new-password", minlength: 12, required: true })),
+      h("label", null, t("repeatPassword"), h("input", { name: "new2", type: "password", autocomplete: "new-password", minlength: 12, required: true }))),
+    h("label", null, t("totpCode"), h("input", { name: "code", inputmode: "numeric", maxlength: 6, pattern: "[0-9]{6}", required: true, placeholder: "000000", autocomplete: "one-time-code" })),
+    pwErr, h("div", null, h("button", { class: "btn ghost", type: "submit" }, t("changePassword"))));
+
+  // users (admins)
+  let usersCard = null;
+  if (users) {
+    const uErr = h("div", { class: "err" });
+    const result = h("div");
+    const roleSel = (value, onchange) => h("select", { onchange }, ["viewer", "analyst", "admin"].map((r) => h("option", { value: r, selected: r === value }, t(r))));
+    const newRole = roleSel("analyst");
+    const uForm = h("form", { class: "inline", onsubmit: async (e) => {
+      e.preventDefault(); uErr.textContent = ""; result.replaceChildren();
+      const f = new FormData(uForm);
+      try {
+        const r = await post("/api/ui/users", { name: f.get("name"), role: newRole.value, code: f.get("code") });
+        uForm.reset();
+        result.replaceChildren(h("div", { class: "newuser mt" }, qrSVG(r.qr), h("dl", { class: "kv" },
+          h("dt", null, t("user")), h("dd", { class: "mono" }, r.name),
+          h("dt", null, t("password")), h("dd", { class: "mono secret-inline" }, r.password),
+          h("dt", null, "TOTP"), h("dd", { class: "mono secret-inline" }, r.totp_secret),
+          h("dt", null, ""), h("dd", { class: "muted" }, t("newUserInfo")))));
+        const list = await api("/api/ui/users"); tbody.replaceChildren(...list.map(userRow));
+      } catch (x) { uErr.textContent = x.message; }
+    } },
+      h("label", null, t("name"), h("input", { name: "name", required: true, maxlength: 32, pattern: "[a-z0-9][a-z0-9._-]*", autocomplete: "off" })),
+      h("label", null, t("role"), newRole),
+      h("label", null, t("totpCode"), h("input", { name: "code", inputmode: "numeric", maxlength: 6, pattern: "[0-9]{6}", required: true, placeholder: "000000", autocomplete: "one-time-code" })),
+      h("button", { class: "btn", type: "submit" }, icon("plus"), t("addUser")));
+    const userRow = (u) => h("tr", null,
+      h("td", { class: "strong" }, u.name),
+      h("td", null, u.name === me.user ? t(u.role) : roleSel(u.role, async (e) => {
+        const code = askCode(); if (!code) { render(); return; }
+        try { await post("/api/ui/users/" + encodeURIComponent(u.name) + "/role", { role: e.target.value, code }); } catch (x) { uErr.textContent = x.message; }
+        render();
+      })),
+      h("td", { class: "nowrap" }, u.last_login && !u.last_login.startsWith("0001") ? timeEl(u.last_login) : "·"),
+      h("td", null, u.passkeys),
+      h("td", null, u.name === me.user ? null : h("button", { class: "btn small ghost", onclick: async () => {
+        if (!confirm(u.name + ": " + t("remove") + "?")) return;
+        const code = askCode(); if (!code) return;
+        try { await post("/api/ui/users/" + encodeURIComponent(u.name) + "/delete", { code }); render(); } catch (x) { uErr.textContent = x.message; }
+      } }, t("remove"))));
+    const tbody = h("tbody", null, users.map(userRow));
+    usersCard = h("div", { class: "card mt" }, h("h3", null, t("users")),
+      h("div", { class: "tablewrap flat" }, h("table", null, h("thead", null, h("tr", null, [t("name"), t("role"), t("lastLogin"), t("passkeys"), ""].map((x) => h("th", null, x)))), tbody)),
+      h("div", { class: "mt" }, uForm), uErr, result);
+  }
+
+  const accountCards = h("div", { class: "grid two mt" },
+    h("div", { class: "card" }, h("h3", null, t("account")),
+      h("dl", { class: "kv" }, h("dt", null, t("user")), h("dd", null, acc.name), h("dt", null, t("role")), h("dd", null, t(acc.role)),
+        h("dt", null, t("lastLogin")), h("dd", null, abs(acc.last_login))),
+      h("h3", { class: "mt" }, t("passkeys")), pkList,
+      window.PublicKeyCredential ? h("form", { class: "inline mt", onsubmit: addPasskey },
+        h("label", null, t("passkeyName"), pkName), h("label", null, t("totpCode"), pkCode),
+        h("button", { class: "btn", type: "submit" }, icon("key"), t("addPasskey"))) : h("div", { class: "muted mt" }, t("noPasskeySupport")),
+      pkErr),
+    h("div", { class: "card" }, h("h3", null, t("changePassword")), pwForm));
+
   const langTabs = h("div", { class: "tabs" }, [["de", "Deutsch"], ["en", "English"]].map(([k, name]) =>
     h("button", { class: k === lang ? "on" : null, onclick: () => setLang(k) }, name)));
   mount(shell("settings", h("h1", null, t("settings")), h("div", { class: "crumbs" }, "vigil " + me.version),
-    h("div", { class: "grid two" },
-      h("div", { class: "card" }, h("h3", null, t("enroll")),
+    accountCards, usersCard,
+    h("div", { class: "grid two mt" },
+      can("admin") ? h("div", { class: "card" }, h("h3", null, t("enroll")),
         h("button", { class: "btn", onclick: async () => {
           const r = await post("/api/ui/tokens");
           tokenBox.replaceChildren(
             h("div", { class: "secret mt" }, "vigil-agent enroll -server " + (me.agent_url || location.origin) + " -token " + r.token),
             h("div", { class: "muted mt" }, t("validUntil") + " " + abs(r.expires)));
-        } }, t("newToken")), tokenBox),
+        } }, t("newToken")), tokenBox) : null,
       h("div", { class: "card" }, h("h3", null, t("chain")), chainBox,
         h("div", { class: "actions" },
-          h("button", { class: "btn ghost", onclick: async () => drawChain(await post("/api/ui/chain/verify")) }, t("verify"))))),
-    h("div", { class: "card mt" }, h("div", { class: "flex" },
+          can("analyst") ? h("button", { class: "btn ghost", onclick: async () => drawChain(await post("/api/ui/chain/verify")) }, t("verify")) : null))),
+    !can("admin") ? null : h("div", { class: "card mt" }, h("div", { class: "flex" },
       h("button", { class: "btn ghost", onclick: async () => { const r = await post("/api/ui/notify/test"); notifyOut.textContent = t("sent") + " (" + r.notifiers + ")"; } }, t("notifyTest")),
       notifyOut)),
     h("div", { class: "card mt" }, h("h3", null, t("theme")), h("div", { class: "tabs" }, ["light", "dark", "system"].map((k) =>

@@ -442,3 +442,15 @@ a.tl-item:hover .feed-title { text-decoration: underline; }
 .small-text { font-size: 11px; margin-top: 2px; }
 .pill svg.ic { width: 11px; height: 11px; vertical-align: -1px; }
 table.rules td:nth-child(4) { min-width: 300px; }
+
+/* ---------- account ---------- */
+
+.divider { display: flex; align-items: center; gap: 10px; color: var(--text-tertiary); font-size: 11px; margin: 16px 0; }
+.divider::before, .divider::after { content: ""; flex: 1; border-top: 1px solid var(--border-light); }
+.btn.wide { width: 100%; padding: 9px 14px; }
+.login .btn.ghost.wide { margin-top: 0; }
+.feed-row svg.ic { width: 14px; height: 14px; vertical-align: -2px; }
+.newuser { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; background: var(--bg); border-radius: var(--radius-sm); padding: 14px; }
+svg.qr { width: 180px; height: 180px; flex-shrink: 0; border-radius: 4px; }
+.secret-inline { user-select: all; }
+.tablewrap.flat { box-shadow: none; }

@@ -14,6 +14,25 @@ of a new one.
 
 Every alert names its rule. The [rule catalogue](rules.md) explains each one.
 
+## Accounts and roles
+
+| Role | May |
+|---|---|
+| viewer | read everything |
+| analyst | also acknowledge and resolve alerts, work on incidents, manage suppressions, verify the chain |
+| admin | also place canaries, manage hosts, create enrollment tokens, send test notifications, manage users |
+
+Accounts created before roles existed are admins. Under **Settings** every
+user can add passkeys and change the password; admins add users (the page
+shows the new password and a QR code for the authenticator app once), change
+roles and remove users. These changes need a fresh code from the
+authenticator app and are written to the event chain. The last admin can
+neither be removed nor lowered.
+
+Passkeys need `public_url` to be set to the address in the browser, because
+it is the relying party they are bound to. Changing the domain later makes
+existing passkeys unusable; password and TOTP keep working.
+
 ## Incidents
 
 Alerts that belong together are grouped into incidents, so an intrusion is

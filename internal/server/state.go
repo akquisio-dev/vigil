@@ -87,6 +87,10 @@ type User struct {
 	Created    time.Time `json:"created"`
 	LastLogin  time.Time `json:"last_login,omitempty"`
 	LastTOTP   int64     `json:"last_totp,omitempty"`
+	// Role is viewer, analyst or admin; empty (older accounts) means admin.
+	Role            string     `json:"role,omitempty"`
+	Passkeys        []*Passkey `json:"passkeys,omitempty"`
+	PasswordChanged time.Time  `json:"password_changed,omitempty"`
 }
 
 type State struct {

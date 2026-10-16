@@ -92,7 +92,7 @@ install -d -m 0750 -o root -g vigil /etc/vigil
 install -m 0640 -o root -g vigil deploy/examples/server.json /etc/vigil/server.json   # edit it
 cp deploy/systemd/vigil-server.service /etc/systemd/system/
 systemctl enable --now vigil-server
-vigil-server user add -config /etc/vigil/server.json alice  # prints the TOTP secret
+vigil-server user add -config /etc/vigil/server.json alice  # shows the TOTP QR code
 ```
 
 `user add` works while the server is running; the server rereads the user

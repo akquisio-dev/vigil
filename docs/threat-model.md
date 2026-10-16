@@ -62,12 +62,18 @@ following hash. With `anchor_daily`, the chain head is posted outside the
 server once a day, so even a full rewrite of the chain by a root attacker on
 the server conflicts with the anchors already sent.
 
-**The dashboard resists credential attacks.** Password plus TOTP for every
-user, PBKDF2-SHA256 with 600,000 iterations, constant-time comparison,
+**The dashboard resists credential attacks.** Passkeys (WebAuthn, with user
+verification required, origin, relying party and signature counter checked)
+or password plus TOTP for every user, PBKDF2-SHA256 with 600,000 iterations,
+constant-time comparison,
 equal timing for unknown users, a used TOTP step is never accepted twice,
 login rate limiting per address and per user, HttpOnly + SameSite=Strict
 cookies, CSRF token on every change, strict CSP, no inline script, and
-agent-supplied strings are only rendered as text.
+agent-supplied strings are only rendered as text. Roles limit what an
+account can change (viewer, analyst, admin). Adding a passkey, changing the
+password and managing users need a fresh TOTP code. Every request checks the
+user file, so removing a user or lowering a role ends its access at once, and
+a password change ends the user's other sessions.
 
 ## What vigil does not promise
 

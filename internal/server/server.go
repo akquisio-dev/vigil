@@ -39,6 +39,9 @@ type Server struct {
 	forged   *limiter
 
 	custom customState // threshold counters of custom rules, guarded by mu
+
+	users      userCache
+	challenges challenges
 }
 
 func New(cfg *Config) (*Server, error) {

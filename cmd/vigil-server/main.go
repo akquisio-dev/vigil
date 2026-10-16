@@ -21,7 +21,7 @@ import (
 
 const usage = `usage:
   vigil-server run         [-config /etc/vigil/server.json]
-  vigil-server user add    [-config ...] NAME
+  vigil-server user add    [-config ...] [-role viewer|analyst|admin] NAME
   vigil-server user remove [-config ...] NAME
   vigil-server user list   [-config ...]
   vigil-server verify      [-config ...]
@@ -50,6 +50,7 @@ func main() {
 	}
 	fs := flag.NewFlagSet(cmd, flag.ExitOnError)
 	cfgPath := fs.String("config", "/etc/vigil/server.json", "server config file")
+	role := fs.String("role", "admin", "user add: viewer, analyst or admin")
 	fs.Parse(args)
 
 	switch cmd {
@@ -74,7 +75,7 @@ func main() {
 		}
 		fmt.Printf("ok, %d records, head %s\n", seq, head)
 	case "user":
-		userCmd(mustConfig(*cfgPath).DataDir, sub, fs.Args())
+		userCmd(mustConfig(*cfgPath).DataDir, sub, *role, fs.Args())
 	default:
 		fail()
 	}
@@ -107,7 +108,7 @@ func rulesCmd(args []string) {
 	}
 }
 
-func userCmd(dir string, sub string, args []string) {
+func userCmd(dir, sub, role string, args []string) {
 	switch sub {
 	case "list":
 		users, err := server.LoadUsers(dir)
@@ -122,7 +123,11 @@ func userCmd(dir string, sub string, args []string) {
 			sort.Strings(names)
 			for _, n := range names {
 				u := users[n]
-				fmt.Printf("%s\tcreated %s\tlast login %s\n", n, u.Created.Format(time.DateOnly), u.LastLogin.Format(time.DateTime))
+				r := u.Role
+				if r == "" {
+					r = "admin"
+				}
+				fmt.Printf("%s\t%s\tcreated %s\tlast login %s\tpasskeys %d\n", n, r, u.Created.Format(time.DateOnly), u.LastLogin.Format(time.DateTime), len(u.Passkeys))
 			}
 		}()
 	case "remove":
@@ -145,6 +150,9 @@ func userCmd(dir string, sub string, args []string) {
 			fail()
 		}
 		name := args[0]
+		if _, _, err := server.NewUser(name, role); err != nil {
+			log.Fatal(err)
+		}
 		pw := readPassword()
 		hash, err := server.HashPassword(pw)
 		if err != nil {
@@ -158,14 +166,18 @@ func userCmd(dir string, sub string, args []string) {
 			if users[name] != nil {
 				return errors.New("user exists; remove it first to reset password and TOTP")
 			}
-			users[name] = &server.User{Name: name, PassHash: hash, TOTPSecret: secret, Created: time.Now().UTC()}
+			users[name] = &server.User{Name: name, Role: role, PassHash: hash, TOTPSecret: secret, Created: time.Now().UTC()}
 			return nil
 		})
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Printf("\nuser %s created.\nAdd this to an authenticator app (TOTP is required to log in):\n\n  secret: %s\n  uri:    %s\n\n",
-			name, secret, server.TOTPURI(name, secret, "vigil"))
+		uri := server.TOTPURI(name, secret, "vigil")
+		fmt.Printf("\nuser %s (%s) created.\nScan this with an authenticator app (TOTP is required to log in):\n\n", name, role)
+		if qr, err := server.QRTerminal(uri); err == nil {
+			fmt.Print(qr)
+		}
+		fmt.Printf("\n  secret: %s\n  uri:    %s\n\nAfter the first login, add a passkey under Settings.\n\n", secret, uri)
 	default:
 		fail()
 	}
