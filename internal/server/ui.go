@@ -160,10 +160,22 @@ func (s *Server) uiHandler() http.Handler {
 	mux.HandleFunc("POST /api/ui/suppressions/{id}/{action}", s.analyst(s.handleSuppressionAction))
 	mux.HandleFunc("GET /api/ui/chain", s.auth(s.handleChain))
 	mux.HandleFunc("POST /api/ui/chain/verify", s.analyst(s.handleChainVerify))
+	mux.HandleFunc("GET /api/ui/notifiers", s.auth(func(w http.ResponseWriter, r *http.Request, sess *session) {
+		writeJSON(w, map[string]any{"notifiers": s.notifierStatus(), "heartbeat": s.cfg.HeartbeatURL != ""})
+	}))
 	mux.HandleFunc("POST /api/ui/notify/test", s.adminOnly(func(w http.ResponseWriter, r *http.Request, sess *session) {
-		s.audit(sess.User, "admin.notify_test", nil)
-		s.notify(message{Severity: "info", Text: "vigil test notification from " + sess.User}, true)
-		writeJSON(w, map[string]int{"notifiers": len(s.cfg.Notifiers)})
+		res := TestNotifiers(s.cfg, "", "vigil test notification from "+sess.User)
+		failed := 0
+		for _, n := range s.cfg.Notifiers {
+			if err, ok := res[n.Name]; ok {
+				if err != nil {
+					failed++
+				}
+				s.noteDelivery(n, err)
+			}
+		}
+		s.audit(sess.User, "admin.notify_test", map[string]any{"notifiers": len(res), "failed": failed})
+		writeJSON(w, map[string]any{"notifiers": s.notifierStatus()})
 	}))
 	return secure(mux)
 }

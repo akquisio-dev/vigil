@@ -26,6 +26,7 @@ const usage = `usage:
   vigil-server user remove [-config ...] NAME
   vigil-server user list   [-config ...]
   vigil-server verify      [-config ...]
+  vigil-server notify test [-config ...] [-name NOTIFIER]
   vigil-server rules check DIR
   vigil-server rules test  FILE EVENTS.jsonl
   vigil-server version     [-verify]`
@@ -43,7 +44,7 @@ func main() {
 		rulesCmd(args)
 		return
 	}
-	if cmd == "user" {
+	if cmd == "user" || cmd == "notify" {
 		if len(args) == 0 {
 			fail()
 		}
@@ -53,6 +54,7 @@ func main() {
 	cfgPath := fs.String("config", "/etc/vigil/server.json", "server config file")
 	role := fs.String("role", "admin", "user add: viewer, analyst or admin")
 	verify := fs.Bool("verify", false, "version: compare this binary with the published release")
+	only := fs.String("name", "", "notify test: only this notifier")
 	fs.Parse(args)
 
 	switch cmd {
@@ -83,10 +85,43 @@ func main() {
 			log.Fatalf("BROKEN: %s", st.ChainError)
 		}
 		fmt.Printf("ok, %d records, head %s\n", seq, head)
+	case "notify":
+		if sub != "test" {
+			fail()
+		}
+		notifyTest(mustConfig(*cfgPath), *only)
 	case "user":
 		userCmd(mustConfig(*cfgPath).DataDir, sub, *role, fs.Args())
 	default:
 		fail()
+	}
+}
+
+// notifyTest sends one message per notifier and waits for each answer, so
+// a new installation can confirm its channels before the first real alert.
+func notifyTest(cfg *server.Config, name string) {
+	if len(cfg.Notifiers) == 0 {
+		log.Fatal("no notifiers configured")
+	}
+	host, _ := os.Hostname()
+	res := server.TestNotifiers(cfg, name, "vigil test notification from "+host)
+	if len(res) == 0 {
+		log.Fatalf("no notifier named %q", name)
+	}
+	failed := 0
+	for _, n := range cfg.Notifiers {
+		err, ok := res[n.Name]
+		switch {
+		case !ok:
+		case err != nil:
+			failed++
+			fmt.Printf("FAIL  %s (%s): %v\n", n.Name, n.Type, err)
+		default:
+			fmt.Printf("ok    %s (%s, from %s)\n", n.Name, n.Type, n.MinSeverity)
+		}
+	}
+	if failed > 0 {
+		os.Exit(1)
 	}
 }
 

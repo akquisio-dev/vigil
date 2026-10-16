@@ -75,6 +75,7 @@ var rules = map[string]ruleDef{
 	"agent.dropped":         {"low", "", "Agent {host} dropped {count} events", "Agent {host} hat {count} Ereignisse verworfen"},
 	"agent.forged":          {"high", "T1557", "Request with invalid signature for agent {agent} from {ip}", "Anfrage mit ungültiger Signatur für Agent {agent} von {ip}"},
 	"chain.broken":          {"critical", "T1565.001", "Event chain broken: {error}", "Ereigniskette gebrochen: {error}"},
+	"notify.failed":         {"high", "", "Notifier {notifier} ({type}) failed: {error}", "Benachrichtigung {notifier} ({type}) fehlgeschlagen: {error}"},
 }
 
 var words = map[string]map[string]string{

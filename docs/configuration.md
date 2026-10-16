@@ -114,7 +114,7 @@ it came from the proxy.
 | `recent_events` | 20000 | events held in memory for the dashboard |
 | `session_hours` | 12 | dashboard session lifetime |
 | `anchor_daily` | false | post the head of the event chain to all notifiers once a day |
-| `heartbeat_url` | | fetched every minute, for an outside watchdog |
+| `heartbeat_url` | | fetched every minute while the server is healthy, for an outside dead man's switch |
 | `notifiers` | none | see below |
 | `brand` | none | your own name and logo, see below |
 | `rules_dir` | none | directory with [custom rules](custom-rules.md) |
@@ -144,16 +144,78 @@ instead; the server log says why. Restart the server after changing them.
 ## Notifiers
 
 Each notifier has a `type`, a `name` and a `min_severity` (`info`, `low`,
-`medium`, `high`, `critical`; default `high`).
+`medium`, `high`, `critical`; default `high`). Names must be unique; without
+one, vigil names it after its type (`discord-1`). An incomplete notifier stops
+the server at start, so typos show up during installation.
+
+After every change, check each channel from the server:
+
+```
+vigil-server notify test -config /etc/vigil/server.json
+vigil-server notify test -config /etc/vigil/server.json -name phone
+```
+
+The command prints `ok` or `FAIL` with the reason per notifier and exits
+non-zero if one failed. The dashboard (Settings) shows when each notifier last
+delivered and its last error, and has the same test button for admins.
+
+When a notifier loses a message after three attempts, vigil raises
+`notify.failed` and sends it through the **other** notifiers. Configure at
+least two different channels, for example a chat and a phone push, so a
+revoked webhook does not leave you blind. Rate limits (HTTP 429) are retried
+after the delay the service asks for.
+
+Notifier URLs and tokens are secrets. Errors in the log and the dashboard
+name only the host, never the URL.
 
 ### Discord
 
 ```json
 { "type": "discord", "name": "soc", "min_severity": "high",
-  "url": "https://discord.com/api/webhooks/..." }
+  "url": "https://discord.com/api/webhooks/...",
+  "mention": "<@&ROLE_ID>", "mention_min_severity": "critical" }
 ```
 
-Create the webhook in a private channel. The URL is a secret.
+Create the webhook in a private channel (Channel settings, Integrations,
+Webhooks). Without `mention`, messages never ping anyone. With it, alerts of
+`mention_min_severity` (default `critical`) and above ping that role
+(`<@&ROLE_ID>`), user (`<@USER_ID>`), `@here` or `@everyone`; with Discord's
+mobile app this is a phone notification.
+
+### Slack, Mattermost, Rocket.Chat
+
+```json
+{ "type": "slack", "name": "chat", "min_severity": "high",
+  "url": "https://hooks.slack.com/services/..." }
+```
+
+Uses the incoming webhook format that all three understand. Text from agents
+is escaped, so it cannot form links or mentions.
+
+### ntfy (push to your phone)
+
+```json
+{ "type": "ntfy", "name": "phone", "min_severity": "high",
+  "url": "https://ntfy.sh/a-long-random-topic-name",
+  "token": "tk_..." }
+```
+
+[ntfy](https://ntfy.sh) delivers push notifications to the ntfy app on Android
+and iOS, and can be self-hosted. `url` is the topic URL. On the public server
+anyone who knows the topic can read it, so pick a long random name, or use an
+access token (`token`) on a reserved topic or your own server. Critical alerts
+are sent with the highest priority, which most phones show even in
+do-not-disturb.
+
+### Telegram
+
+```json
+{ "type": "telegram", "name": "telegram", "min_severity": "high",
+  "token": "123456:ABC...", "chat_id": "-1001234567890" }
+```
+
+Create a bot with @BotFather, add it to a group or start a chat with it, and
+use that chat's id.
 
 ### Webhook
 
@@ -163,7 +225,8 @@ Create the webhook in a private channel. The URL is a secret.
 ```
 
 vigil posts JSON with `severity`, `title`, `host`, `technique`, `link` and
-`text`.
+`text`. Use it for anything not listed here (PagerDuty or Opsgenie through a
+small relay, n8n, Home Assistant).
 
 ### Mail
 
@@ -179,8 +242,23 @@ an unencrypted connection to a remote host.
 
 ## Watching the server from outside
 
-The server watches the agents, but nothing inside vigil watches the server. Set
-`heartbeat_url` to a check at an outside service (healthchecks.io or similar)
-that alerts when the pings stop. With `anchor_daily`, the head of the event
-chain is posted to your notifiers every day, which leaves a copy of the log's
-state outside the machine.
+The server watches the agents, but nothing inside vigil can notice that the
+server itself is gone. Set `heartbeat_url` to a check at an outside dead man's
+switch service, which alerts you when the pings stop:
+
+```json
+"heartbeat_url": "https://hc-ping.com/your-check-uuid"
+```
+
+Any service that accepts a periodic GET works: healthchecks.io (free tier,
+self-hostable), Uptime Kuma (push monitor), Better Stack, Cronitor. Set the
+expected period to one minute and a grace time of a few minutes.
+
+The server pings once a minute, and only while it is healthy. It stops pinging
+when the event chain fails verification, the event log or the data directory
+cannot be written, or the server's state stays locked for more than ten
+seconds. A crashed, hung or tampered server therefore ends in the same outside
+alarm. The reason is written to the server log once.
+
+With `anchor_daily`, the head of the event chain is posted to your notifiers
+every day, which leaves a copy of the log's state outside the machine.

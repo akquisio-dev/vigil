@@ -2,8 +2,12 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/url"
 	"os"
+	"regexp"
+	"strings"
 	"time"
 )
 
@@ -55,8 +59,9 @@ type Config struct {
 	RulesDir string `json:"rules_dir,omitempty"`
 
 	Notifiers []NotifierConfig `json:"notifiers"`
-	// HeartbeatURL is fetched every minute so an outside service notices
-	// when the server itself is down (healthchecks.io style).
+	// HeartbeatURL is fetched every minute while the server is healthy, so
+	// an outside service (healthchecks.io, Uptime Kuma push, Better Stack)
+	// notices when the server is down, hung, or its event log is broken.
 	HeartbeatURL string `json:"heartbeat_url,omitempty"`
 	// AnchorDaily posts the head of the event chain to all notifiers once a
 	// day, leaving a copy outside this machine that later tampering cannot
@@ -65,11 +70,21 @@ type Config struct {
 }
 
 type NotifierConfig struct {
-	Type        string `json:"type"` // discord | webhook | smtp
+	Type        string `json:"type"` // discord | slack | ntfy | telegram | webhook | smtp
 	Name        string `json:"name"`
 	MinSeverity string `json:"min_severity"`
 
-	URL string `json:"url,omitempty"` // discord, webhook
+	URL string `json:"url,omitempty"` // discord, slack, ntfy (topic URL), webhook
+
+	// Mention is pinged in Discord for alerts of MentionMinSeverity and
+	// above (default critical): "<@&ROLE_ID>", "<@USER_ID>", "@here" or
+	// "@everyone".
+	Mention            string `json:"mention,omitempty"`
+	MentionMinSeverity string `json:"mention_min_severity,omitempty"`
+
+	// Token is the ntfy access token or the Telegram bot token.
+	Token  string `json:"token,omitempty"`
+	ChatID string `json:"chat_id,omitempty"` // telegram
 
 	SMTPHost string   `json:"smtp_host,omitempty"`
 	SMTPPort int      `json:"smtp_port,omitempty"`
@@ -114,13 +129,79 @@ func LoadConfig(path string) (*Config, error) {
 	if c.SessionHours <= 0 {
 		c.SessionHours = 12
 	}
-	for i, n := range c.Notifiers {
-		if n.MinSeverity == "" {
-			c.Notifiers[i].MinSeverity = "high"
+	names := map[string]bool{}
+	for i := range c.Notifiers {
+		n := &c.Notifiers[i]
+		if n.Name == "" {
+			n.Name = fmt.Sprintf("%s-%d", n.Type, i+1)
 		}
-		if _, ok := severityRank[c.Notifiers[i].MinSeverity]; !ok {
-			return nil, fmt.Errorf("notifier %q: unknown min_severity %q", n.Name, n.MinSeverity)
+		if names[n.Name] {
+			return nil, fmt.Errorf("notifier name %q is used twice", n.Name)
+		}
+		names[n.Name] = true
+		if err := n.check(); err != nil {
+			return nil, fmt.Errorf("notifier %q: %w", n.Name, err)
 		}
 	}
 	return &c, nil
+}
+
+var (
+	discordMention = regexp.MustCompile(`^(<@&?[0-9]{1,20}>|@here|@everyone)$`)
+	telegramToken  = regexp.MustCompile(`^[0-9]{1,20}:[A-Za-z0-9_-]{20,}$`)
+)
+
+func httpURL(raw string) error {
+	u, err := url.Parse(raw)
+	if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" {
+		return errors.New("url must be an http(s) address")
+	}
+	return nil
+}
+
+// check fills defaults and refuses incomplete notifiers at start, so a typo
+// is found at install time and not when the first alert is lost.
+func (n *NotifierConfig) check() error {
+	if n.MinSeverity == "" {
+		n.MinSeverity = "high"
+	}
+	if _, ok := severityRank[n.MinSeverity]; !ok {
+		return fmt.Errorf("unknown min_severity %q", n.MinSeverity)
+	}
+	switch n.Type {
+	case "discord", "slack", "webhook":
+		if err := httpURL(n.URL); err != nil {
+			return err
+		}
+	case "ntfy":
+		if err := httpURL(n.URL); err != nil {
+			return err
+		}
+		u, _ := url.Parse(n.URL)
+		if t := strings.Trim(u.Path, "/"); t == "" || strings.Contains(t, "/") {
+			return errors.New("url must be the topic URL, e.g. https://ntfy.sh/your-topic")
+		}
+	case "telegram":
+		if !telegramToken.MatchString(n.Token) || n.ChatID == "" {
+			return errors.New("telegram needs token (from @BotFather) and chat_id")
+		}
+	case "smtp":
+		if n.SMTPHost == "" || n.From == "" || len(n.To) == 0 {
+			return errors.New("smtp needs smtp_host, from and to")
+		}
+	default:
+		return fmt.Errorf("unknown type %q", n.Type)
+	}
+	if n.Mention != "" {
+		if n.Type != "discord" || !discordMention.MatchString(n.Mention) {
+			return errors.New(`mention is for discord: "<@&ROLE_ID>", "<@USER_ID>", "@here" or "@everyone"`)
+		}
+		if n.MentionMinSeverity == "" {
+			n.MentionMinSeverity = "critical"
+		}
+		if _, ok := severityRank[n.MentionMinSeverity]; !ok {
+			return fmt.Errorf("unknown mention_min_severity %q", n.MentionMinSeverity)
+		}
+	}
+	return nil
 }

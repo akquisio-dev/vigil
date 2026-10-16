@@ -277,6 +277,11 @@ var ruleDocs = map[string]ruleDoc{
 		"Disk corruption.",
 		"Assume someone edited the log on the server. Compare with the daily chain anchors sent to your notifiers.",
 	},
+	"notify.failed": {
+		"A notifier could not deliver a message after three attempts. The alert goes out through the other notifiers only, and resolves itself with the next successful delivery.",
+		"Short outages of the chat or mail service.",
+		"Run `vigil-server notify test -name <notifier>` on the server. A revoked webhook, an expired token or a blocked outbound connection are the usual causes. While it fails, alerts reach you only through the dashboard and other notifiers.",
+	},
 }
 
 // RuleInfo is one entry of the published rule catalogue.

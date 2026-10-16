@@ -150,5 +150,16 @@ Rename it in the dashboard; hostnames like `ubuntu` are not helpful.
 
 ## Add notifications
 
-Until a notifier is configured, alerts only appear in the dashboard. See
-[Configuration](configuration.md#notifiers) for Discord, webhooks and mail.
+Until a notifier is configured, alerts only appear in the dashboard, and an
+attack at night waits until someone looks. Add at least two channels, for
+example a chat and a phone push, see
+[Configuration](configuration.md#notifiers) for Discord, Slack, Mattermost,
+ntfy, Telegram, webhooks and mail. Then check them:
+
+```
+sudo vigil-server notify test -config /etc/vigil/server.json
+```
+
+Finally set `heartbeat_url` to an outside check, so you also hear about it
+when the server itself goes down. See
+[Watching the server from outside](configuration.md#watching-the-server-from-outside).

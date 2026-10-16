@@ -31,14 +31,15 @@ const (
 )
 
 // Suppressible reports whether a rule may be suppressed. Findings an attacker
-// would want silenced first never can be: anything about vigil itself, the
-// canaries, the event chain and every critical rule.
+// would want silenced first never can be: anything about vigil itself (its
+// agents, notifiers and self tests), the canaries, the event chain and every
+// critical rule.
 func Suppressible(rule string) bool {
 	def, ok := lookupRule(rule)
 	if !ok || def.Severity == "critical" {
 		return false
 	}
-	for _, p := range []string{"agent.", "canary.", "chain.", "log."} {
+	for _, p := range []string{"agent.", "canary.", "chain.", "log.", "notify.", "selftest."} {
 		if strings.HasPrefix(rule, p) {
 			return false
 		}

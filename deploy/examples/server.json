@@ -11,7 +11,9 @@
   "anchor_daily": true,
   "heartbeat_url": "",
   "notifiers": [
-    { "type": "discord", "name": "soc-channel", "min_severity": "high", "url": "https://discord.com/api/webhooks/..." },
+    { "type": "discord", "name": "soc-channel", "min_severity": "high", "url": "https://discord.com/api/webhooks/...",
+      "mention": "<@&ROLE_ID>", "mention_min_severity": "critical" },
+    { "type": "ntfy", "name": "phone", "min_severity": "high", "url": "https://ntfy.sh/a-long-random-topic-name" },
     { "type": "smtp", "name": "mail", "min_severity": "critical",
       "smtp_host": "smtp.example.com", "smtp_port": 587, "smtp_user": "alerts@example.com", "smtp_pass": "...",
       "from": "alerts@example.com", "to": ["oncall@example.com"] }

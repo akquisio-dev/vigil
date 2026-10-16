@@ -43,6 +43,9 @@ type Server struct {
 	users      userCache
 	challenges challenges
 	intel      intelSet
+	nh         notifierHealth
+
+	beatWarned string // last reason the heartbeat was withheld, loop goroutine only
 }
 
 func New(cfg *Config) (*Server, error) {
@@ -189,18 +192,64 @@ func (s *Server) loop(ctx context.Context) {
 		case <-beat.C:
 			s.expireSuppressions()
 			if s.cfg.HeartbeatURL != "" {
-				go func() {
-					c := &http.Client{Timeout: 10 * time.Second}
-					if res, err := c.Get(s.cfg.HeartbeatURL); err == nil {
-						res.Body.Close()
-					}
-				}()
+				s.heartbeat()
 			}
 		case <-hourly.C:
 			s.daily()
 			go s.refreshIntel()
 		}
 	}
+}
+
+// heartbeat pings the outside watchdog only while the server is healthy.
+// Withholding the ping is the one signal every dead man's switch service
+// understands, so a hung server, a full disk or a broken chain all end in
+// the same outside alarm.
+func (s *Server) heartbeat() {
+	reason := s.unhealthy()
+	if reason != "" {
+		if reason != s.beatWarned {
+			log.Printf("heartbeat withheld: %s", reason)
+		}
+		s.beatWarned = reason
+		return
+	}
+	s.beatWarned = ""
+	go func() {
+		c := &http.Client{Timeout: 10 * time.Second}
+		res, err := c.Get(s.cfg.HeartbeatURL)
+		if err != nil {
+			log.Printf("heartbeat: %v", redact(err))
+			return
+		}
+		res.Body.Close()
+		if res.StatusCode >= 300 {
+			log.Printf("heartbeat: status %s", res.Status)
+		}
+	}()
+}
+
+// unhealthy names the first problem that should silence the heartbeat.
+func (s *Server) unhealthy() string {
+	if ok, msg := s.store.Health(); !ok {
+		return msg
+	}
+	locked := make(chan struct{})
+	go func() {
+		s.mu.Lock()
+		s.mu.Unlock()
+		close(locked)
+	}()
+	select {
+	case <-locked:
+	case <-time.After(10 * time.Second):
+		return "server state is locked for more than 10 seconds"
+	}
+	probe := filepath.Join(s.cfg.DataDir, ".health")
+	if err := os.WriteFile(probe, []byte(time.Now().UTC().Format(time.RFC3339)), 0o600); err != nil {
+		return "data directory not writable: " + err.Error()
+	}
+	return ""
 }
 
 // daily runs housekeeping that is due at most once a day; it is called

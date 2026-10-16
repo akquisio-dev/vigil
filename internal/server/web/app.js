@@ -23,6 +23,8 @@ const T = {
     rename: "Rename", deleteHost: "Remove host", confirmDelete: "Remove this host and its canaries?",
     confirmCanary: "Remove this canary? The agent deletes the file.",
     enroll: "Enroll a host", newToken: "Create token", validUntil: "valid until", notifyTest: "Send test notification",
+    notifiers: "Notifications", noNotifiers: "No notifier configured. Alerts only show up here.", delivered: "last delivered",
+    neverDelivered: "nothing sent yet", failing: "failing", heartbeat: "Outside heartbeat", configured: "configured", notConfigured: "not configured",
     sent: "sent", loadMore: "Load more", filterType: "Type prefix", allHosts: "All hosts", time: "Time", details: "Details",
     params: "Parameters", logins: "SSH logins", ip: "IP", key: "Key", method: "Method", configSync: "Config",
     synced: "applied", waiting: "pending", alertsOpen: "open alerts", canariesOpened: "opened",
@@ -78,6 +80,8 @@ const T = {
     rename: "Umbenennen", deleteHost: "Host entfernen", confirmDelete: "Diesen Host und seine Köder entfernen?",
     confirmCanary: "Köder entfernen? Der Agent löscht die Datei.",
     enroll: "Host einschreiben", newToken: "Token erzeugen", validUntil: "gültig bis", notifyTest: "Testnachricht senden",
+    notifiers: "Benachrichtigungen", noNotifiers: "Keine Benachrichtigung eingerichtet. Alarme erscheinen nur hier.", delivered: "zuletzt zugestellt",
+    neverDelivered: "noch nichts gesendet", failing: "fehlerhaft", heartbeat: "Herzschlag nach außen", configured: "eingerichtet", notConfigured: "nicht eingerichtet",
     sent: "gesendet", loadMore: "Mehr laden", filterType: "Typ-Präfix", allHosts: "Alle Hosts", time: "Zeit", details: "Details",
     params: "Parameter", logins: "SSH-Anmeldungen", ip: "IP", key: "Schlüssel", method: "Methode", configSync: "Konfiguration",
     synced: "übernommen", waiting: "ausstehend", alertsOpen: "offene Alarme", canariesOpened: "geöffnet",
@@ -879,7 +883,16 @@ async function suppressionsView() {
 async function settingsView() {
   const chain = await api("/api/ui/chain");
   const tokenBox = h("div");
-  const notifyOut = h("span", { class: "muted" });
+  const notifyErr = h("div", { class: "err" });
+  const notifyBox = h("div");
+  const drawNotifiers = (list) => notifyBox.replaceChildren(list.length ? h("div", { class: "feed" }, list.map((n) => h("div", { class: "feed-row" },
+    h("div", null, h("span", { class: "chip" }, h("span", { class: "dot " + (n.failures ? "broken" : n.last_ok && !n.last_ok.startsWith("0001") ? "ok" : "") }), h("span", { class: "strong" }, n.name)),
+      " ", h("span", { class: "muted" }, n.type + ", " + t(n.min_severity) + "+")),
+    h("div", { class: "feed-sub" }, n.failures ? t("failing") + ": " + n.last_error
+      : n.last_ok && !n.last_ok.startsWith("0001") ? t("delivered") + " " + abs(n.last_ok) : t("neverDelivered")))))
+    : h("div", { class: "muted" }, t("noNotifiers")));
+  const notif = await api("/api/ui/notifiers");
+  drawNotifiers(notif.notifiers);
   const chainBox = h("div");
   const drawChain = (c) => chainBox.replaceChildren(h("dl", { class: "kv" },
     h("dt", null, t("status")), h("dd", null, h("span", { class: "chip" }, h("span", { class: "dot " + (c.ok ? "ok" : "broken") }), t(c.ok ? "chainOK" : "chainBroken"))),
@@ -1008,9 +1021,12 @@ async function settingsView() {
       h("div", { class: "card" }, h("h3", null, t("chain")), chainBox,
         h("div", { class: "actions" },
           can("analyst") ? h("button", { class: "btn ghost", onclick: async () => drawChain(await post("/api/ui/chain/verify")) }, t("verify")) : null))),
-    !can("admin") ? null : h("div", { class: "card mt" }, h("div", { class: "flex" },
-      h("button", { class: "btn ghost", onclick: async () => { const r = await post("/api/ui/notify/test"); notifyOut.textContent = t("sent") + " (" + r.notifiers + ")"; } }, t("notifyTest")),
-      notifyOut)),
+    h("div", { class: "card mt" }, h("h3", null, t("notifiers")), notifyBox,
+      h("dl", { class: "kv mt" }, h("dt", null, t("heartbeat")), h("dd", null, t(notif.heartbeat ? "configured" : "notConfigured"))),
+      can("admin") && notif.notifiers.length ? h("div", { class: "actions" }, h("button", { class: "btn ghost", onclick: async () => {
+        notifyErr.textContent = "";
+        try { drawNotifiers((await post("/api/ui/notify/test")).notifiers); } catch (x) { notifyErr.textContent = x.message; }
+      } }, t("notifyTest"))) : null, notifyErr),
     h("div", { class: "card mt" }, h("h3", null, t("theme")), h("div", { class: "tabs" }, ["light", "dark", "system"].map((k) =>
       h("button", { class: k === theme() ? "on" : null, onclick: () => setTheme(k) }, t(k))))),
     h("div", { class: "card mt" }, h("h3", null, t("language")), h("div", { class: "flex" }, langTabs,

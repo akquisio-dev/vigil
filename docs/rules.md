@@ -2,7 +2,7 @@
 
 # Detection rules
 
-vigil ships 53 rules. Every alert carries the rule id, so an alert can be looked up here.
+vigil ships 54 rules. Every alert carries the rule id, so an alert can be looked up here.
 
 Severity decides who is woken up: each notifier has a `min_severity`, `high` by default.
 
@@ -28,6 +28,7 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 | [`net.blocklisted`](#net-blocklisted) | high | [T1071](https://attack.mitre.org/techniques/T1071/) |
 | [`net.miner_pool`](#net-miner_pool) | high | [T1496](https://attack.mitre.org/techniques/T1496/) |
 | [`net.service_outbound`](#net-service_outbound) | high | [T1572](https://attack.mitre.org/techniques/T1572/) |
+| [`notify.failed`](#notify-failed) | high |  |
 | [`port.docker`](#port-docker) | high |  |
 | [`process.deleted_exe`](#process-deleted_exe) | high | [T1070.004](https://attack.mitre.org/techniques/T1070/004/) |
 | [`process.download_exec`](#process-download_exec) | high | [T1105](https://attack.mitre.org/techniques/T1105/) |
@@ -529,6 +530,18 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 **Known false positives:** Database replication to a public address, SSH port forwarding used on purpose.
 
 **What to do:** Check the connection (`ss -tnp`), the service's log and its configuration. For Redis, check `CONFIG GET replicaof` and `dir`.
+
+### `notify.failed` {#notify-failed}
+
+**Severity:** high
+
+**Alert:** `Notifier {notifier} ({type}) failed: {error}`
+
+**Fires when:** A notifier could not deliver a message after three attempts. The alert goes out through the other notifiers only, and resolves itself with the next successful delivery.
+
+**Known false positives:** Short outages of the chat or mail service.
+
+**What to do:** Run `vigil-server notify test -name <notifier>` on the server. A revoked webhook, an expired token or a blocked outbound connection are the usual causes. While it fails, alerts reach you only through the dashboard and other notifiers.
 
 ### `process.deleted_exe` {#process-deleted_exe}
 

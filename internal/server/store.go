@@ -57,6 +57,21 @@ type Store struct {
 	ChainOK    bool
 	ChainError string
 	VerifiedAt time.Time
+
+	appendErr string // last failed write, cleared by the next good one
+}
+
+// Health reports whether the log is intact and writable.
+func (s *Store) Health() (bool, string) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if !s.ChainOK {
+		return false, "event chain broken: " + s.ChainError
+	}
+	if s.appendErr != "" {
+		return false, "event log not writable: " + s.appendErr
+	}
+	return true, ""
 }
 
 func OpenStore(dir string, recent int) (*Store, error) {
@@ -153,6 +168,15 @@ func (s *Store) Verify() (bool, string) {
 func (s *Store) Append(recs ...*Record) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	err := s.appendLocked(recs)
+	s.appendErr = ""
+	if err != nil {
+		s.appendErr = err.Error()
+	}
+	return err
+}
+
+func (s *Store) appendLocked(recs []*Record) error {
 	now := time.Now().UTC()
 	day := now.Format("2006-01-02")
 	if s.file == nil || s.day != day {
