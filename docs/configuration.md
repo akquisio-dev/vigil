@@ -31,6 +31,9 @@ the defaults below.
 | `docker` | true | read Docker NAT publications with `iptables-save` |
 | `processes` | true | watch program starts and report suspicious ones |
 | `outbound` | true | report new outbound TCP destinations with their process |
+| `suid` | true | find SUID/SGID programs and files with capabilities (all local filesystems every 6 hours, temp directories every 5 minutes) |
+| `integrity` | true | compare programs, PAM modules and core libraries with their Debian package checksums (every 6 hours; Debian and Ubuntu only) |
+| `bpf` | true | report eBPF programs that can hook the kernel or the network path |
 | `kernel` | true | watch kernel modules (new, out of tree, hidden from `/proc/modules`) and kernel taint flags |
 | `updates` | true | report pending (security) updates and pending reboots, Debian and Ubuntu |
 | `web_logs` | none | access logs to watch, see below |

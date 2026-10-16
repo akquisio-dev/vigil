@@ -16,6 +16,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
@@ -46,6 +47,7 @@ type Agent struct {
 	outSeen     map[string]bool   // remote network:port combinations already reported
 	broken      map[string]string // collector -> why it stopped, for the self test
 	kernel      *KernelState      // main loop only
+	bpf         *BPFState         // main loop only
 	preloadSeen map[string]bool   // exe|LD_PRELOAD pairs already reported
 }
 
@@ -111,6 +113,12 @@ func (a *Agent) flushSoon() {
 }
 
 func (a *Agent) Run(ctx context.Context) error {
+	// The packaged unit caps memory at 96 MB. Without a soft limit the
+	// garbage collector lets the heap double before collecting, and a
+	// filesystem walk on a large host would hit the cap.
+	if os.Getenv("GOMEMLIMIT") == "" {
+		debug.SetMemoryLimit(48 << 20)
+	}
 	if len(a.cfg.CanaryRoots) > 0 {
 		w, err := newCanaryWatch()
 		if err != nil {
@@ -147,6 +155,12 @@ func (a *Agent) Run(ctx context.Context) error {
 	}
 	if on(a.cfg.Updates) {
 		go a.runUpdates(ctx)
+	}
+	if on(a.cfg.Suid) {
+		go a.runSuid(ctx)
+	}
+	if on(a.cfg.Integrity) {
+		go a.runIntegrity(ctx)
 	}
 	for _, wl := range a.cfg.WebLogs {
 		go a.tailWebLog(ctx, wl)
@@ -190,6 +204,7 @@ func (a *Agent) scan() {
 	a.scanPorts()
 	a.checkCanaries()
 	a.scanKernel()
+	a.scanBPF()
 }
 
 func (a *Agent) saveState() {

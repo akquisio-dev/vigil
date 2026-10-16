@@ -282,6 +282,46 @@ var ruleDocs = map[string]ruleDoc{
 		"A host whose clock jumped backwards by more than the batch interval: sequence numbers are derived from the clock.",
 		"Someone is trying to inject events. Check the source address.",
 	},
+	"file.suid": {
+		"A file became SUID or SGID, or got a capability that leads to root (`cap_setuid`, `cap_dac_override`, `cap_sys_admin` and similar), and either no package owns it, or the bit was set after its package was installed (`chmod u+s /usr/bin/find`). Existing such files are named once when the collector first runs.",
+		"Software installed by hand (`make install`) that ships SUID helpers; tools that use `setcap` after installation; files below `/home` and `/root`.",
+		"Check who changed the file and when (`stat`, `journalctl`). A shell, an interpreter or a GTFOBins program with the SUID bit is a backdoor: remove the bit (`chmod u-s`) and look for how root was reached.",
+	},
+	"file.suid_tmp": {
+		"A root-owned SUID/SGID program, or one with a dangerous capability, appeared in `/tmp`, `/var/tmp` or `/dev/shm`. Nothing legitimate puts root programs there.",
+		"None known.",
+		"Treat as a root compromise: someone with root left a way back in. Copy the file for analysis, remove it, and investigate how root was reached.",
+	},
+	"file.suid_packaged": {
+		"A package installed a SUID/SGID program or a file with a capability, for example `sudo` or `ping`.",
+		"Every package installation that ships one. That is why this rule is low.",
+		"Confirm the package installation was planned.",
+	},
+	"integrity.binary_replaced": {
+		"A program used to log in or to inspect the system (`sshd`, `sudo`, `su`, `login`, `ps`, `ss`, `ls`, `find`, shells), a PAM module or a core library (`libc`, `ld-linux`, `libpam`, `liblzma`, `libnss_*`) no longer matches the checksum its Debian package recorded, confirmed on a second look ten minutes later. Also raised when the package's checksum list changed while the package version did not.",
+		"None known on systems without prelink. Files changed with `dpkg-divert` are skipped.",
+		"Assume a rootkit or a backdoor: the tools on the host may lie to you. Compare `sha256` with a clean copy of the same package version (`apt download`), inspect from a rescue system, and rebuild the host.",
+	},
+	"integrity.modified": {
+		"Any other program in `/usr/bin`, `/usr/sbin`, `/usr/lib/openssh` or `/usr/libexec` differs from its package checksum (confirmed twice), or the checksum list changed without a package update.",
+		"Programs patched by hand, files changed by a configuration tool without `dpkg-divert`.",
+		"Compare with the package (`apt download`, `debsums -c`) and find out who changed it and when.",
+	},
+	"integrity.unowned": {
+		"A new regular file appeared in `/usr/bin` or `/usr/sbin` that no package lists. Files present when the collector first ran are accepted.",
+		"Software installed with `make install` or `curl | sh` into `/usr/bin` instead of `/usr/local/bin`, binaries that a package's install script generates.",
+		"Check what it is (`file`, `strings`, the `sha256` on a malware database) and how it got there.",
+	},
+	"integrity.many": {
+		"More than 25 packaged files differed from their checksums in one run. Only the first 25 are reported one by one.",
+		"A broken or interrupted package installation (`dpkg --audit`), restoring files from an old backup.",
+		"Run `dpkg --audit` and `debsums -c`. If no package operation explains it, treat it like `integrity.binary_replaced`.",
+	},
+	"kernel.bpf": {
+		"An eBPF program of a type that can hook the kernel or the network path was loaded: kprobe, tracepoint, raw tracepoint, tracing (fentry/fexit), LSM, extension, perf event or XDP. eBPF rootkits such as boopkit, TripleCross and ebpfkit work this way. Programs that were loaded when the collector first ran are reported once as well, since a rootkit may already be there. The same program loaded again (same type, name and tag) stays quiet. cgroup and socket programs from systemd and Docker are not reported.",
+		"Observability and security tools: bpftrace, BCC tools, Falco, Tracee, Cilium, Pixie, Parca, Datadog and similar agents, `perf`. Suppress them by name with a reason.",
+		"List programs with `bpftool prog show` and find the loading process (`bpftool prog show id <id> --json` shows `pids` on recent kernels). A program nobody can explain is a strong sign of a kernel-level compromise.",
+	},
 	"kernel.module": {
 		"A kernel module from the kernel's own tree was loaded after the agent's baseline.",
 		"The kernel loads modules on demand all the time: nf_tables for firewall rules, wireguard, bridge and overlay modules for Docker, filesystem drivers. That is why this rule is low.",

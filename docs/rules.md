@@ -2,7 +2,7 @@
 
 # Detection rules
 
-vigil ships 61 rules. Every alert carries the rule id, so an alert can be looked up here.
+vigil ships 69 rules. Every alert carries the rule id, so an alert can be looked up here.
 
 Severity decides who is woken up: each notifier has a `min_severity`, `high` by default.
 
@@ -11,6 +11,8 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 | [`canary.opened`](#canary-opened) | critical | [T1552.001](https://attack.mitre.org/techniques/T1552/001/) |
 | [`chain.broken`](#chain-broken) | critical | [T1565.001](https://attack.mitre.org/techniques/T1565/001/) |
 | [`file.preload`](#file-preload) | critical | [T1574.006](https://attack.mitre.org/techniques/T1574/006/) |
+| [`file.suid_tmp`](#file-suid_tmp) | critical | [T1548.001](https://attack.mitre.org/techniques/T1548/001/) |
+| [`integrity.binary_replaced`](#integrity-binary_replaced) | critical | [T1554](https://attack.mitre.org/techniques/T1554/) |
 | [`kernel.module_hidden`](#kernel-module_hidden) | critical | [T1014](https://attack.mitre.org/techniques/T1014/) |
 | [`net.c2`](#net-c2) | critical | [T1071](https://attack.mitre.org/techniques/T1071/) |
 | [`process.miner`](#process-miner) | critical | [T1496](https://attack.mitre.org/techniques/T1496/) |
@@ -25,6 +27,10 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 | [`file.cron`](#file-cron) | high | [T1053.003](https://attack.mitre.org/techniques/T1053/003/) |
 | [`file.pam`](#file-pam) | high | [T1556.003](https://attack.mitre.org/techniques/T1556/003/) |
 | [`file.sudo`](#file-sudo) | high | [T1548.003](https://attack.mitre.org/techniques/T1548/003/) |
+| [`file.suid`](#file-suid) | high | [T1548.001](https://attack.mitre.org/techniques/T1548/001/) |
+| [`integrity.many`](#integrity-many) | high | [T1554](https://attack.mitre.org/techniques/T1554/) |
+| [`integrity.modified`](#integrity-modified) | high | [T1554](https://attack.mitre.org/techniques/T1554/) |
+| [`kernel.bpf`](#kernel-bpf) | high | [T1014](https://attack.mitre.org/techniques/T1014/) |
 | [`kernel.module_unsigned`](#kernel-module_unsigned) | high | [T1547.006](https://attack.mitre.org/techniques/T1547/006/) |
 | [`log.spoofed`](#log-spoofed) | high | [T1070](https://attack.mitre.org/techniques/T1070/) |
 | [`net.blocklisted`](#net-blocklisted) | high | [T1071](https://attack.mitre.org/techniques/T1071/) |
@@ -50,6 +56,7 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 | [`file.shell_init`](#file-shell_init) | medium | [T1546.004](https://attack.mitre.org/techniques/T1546/004/) |
 | [`file.sshd`](#file-sshd) | medium | [T1098](https://attack.mitre.org/techniques/T1098/) |
 | [`file.systemd`](#file-systemd) | medium | [T1543.002](https://attack.mitre.org/techniques/T1543/002/) |
+| [`integrity.unowned`](#integrity-unowned) | medium | [T1554](https://attack.mitre.org/techniques/T1554/) |
 | [`kernel.tainted`](#kernel-tainted) | medium | [T1014](https://attack.mitre.org/techniques/T1014/) |
 | [`net.tor`](#net-tor) | medium | [T1090.003](https://attack.mitre.org/techniques/T1090/003/) |
 | [`port.public`](#port-public) | medium |  |
@@ -60,6 +67,7 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 | [`web.login_bruteforce`](#web-login_bruteforce) | medium | [T1110](https://attack.mitre.org/techniques/T1110/) |
 | [`agent.dropped`](#agent-dropped) | low |  |
 | [`file.other`](#file-other) | low |  |
+| [`file.suid_packaged`](#file-suid_packaged) | low | [T1548.001](https://attack.mitre.org/techniques/T1548/001/) |
 | [`kernel.module`](#kernel-module) | low | [T1547.006](https://attack.mitre.org/techniques/T1547/006/) |
 | [`port.local`](#port-local) | low |  |
 | [`process.rate_limited`](#process-rate_limited) | low |  |
@@ -196,6 +204,18 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 
 **What to do:** Treat as compromise. Any library listed there is loaded into every process, a common userland rootkit technique.
 
+### `file.suid_tmp` {#file-suid_tmp}
+
+**Severity:** critical · **ATT&CK:** [T1548.001](https://attack.mitre.org/techniques/T1548/001/)
+
+**Alert:** `Root {what} program in a temp directory: {path}`
+
+**Fires when:** A root-owned SUID/SGID program, or one with a dangerous capability, appeared in `/tmp`, `/var/tmp` or `/dev/shm`. Nothing legitimate puts root programs there.
+
+**Known false positives:** None known.
+
+**What to do:** Treat as a root compromise: someone with root left a way back in. Copy the file for analysis, remove it, and investigate how root was reached.
+
 ### `file.cron` {#file-cron}
 
 **Severity:** high · **ATT&CK:** [T1053.003](https://attack.mitre.org/techniques/T1053/003/)
@@ -231,6 +251,18 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 **Known false positives:** Admin changes, package installs that add sudo rules.
 
 **What to do:** Read the change. New `NOPASSWD` rules for unexpected users are privilege escalation paths.
+
+### `file.suid` {#file-suid}
+
+**Severity:** high · **ATT&CK:** [T1548.001](https://attack.mitre.org/techniques/T1548/001/)
+
+**Alert:** `{what} on {path} ({why})`
+
+**Fires when:** A file became SUID or SGID, or got a capability that leads to root (`cap_setuid`, `cap_dac_override`, `cap_sys_admin` and similar), and either no package owns it, or the bit was set after its package was installed (`chmod u+s /usr/bin/find`). Existing such files are named once when the collector first runs.
+
+**Known false positives:** Software installed by hand (`make install`) that ships SUID helpers; tools that use `setcap` after installation; files below `/home` and `/root`.
+
+**What to do:** Check who changed the file and when (`stat`, `journalctl`). A shell, an interpreter or a GTFOBins program with the SUID bit is a backdoor: remove the bit (`chmod u-s`) and look for how root was reached.
 
 ### `file.accounts` {#file-accounts}
 
@@ -291,6 +323,18 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 **Known false positives:** Depends on what you added to the watch list.
 
 **What to do:** Review the change.
+
+### `file.suid_packaged` {#file-suid_packaged}
+
+**Severity:** low · **ATT&CK:** [T1548.001](https://attack.mitre.org/techniques/T1548/001/)
+
+**Alert:** `{what} on {path} from package {package}`
+
+**Fires when:** A package installed a SUID/SGID program or a file with a capability, for example `sudo` or `ping`.
+
+**Known false positives:** Every package installation that ships one. That is why this rule is low.
+
+**What to do:** Confirm the package installation was planned.
 
 ## Exposure
 
@@ -393,6 +437,18 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 **Known false positives:** Disk corruption.
 
 **What to do:** Assume someone edited the log on the server. Compare with the daily chain anchors sent to your notifiers.
+
+### `integrity.binary_replaced` {#integrity-binary_replaced}
+
+**Severity:** critical · **ATT&CK:** [T1554](https://attack.mitre.org/techniques/T1554/)
+
+**Alert:** `{path} from {package} was modified: {reason}`
+
+**Fires when:** A program used to log in or to inspect the system (`sshd`, `sudo`, `su`, `login`, `ps`, `ss`, `ls`, `find`, shells), a PAM module or a core library (`libc`, `ld-linux`, `libpam`, `liblzma`, `libnss_*`) no longer matches the checksum its Debian package recorded, confirmed on a second look ten minutes later. Also raised when the package's checksum list changed while the package version did not.
+
+**Known false positives:** None known on systems without prelink. Files changed with `dpkg-divert` are skipped.
+
+**What to do:** Assume a rootkit or a backdoor: the tools on the host may lie to you. Compare `sha256` with a clean copy of the same package version (`apt download`), inspect from a rescue system, and rebuild the host.
 
 ### `kernel.module_hidden` {#kernel-module_hidden}
 
@@ -501,6 +557,42 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 **Known false positives:** Planned restarts and updates. Announce them with a maintenance window in the dashboard.
 
 **What to do:** Check who stopped it if no maintenance was planned.
+
+### `integrity.many` {#integrity-many}
+
+**Severity:** high · **ATT&CK:** [T1554](https://attack.mitre.org/techniques/T1554/)
+
+**Alert:** `{count} packaged files differ from their checksums`
+
+**Fires when:** More than 25 packaged files differed from their checksums in one run. Only the first 25 are reported one by one.
+
+**Known false positives:** A broken or interrupted package installation (`dpkg --audit`), restoring files from an old backup.
+
+**What to do:** Run `dpkg --audit` and `debsums -c`. If no package operation explains it, treat it like `integrity.binary_replaced`.
+
+### `integrity.modified` {#integrity-modified}
+
+**Severity:** high · **ATT&CK:** [T1554](https://attack.mitre.org/techniques/T1554/)
+
+**Alert:** `{path} from {package} was modified: {reason}`
+
+**Fires when:** Any other program in `/usr/bin`, `/usr/sbin`, `/usr/lib/openssh` or `/usr/libexec` differs from its package checksum (confirmed twice), or the checksum list changed without a package update.
+
+**Known false positives:** Programs patched by hand, files changed by a configuration tool without `dpkg-divert`.
+
+**What to do:** Compare with the package (`apt download`, `debsums -c`) and find out who changed it and when.
+
+### `kernel.bpf` {#kernel-bpf}
+
+**Severity:** high · **ATT&CK:** [T1014](https://attack.mitre.org/techniques/T1014/)
+
+**Alert:** `eBPF {type} program {name} loaded (uid {uid})`
+
+**Fires when:** An eBPF program of a type that can hook the kernel or the network path was loaded: kprobe, tracepoint, raw tracepoint, tracing (fentry/fexit), LSM, extension, perf event or XDP. eBPF rootkits such as boopkit, TripleCross and ebpfkit work this way. Programs that were loaded when the collector first ran are reported once as well, since a rootkit may already be there. The same program loaded again (same type, name and tag) stays quiet. cgroup and socket programs from systemd and Docker are not reported.
+
+**Known false positives:** Observability and security tools: bpftrace, BCC tools, Falco, Tracee, Cilium, Pixie, Parca, Datadog and similar agents, `perf`. Suppress them by name with a reason.
+
+**What to do:** List programs with `bpftool prog show` and find the loading process (`bpftool prog show id <id> --json` shows `pids` on recent kernels). A program nobody can explain is a strong sign of a kernel-level compromise.
 
 ### `kernel.module_unsigned` {#kernel-module_unsigned}
 
@@ -669,6 +761,18 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 **Known false positives:** Rare. A file with such a name on purpose.
 
 **What to do:** Look at the file on disk, its owner and change time, and search the web root for other recently changed files. Treat as an intrusion until proven otherwise.
+
+### `integrity.unowned` {#integrity-unowned}
+
+**Severity:** medium · **ATT&CK:** [T1554](https://attack.mitre.org/techniques/T1554/)
+
+**Alert:** `New program {path} that no package installed`
+
+**Fires when:** A new regular file appeared in `/usr/bin` or `/usr/sbin` that no package lists. Files present when the collector first ran are accepted.
+
+**Known false positives:** Software installed with `make install` or `curl | sh` into `/usr/bin` instead of `/usr/local/bin`, binaries that a package's install script generates.
+
+**What to do:** Check what it is (`file`, `strings`, the `sha256` on a malware database) and how it got there.
 
 ### `kernel.tainted` {#kernel-tainted}
 

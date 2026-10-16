@@ -40,6 +40,15 @@ type Config struct {
 	// Kernel watches loaded kernel modules, modules hidden from
 	// /proc/modules and new kernel taint flags.
 	Kernel *bool `json:"kernel,omitempty"`
+	// Suid walks local filesystems for SUID/SGID programs and files with
+	// capabilities (every 6 hours, temp directories every 5 minutes).
+	Suid *bool `json:"suid,omitempty"`
+	// Integrity compares login and inspection programs, PAM modules and core
+	// libraries with their Debian package checksums (every 6 hours).
+	Integrity *bool `json:"integrity,omitempty"`
+	// BPF reports newly loaded eBPF programs that can hook the kernel or the
+	// network path (kprobe, tracepoint, tracing, lsm, xdp and similar).
+	BPF *bool `json:"bpf,omitempty"`
 	// Updates reports pending (security) updates and pending reboots.
 	Updates *bool `json:"updates,omitempty"`
 	// Outbound reports new outbound TCP destinations with their process.

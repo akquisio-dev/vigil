@@ -69,20 +69,28 @@ var rules = map[string]ruleDef{
 	"canary.remove_failed": {"medium", "", "Canary {path} could not be removed: {error}", "Köder {path} ließ sich nicht entfernen: {error}"},
 	"canary.overflow":      {"medium", "", "Canary event queue overflowed on {host}", "Köder-Warteschlange auf {host} übergelaufen"},
 
-	"agent.silent":           {"high", "T1562.001", "Agent {host} silent", "Agent {host} meldet sich nicht"},
-	"agent.stopped":          {"high", "T1562.001", "Agent {host} was stopped", "Agent {host} wurde beendet"},
-	"agent.restarted":        {"high", "T1562.001", "Agent {host} restarted after {gap} without monitoring", "Agent {host} neu gestartet nach {gap} ohne Überwachung"},
-	"agent.config_rejected":  {"high", "T1557", "Agent {host} rejected a configuration ({reason})", "Agent {host} hat eine Konfiguration abgelehnt ({reason})"},
-	"log.spoofed":            {"high", "T1070", "Fake {identifier} log entry written by {comm} (uid {uid})", "Gefälschter {identifier}-Logeintrag von {comm} (uid {uid})"},
-	"agent.dropped":          {"low", "", "Agent {host} dropped {count} events", "Agent {host} hat {count} Ereignisse verworfen"},
-	"agent.forged":           {"high", "T1557", "Request with invalid signature for agent {agent} from {ip}", "Anfrage mit ungültiger Signatur für Agent {agent} von {ip}"},
-	"kernel.module":          {"low", "T1547.006", "Kernel module {name} loaded", "Kernelmodul {name} geladen"},
-	"kernel.module_unsigned": {"high", "T1547.006", "Out-of-tree or unsigned kernel module {name} ({taint})", "Fremdes oder unsigniertes Kernelmodul {name} ({taint})"},
-	"kernel.module_hidden":   {"critical", "T1014", "Kernel module {name} is hidden from /proc/modules", "Kernelmodul {name} ist vor /proc/modules versteckt"},
-	"kernel.tainted":         {"medium", "T1014", "Kernel tainted: {added} (now {tainted})", "Kernel markiert: {added} (jetzt {tainted})"},
-	"chain.broken":           {"critical", "T1565.001", "Event chain broken: {error}", "Ereigniskette gebrochen: {error}"},
-	"selftest.failed":        {"high", "T1562.001", "Self test on {host} failed: {missing}", "Selbsttest auf {host} fehlgeschlagen: {missing}"},
-	"notify.failed":          {"high", "", "Notifier {notifier} ({type}) failed: {error}", "Benachrichtigung {notifier} ({type}) fehlgeschlagen: {error}"},
+	"agent.silent":              {"high", "T1562.001", "Agent {host} silent", "Agent {host} meldet sich nicht"},
+	"agent.stopped":             {"high", "T1562.001", "Agent {host} was stopped", "Agent {host} wurde beendet"},
+	"agent.restarted":           {"high", "T1562.001", "Agent {host} restarted after {gap} without monitoring", "Agent {host} neu gestartet nach {gap} ohne Überwachung"},
+	"agent.config_rejected":     {"high", "T1557", "Agent {host} rejected a configuration ({reason})", "Agent {host} hat eine Konfiguration abgelehnt ({reason})"},
+	"log.spoofed":               {"high", "T1070", "Fake {identifier} log entry written by {comm} (uid {uid})", "Gefälschter {identifier}-Logeintrag von {comm} (uid {uid})"},
+	"agent.dropped":             {"low", "", "Agent {host} dropped {count} events", "Agent {host} hat {count} Ereignisse verworfen"},
+	"agent.forged":              {"high", "T1557", "Request with invalid signature for agent {agent} from {ip}", "Anfrage mit ungültiger Signatur für Agent {agent} von {ip}"},
+	"file.suid":                 {"high", "T1548.001", "{what} on {path} ({why})", "{what} auf {path} ({why})"},
+	"file.suid_tmp":             {"critical", "T1548.001", "Root {what} program in a temp directory: {path}", "Root-Programm mit {what} in einem Temp-Verzeichnis: {path}"},
+	"file.suid_packaged":        {"low", "T1548.001", "{what} on {path} from package {package}", "{what} auf {path} aus Paket {package}"},
+	"integrity.binary_replaced": {"critical", "T1554", "{path} from {package} was modified: {reason}", "{path} aus {package} wurde verändert: {reason}"},
+	"integrity.modified":        {"high", "T1554", "{path} from {package} was modified: {reason}", "{path} aus {package} wurde verändert: {reason}"},
+	"integrity.unowned":         {"medium", "T1554", "New program {path} that no package installed", "Neues Programm {path}, das kein Paket installiert hat"},
+	"integrity.many":            {"high", "T1554", "{count} packaged files differ from their checksums", "{count} Paketdateien weichen von ihren Prüfsummen ab"},
+	"kernel.bpf":                {"high", "T1014", "eBPF {type} program {name} loaded (uid {uid})", "eBPF-{type}-Programm {name} geladen (uid {uid})"},
+	"kernel.module":             {"low", "T1547.006", "Kernel module {name} loaded", "Kernelmodul {name} geladen"},
+	"kernel.module_unsigned":    {"high", "T1547.006", "Out-of-tree or unsigned kernel module {name} ({taint})", "Fremdes oder unsigniertes Kernelmodul {name} ({taint})"},
+	"kernel.module_hidden":      {"critical", "T1014", "Kernel module {name} is hidden from /proc/modules", "Kernelmodul {name} ist vor /proc/modules versteckt"},
+	"kernel.tainted":            {"medium", "T1014", "Kernel tainted: {added} (now {tainted})", "Kernel markiert: {added} (jetzt {tainted})"},
+	"chain.broken":              {"critical", "T1565.001", "Event chain broken: {error}", "Ereigniskette gebrochen: {error}"},
+	"selftest.failed":           {"high", "T1562.001", "Self test on {host} failed: {missing}", "Selbsttest auf {host} fehlgeschlagen: {missing}"},
+	"notify.failed":             {"high", "", "Notifier {notifier} ({type}) failed: {error}", "Benachrichtigung {notifier} ({type}) fehlgeschlagen: {error}"},
 }
 
 var words = map[string]map[string]string{
@@ -390,6 +398,50 @@ func (s *Server) evaluate(a *AgentRec, r *Record) []finding {
 		if num(d, "logins") >= 20 {
 			add("web.login_bruteforce", str(d, "ip"), p)
 		}
+	case "file.suid":
+		p := map[string]string{"path": str(d, "path"), "bits": str(d, "bits"), "caps": str(d, "caps"), "mode": str(d, "mode"),
+			"package": str(d, "package"), "uid": str(d, "uid")}
+		what := strings.Trim(p["bits"]+" "+p["caps"], " ")
+		p["what"] = what
+		danger, _ := d["dangerous_caps"].(bool)
+		if p["bits"] == "" && !danger {
+			break // only harmless capabilities such as cap_net_bind_service
+		}
+		packaged, _ := d["pkgdb"].(bool)
+		packaged = packaged && p["package"] != ""
+		after, _ := d["changed_after_install"].(bool)
+		rootOwned := p["uid"] == "0" || danger
+		switch {
+		case str(d, "where") == "tmp" && rootOwned:
+			add("file.suid_tmp", p["path"], p)
+		case packaged && !after:
+			add("file.suid_packaged", p["path"], p)
+		default:
+			if after {
+				p["why"] = "set after the package " + p["package"] + " was installed"
+			} else if p["package"] == "" {
+				p["why"] = "no package owns it"
+			}
+			add("file.suid", p["path"], p)
+		}
+	case "integrity.mismatch":
+		p := map[string]string{"path": str(d, "path"), "package": str(d, "package"), "version": str(d, "version"),
+			"reason": str(d, "reason"), "sha256": str(d, "sha256")}
+		if crit, _ := d["critical"].(bool); crit {
+			add("integrity.binary_replaced", p["path"], p)
+		} else {
+			add("integrity.modified", p["path"], p)
+		}
+	case "integrity.unowned":
+		add("integrity.unowned", str(d, "path"), map[string]string{"path": str(d, "path"), "sha256": str(d, "sha256")})
+	case "integrity.many":
+		add("integrity.many", "", map[string]string{"count": str(d, "count")})
+	case "kernel.bpf_loaded":
+		p := map[string]string{"type": str(d, "type"), "name": str(d, "name"), "tag": str(d, "tag"), "uid": str(d, "uid")}
+		if p["name"] == "" {
+			p["name"] = "(unnamed)"
+		}
+		add("kernel.bpf", p["type"]+"|"+p["name"]+"|"+p["tag"], p)
 	case "kernel.baseline":
 		for _, m := range strSlice(d["out_of_tree"]) {
 			name, taint, _ := strings.Cut(m, " (")

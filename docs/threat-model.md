@@ -138,6 +138,23 @@ them runs arbitrary commands. Hosts where this risk is not acceptable leave
   finding, critical ones included, raises its alert as usual. Faking the
   exact traces needs root, and root could stop the agent instead, which is
   never quiet.
+- Package integrity trusts the Debian checksum lists on the host. An
+  attacker with root who replaces a binary *and* its md5sums entry is caught
+  only because the agent keeps its own SHA-256 inventory and reports a
+  checksum list that changed without a package update. If that happens
+  before the agent's first run, or together with a fake version bump in the
+  dpkg status file, it is not seen. For certainty, compare with a clean copy
+  from the package mirror.
+- The SUID walk runs every six hours (temp directories every five minutes),
+  so a SUID file that exists only between two walks is missed. Program starts
+  from it are still seen by the process collector.
+- Hidden kernel modules are found by comparing `/proc/modules` with sysfs. A
+  rootkit that removes itself from both is not found this way; the taint flags
+  and the module load itself (`kernel.module_unsigned`) are the remaining
+  signals, and only if the agent was running at that moment.
+- eBPF programs that the kernel loads itself at boot (`hid_tail_call`, the
+  bpf_preload iterators) are ignored when loaded in the first two minutes
+  after boot.
 - Program starts are read from `/proc` after the kernel reports them. A
   program that exits within a millisecond or two can be gone before the agent
   looks, and is then not reported.

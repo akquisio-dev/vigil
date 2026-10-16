@@ -18,10 +18,12 @@ external dependencies.
 | SSH access | logins with key name and source, password logins, logins with keys outside `authorized_keys`, first login from a new address, brute-force waves | T1078, T1098.004, T1110 |
 | Persistence | changes to `authorized_keys`, cron, systemd units, sudoers, PAM, shell init files, `ld.so.preload` | T1098.004, T1053.003, T1543.002, T1548.003, T1556.003, T1546.004, T1574.006 |
 | Processes | reverse shells, web servers and databases starting shells, download and run, crypto miners, programs from `/tmp`, from deleted files or **from memory only** (memfd), `LD_PRELOAD` injection | T1059.004, T1505.003, T1105, T1496, T1620, T1574.006 |
+| Tampered software | **replaced `sshd`, `sudo`, `ps`, `ls`, PAM modules or `libc`/`liblzma`** (checked against Debian package checksums plus an own SHA-256 inventory), new programs in `/usr/bin` that no package installed | T1554 |
+| Privilege escalation | new SUID/SGID programs and file capabilities, **SUID bits set on packaged programs after installation** (GTFOBins backdoors), root programs in temp directories | T1548.001 |
 | Accounts | new accounts, accounts that gain uid 0 | T1136.001, T1078.003 |
 | Exposure | new listening ports, **Docker publications that bypass host firewalls like ufw** (read from the NAT table, not only from sockets) | |
 | Canaries | decoy credentials, `.env` files, SSH keys and SQL dumps; any open is reported with process, user and parent chain | T1552.001, T1070.004 |
-| Kernel | new kernel modules, out-of-tree or unsigned modules, **modules hidden from `/proc/modules`** (rootkits), new kernel taint flags | T1547.006, T1014 |
+| Kernel | new kernel modules, out-of-tree or unsigned modules, **modules hidden from `/proc/modules`** (rootkits), new kernel taint flags, **eBPF programs that hook syscalls or packets** (eBPF rootkits) | T1547.006, T1014 |
 | Defense evasion | agents that stop, restart or go silent (dead man's switch), forged or replayed agent traffic, fake `sshd`/`sudo` lines written to the journal by other processes, edits to the event log | T1562.001, T1557, T1070, T1565.001 |
 
 Changes that happen while an agent is down are found on its next start,

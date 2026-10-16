@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Kernel: new modules (`kernel.module`), out-of-tree or unsigned modules (`kernel.module_unsigned`), modules hidden from `/proc/modules` (`kernel.module_hidden`), new taint flags (`kernel.tainted`), eBPF programs that hook the kernel or packets (`kernel.bpf`). Agent options `kernel`, `bpf`.
+- Processes: programs run from memory only (`process.memfd_exec`), `LD_PRELOAD` injection (`process.preload`).
+- SUID/SGID programs and file capabilities (`file.suid`, `file.suid_tmp`, `file.suid_packaged`), including SUID bits set on packaged programs after installation. Agent option `suid`.
+- Package integrity: programs used to log in or inspect the system, PAM modules and core libraries against Debian package checksums plus an own SHA-256 inventory (`integrity.binary_replaced`, `integrity.modified`, `integrity.unowned`, `integrity.many`). Agent option `integrity`.
+- Every new collector keeps its own baseline, so upgrading does not report what was already there (except things that are odd already: out-of-tree modules, hooking eBPF programs, unowned or late SUID files, modified packaged files).
+
 ## v0.11.0
 
 - Self test: on request and every `selftest_days` (default 7) each agent leaves three harmless marked traces (crontab spool file, `sleep` from `/tmp`, an sshd-tagged log line) that `file.cron`, `process.tmp_exec` and `log.spoofed` must catch; the result goes to every notifier, failures raise `selftest.failed` with the reason a sensor is down. Agent option `selftest` (default on).

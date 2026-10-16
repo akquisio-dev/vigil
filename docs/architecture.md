@@ -37,7 +37,10 @@ socket and runs only these external programs: `journalctl`, `iptables-save`,
 | Outbound | established TCP sockets in `/proc/net/{tcp,tcp6}` that are not to a listening port | 10 seconds |
 | Web logs | configured access logs, followed across rotation | continuous, one summary per minute |
 | Updates | `apt list --upgradable`, `/var/run/reboot-required`, `/boot/vmlinuz-*` | 6 hours |
+| SUID and capabilities | walk of local filesystems (not container trees), `security.capability` xattrs, owners from `/var/lib/dpkg/info/*.list`, own inventory in `suid.json` | 6 hours, temp directories 5 minutes |
+| Package integrity | MD5 against `/var/lib/dpkg/info/*.md5sums` for programs, PAM modules and core libraries, own SHA-256 inventory in `integrity.json`, rehash only when inode, size or ctime changed; skipped while dpkg runs, findings confirmed after 10 minutes | 6 hours |
 | Kernel | `/proc/modules`, `/sys/module/*/initstate`, `/proc/sys/kernel/tainted`, own baseline in `kernel.json` | `scan_seconds` |
+| eBPF | `bpf(BPF_PROG_GET_NEXT_ID)` and `BPF_OBJ_GET_INFO_BY_FD`, hooking program types only, own list in `bpf.json` | `scan_seconds` |
 
 Program starts are only reported when something about them is suspicious
 (see the `process.*` rules); everything else is dropped on the host, and at
@@ -159,6 +162,14 @@ can use. Fields in brackets are only present when known.
 | `net.connection` | `remote_ip`, `remote_port`, `local_port`, `process`, `exe`, `uid`, `private` |
 | `web.activity` | `log`, `ip`, `requests`, `status_2xx` … `status_5xx`, `probes`, `exploit_kinds` (list), `exploits_ok`, `shells`, `logins`, `samples` (list), `user_agent` |
 | `system.updates` | `pending`, `security`, `security_packages` (list), `security_oldest_days`, `reboot_required`, (`reboot_days`), `reboot_packages`, `kernel_running`, `kernel_newest`, `unattended_upgrades`, `lists_age_days` |
+| `file.suid` | `path`, `mode`, `bits`, `uid`, `gid`, `where` (`tmp`, `home`, `system`), `dangerous_caps`, (`caps`, `package`, `pkgdb`, `changed_after_install`, `baseline`, `old_mode`, `old_caps`) |
+| `file.suid_removed` | `path` |
+| `suid.scan` | `files`, `roots`, `seconds` |
+| `integrity.mismatch` | `path`, `package`, `version`, `reason`, `sha256`, `size`, `critical`, (`expected_md5`, `md5`, `old_sha256`) |
+| `integrity.unowned` | `path`, (`sha256`, `size`, `mode`) |
+| `integrity.scan` | `files`, `suspect`, `unowned`, `first`, `seconds` |
+| `integrity.many` | `count` |
+| `kernel.bpf_loaded` | `id`, `type`, `name`, `tag`, `uid`, (`baseline`) |
 | `kernel.baseline` | `modules`, `tainted`, `out_of_tree` (list of `name (flags)`) |
 | `kernel.module_loaded` | `name`, `taint`, `size` |
 | `kernel.module_unloaded`, `kernel.module_hidden` | `name` |
