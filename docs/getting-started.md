@@ -16,7 +16,41 @@ Agents sign everything they send, so the agent API does not need TLS for
 integrity. It should still not be reachable from the internet: keep it on a VPN
 address and allow it in the firewall only from your hosts.
 
-## Build
+## Get the binaries
+
+### From a release (recommended)
+
+Every release on GitHub has static binaries for amd64 and arm64, Debian
+packages, `SHA256SUMS` and a Sigstore signature of `SHA256SUMS`, made by the
+release workflow without any long-lived key. `install.sh` downloads, checks
+both and installs the binary and its systemd unit:
+
+```sh
+curl -fsSLO https://github.com/akquisio-dev/vigil/releases/latest/download/install.sh
+less install.sh
+sh install.sh server
+sh install.sh agent -server http://10.0.0.1:8471 -token vgl_...   # on each host
+```
+
+It needs [cosign](https://docs.sigstore.dev/cosign/system_config/installation/)
+for the signature check. To check a download by hand:
+
+```sh
+cosign verify-blob SHA256SUMS --bundle SHA256SUMS.sigstore.json \
+  --certificate-identity https://github.com/akquisio-dev/vigil/.github/workflows/release.yml@refs/tags/v0.9.0 \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+sha256sum -c SHA256SUMS --ignore-missing
+```
+
+Builds are reproducible: `git checkout v0.9.0 && deploy/release/build.sh
+v0.9.0` with the Go toolchain named in `go.mod` produces the same checksums.
+On a running host, `vigil-agent version -verify` and `vigil-server version
+-verify` compare the installed binary with the published one.
+
+The Debian packages install to `/usr/bin` and do not enable the service; add
+the configuration first.
+
+### From source
 
 vigil needs Go 1.25 or newer.
 

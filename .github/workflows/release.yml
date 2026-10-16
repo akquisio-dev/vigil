@@ -1,0 +1,43 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write # create the release
+  id-token: write # keyless signing with Sigstore
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - name: Use the toolchain from go.mod exactly
+        run: echo "GOTOOLCHAIN=$(sed -n 's/^toolchain //p' go.mod)" >> "$GITHUB_ENV"
+      - run: go test ./...
+      - name: Build binaries and packages
+        run: deploy/release/build.sh "$GITHUB_REF_NAME"
+      - uses: sigstore/cosign-installer@v3
+      - name: Sign SHA256SUMS
+        run: cosign sign-blob --yes --bundle dist/SHA256SUMS.sigstore.json dist/SHA256SUMS
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "Verify before installing:"
+            echo
+            echo '```sh'
+            echo "cosign verify-blob SHA256SUMS --bundle SHA256SUMS.sigstore.json \\"
+            echo "  --certificate-identity https://github.com/${GITHUB_REPOSITORY}/.github/workflows/release.yml@refs/tags/${GITHUB_REF_NAME} \\"
+            echo "  --certificate-oidc-issuer https://token.actions.githubusercontent.com"
+            echo "sha256sum -c SHA256SUMS --ignore-missing"
+            echo '```'
+            echo
+            echo "Rebuild and compare: \`git checkout ${GITHUB_REF_NAME} && deploy/release/build.sh ${GITHUB_REF_NAME}\`"
+          } > notes.md
+          gh release create "$GITHUB_REF_NAME" dist/* --title "$GITHUB_REF_NAME" --notes-file notes.md --verify-tag

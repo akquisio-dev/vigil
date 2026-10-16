@@ -93,8 +93,11 @@ The first port snapshot of a host is its baseline. Afterwards:
 
 ## Upgrading
 
-Replace the binary and restart the service. Start a maintenance window for the
-host first, or the restart raises an alert.
+Start a maintenance window for the host first, or the restart raises an
+alert. Then install the new release (`sh install.sh agent -version vX.Y.Z`,
+the `.deb`, or the binary by hand) and restart the service. Agents do not
+update themselves; a compromised server must not be able to push code to
+every host.
 
 ```sh
 install -m 0755 dist/vigil-agent /usr/local/bin/

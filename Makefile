@@ -1,9 +1,14 @@
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
-LDFLAGS := -s -w -X github.com/akquisio-dev/vigil/internal/agent.Version=$(VERSION) -X github.com/akquisio-dev/vigil/internal/server.Version=$(VERSION)
+PKG := github.com/akquisio-dev/vigil/internal
+# Same flags as deploy/release/build.sh, so a local build of a tag matches the release.
+LDFLAGS := -s -w -buildid= -X $(PKG)/agent.Version=$(VERSION) -X $(PKG)/server.Version=$(VERSION)
 
-.PHONY: build test vet clean
+.PHONY: build test vet clean release
 build:
-	CGO_ENABLED=0 go build -trimpath -ldflags '$(LDFLAGS)' -o dist/ ./cmd/...
+	CGO_ENABLED=0 go build -trimpath -buildvcs=false -ldflags '$(LDFLAGS)' -o dist/ ./cmd/...
+
+release:
+	deploy/release/build.sh $(VERSION)
 
 test:
 	go test ./...

@@ -16,6 +16,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/akquisio-dev/vigil/internal/release"
 	"github.com/akquisio-dev/vigil/internal/server"
 )
 
@@ -27,7 +28,7 @@ const usage = `usage:
   vigil-server verify      [-config ...]
   vigil-server rules check DIR
   vigil-server rules test  FILE EVENTS.jsonl
-  vigil-server version`
+  vigil-server version     [-verify]`
 
 func main() {
 	log.SetFlags(0)
@@ -51,11 +52,19 @@ func main() {
 	fs := flag.NewFlagSet(cmd, flag.ExitOnError)
 	cfgPath := fs.String("config", "/etc/vigil/server.json", "server config file")
 	role := fs.String("role", "admin", "user add: viewer, analyst or admin")
+	verify := fs.Bool("verify", false, "version: compare this binary with the published release")
 	fs.Parse(args)
 
 	switch cmd {
 	case "version":
 		fmt.Println(server.Version)
+		if *verify {
+			msg, err := release.Verify("vigil-server", server.Version)
+			if err != nil {
+				log.Fatal(err)
+			}
+			fmt.Println(msg)
+		}
 	case "run":
 		s := mustServer(*cfgPath)
 		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

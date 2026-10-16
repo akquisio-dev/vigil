@@ -11,12 +11,13 @@ import (
 	"syscall"
 
 	"github.com/akquisio-dev/vigil/internal/agent"
+	"github.com/akquisio-dev/vigil/internal/release"
 )
 
 const usage = `usage:
   vigil-agent run    [-config /etc/vigil/agent.json]
   vigil-agent enroll [-config /etc/vigil/agent.json] -server URL -token TOKEN
-  vigil-agent version`
+  vigil-agent version [-verify]`
 
 func main() {
 	log.SetFlags(0)
@@ -28,11 +29,19 @@ func main() {
 	cfgPath := fs.String("config", "/etc/vigil/agent.json", "agent config file")
 	server := fs.String("server", "", "server URL (enroll)")
 	token := fs.String("token", "", "enrollment token from the dashboard (enroll)")
+	verify := fs.Bool("verify", false, "version: compare this binary with the published release")
 	fs.Parse(os.Args[2:])
 
 	switch os.Args[1] {
 	case "version":
 		fmt.Println(agent.Version)
+		if *verify {
+			msg, err := release.Verify("vigil-agent", agent.Version)
+			if err != nil {
+				log.Fatal(err)
+			}
+			fmt.Println(msg)
+		}
 	case "enroll":
 		cfg := mustConfig(*cfgPath)
 		if *server == "" {
