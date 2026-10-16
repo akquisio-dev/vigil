@@ -37,6 +37,8 @@ type Server struct {
 	sessions map[string]*session
 	limit    *limiter
 	forged   *limiter
+
+	custom customState // threshold counters of custom rules, guarded by mu
 }
 
 func New(cfg *Config) (*Server, error) {
@@ -111,6 +113,13 @@ func (s *Server) Run(ctx context.Context) error {
 		s.chainBroken(s.store.ChainError)
 	}
 	s.record("server", "", "", proto.NewEvent("server.started", map[string]any{"version": Version}))
+	if s.cfg.RulesDir != "" {
+		n, errs := LoadCustomRules(s.cfg.RulesDir)
+		log.Printf("custom rules: %d loaded from %s", n, s.cfg.RulesDir)
+		for _, e := range errs {
+			log.Printf("custom rules: %s", e)
+		}
+	}
 
 	ui := s.uiHandler()
 	agentMux := http.NewServeMux()
@@ -391,7 +400,7 @@ func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 		if rec.Source != "agent" {
 			continue
 		}
-		fresh = append(fresh, s.raise(s.evaluate(a, rec), a.ID, rec.Seq)...)
+		fresh = append(fresh, s.raise(append(s.evaluate(a, rec), s.evaluateCustom(a, rec)...), a.ID, rec.Seq)...)
 	}
 	s.correlate(fresh)
 	resp := proto.BatchResponse{ConfigVersion: a.ConfigVersion}

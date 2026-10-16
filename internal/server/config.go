@@ -48,6 +48,9 @@ type Config struct {
 	// that run vigil under their own name.
 	Brand *BrandConfig `json:"brand,omitempty"`
 
+	// RulesDir holds custom rules (*.json), loaded at start.
+	RulesDir string `json:"rules_dir,omitempty"`
+
 	Notifiers []NotifierConfig `json:"notifiers"`
 	// HeartbeatURL is fetched every minute so an outside service notices
 	// when the server itself is down (healthchecks.io style).

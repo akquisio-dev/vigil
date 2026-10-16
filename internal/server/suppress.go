@@ -34,7 +34,7 @@ const (
 // would want silenced first never can be: anything about vigil itself, the
 // canaries, the event chain and every critical rule.
 func Suppressible(rule string) bool {
-	def, ok := rules[rule]
+	def, ok := lookupRule(rule)
 	if !ok || def.Severity == "critical" {
 		return false
 	}
@@ -225,4 +225,12 @@ func (s *Server) handleSuppressionAction(w http.ResponseWriter, r *http.Request,
 	s.audit(sess.User, "suppression."+map[string]string{"delete": "deleted", "renew": "renewed"}[action],
 		map[string]any{"id": sp.ID, "rule": sp.Rule, "expires": sp.Expires})
 	writeJSON(w, map[string]bool{"ok": true})
+}
+
+func suppressibleList() map[string]bool {
+	out := map[string]bool{}
+	for id := range rules {
+		out[id] = Suppressible(id)
+	}
+	return out
 }

@@ -107,6 +107,10 @@ func (s *Server) uiHandler() http.Handler {
 	mux.HandleFunc("GET /api/ui/canaries", s.auth(s.handleCanaries))
 	mux.HandleFunc("POST /api/ui/canaries", s.auth(s.handleCanaryCreate))
 	mux.HandleFunc("POST /api/ui/canaries/{id}/delete", s.auth(s.handleCanaryDelete))
+	mux.HandleFunc("GET /api/ui/rules", s.auth(func(w http.ResponseWriter, r *http.Request, sess *session) {
+		custom, errs := CustomInfo()
+		writeJSON(w, map[string]any{"builtin": Catalog(), "custom": custom, "errors": errs, "suppressible": suppressibleList()})
+	}))
 	mux.HandleFunc("GET /api/ui/incidents", s.auth(s.handleIncidents))
 	mux.HandleFunc("GET /api/ui/incidents/{id}", s.auth(s.handleIncident))
 	mux.HandleFunc("POST /api/ui/incidents/{id}/{action}", s.auth(s.handleIncidentAction))

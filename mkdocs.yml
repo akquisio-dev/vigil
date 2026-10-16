@@ -11,6 +11,7 @@ nav:
   - Installation: getting-started.md
   - Configuration: configuration.md
   - Detection rules: rules.md
+  - Custom rules: custom-rules.md
   - Canaries: canaries.md
   - Operations: operations.md
   - Architecture: architecture.md

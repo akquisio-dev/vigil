@@ -183,6 +183,8 @@ var ruleDocs = map[string]ruleDoc{
 type RuleInfo struct {
 	ID, Severity, Technique, Title    string
 	Trigger, FalsePositives, Response string
+	Custom                            bool   `json:",omitempty"`
+	File                              string `json:",omitempty"`
 }
 
 // Catalog lists all rules, most severe first, then by id.

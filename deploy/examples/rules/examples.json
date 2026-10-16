@@ -1,0 +1,32 @@
+[
+  {
+    "id": "custom.sudo_shell",
+    "severity": "medium",
+    "technique": "T1548.003",
+    "description": "Someone used sudo to start an interactive shell instead of a single command.",
+    "title": { "en": "{user} started a root shell with sudo: {command}", "de": "{user} hat mit sudo eine Root-Shell gestartet: {command}" },
+    "event": "sudo.command",
+    "where": [ { "field": "command", "op": "regex", "value": "(^|/)(ba|z|da)?sh( -i)?$|sudo -i|sudo su" } ],
+    "key": ["user"]
+  },
+  {
+    "id": "custom.root_spray",
+    "severity": "medium",
+    "technique": "T1110",
+    "description": "One address keeps trying root or admin over half an hour.",
+    "title": { "en": "{ip} keeps trying root or admin ({count} batches)", "de": "{ip} probiert dauernd root oder admin ({count} Wellen)" },
+    "event": "ssh.failed",
+    "where": [ { "field": "users", "op": "in", "value": ["root", "admin"] } ],
+    "threshold": { "count": 5, "window_minutes": 30, "group_by": "ip" }
+  },
+  {
+    "id": "custom.docker_api_port",
+    "severity": "high",
+    "technique": "T1610",
+    "description": "The Docker API port is listening. Anyone who reaches it controls the host.",
+    "title": { "en": "Docker API listening on {addr}:{port}", "de": "Docker-API lauscht auf {addr}:{port}" },
+    "event": "port.opened",
+    "where": [ { "field": "port", "op": "in", "value": [2375, 2376] } ],
+    "key": ["port"]
+  }
+]

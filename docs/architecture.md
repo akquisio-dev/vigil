@@ -121,3 +121,26 @@ A single page without a build step. Every value from agents is inserted with
 `textContent`, never as markup. The server sends a strict Content Security
 Policy without inline scripts, cookies are HttpOnly and SameSite=Strict, and
 every change needs a CSRF token bound to the session.
+
+## Event types
+
+What agents send, with the fields rules (and [custom rules](custom-rules.md))
+can use. Fields in brackets are only present when known.
+
+| Type | Fields |
+|---|---|
+| `ssh.login` | `user`, `ip`, `port`, `method`, `sshd_pid`, (`fingerprint`, `key_type`, `key_comment`, `key_file`) |
+| `ssh.logout` | `user`, `ip`, `port`, `sshd_pid` |
+| `ssh.failed` | `ip`, `count`, `users` (list), aggregated per address and interval |
+| `sudo.command` | `user`, `tty`, `cwd`, `as`, `command` |
+| `ssh.key_added`, `ssh.key_removed` | `file`, `fingerprint`, `key_type`, `comment` |
+| `file.added`, `file.changed`, `file.removed` | `path`, `category`, (`hash`, `old_hash`, `mode`, `old_mode`, `uid`, `old_uid`, `size`) |
+| `user.added`, `user.removed` | `user`, `uid` |
+| `user.uid_changed` | `user`, `uid`, `old_uid` |
+| `port.opened`, `port.closed` | `key`, `proto`, `addr`, `port`, `scope`, `via`, (`process`, `target`) |
+| `port.snapshot` | `ports` (list) |
+| `canary.opened` | `canary_id`, `path`, `pid`, (`exe`, `comm`, `cmdline`, `uid`, `loginuid`, `sessionid`) |
+| `canary.placed`, `canary.removed`, `canary.tampered`, `canary.error` | `canary_id`, `path`, (`type`, `hash`, `problem`, `error`) |
+| `log.spoofed` | `identifier`, `comm`, `uid`, `message` |
+| `agent.started` | `version`, `hostname`, `canary_roots` |
+| `agent.stopping`, `agent.dropped`, `agent.warning`, `agent.config_rejected` | details of the agent's own state |

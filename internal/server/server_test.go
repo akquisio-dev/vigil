@@ -297,3 +297,55 @@ func TestIncidentGrouping(t *testing.T) {
 		t.Fatal("closed incidents take no new alerts")
 	}
 }
+
+func TestCustomRules(t *testing.T) {
+	dir := t.TempDir()
+	write := func(name, body string) {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	example, _ := os.ReadFile("../../deploy/examples/rules/examples.json")
+	write("a-examples.json", string(example))
+	write("b-broken.json", `{"id": "custom.x", "severity": "high"`)
+	write("c-builtin.json", `{"id": "ssh.bruteforce", "severity": "info", "title": {"en": "x"}, "event": "ssh.failed"}`)
+	write("d-regex.json", `{"id": "custom.bad", "severity": "low", "title": {"en": "x"}, "event": "ssh.failed", "where": [{"field": "ip", "op": "regex", "value": "("}]}`)
+	n, errs := LoadCustomRules(dir)
+	defer LoadCustomRules("")
+	if n != 3 || len(errs) != 3 {
+		t.Fatalf("loaded %d, errors %v", n, errs)
+	}
+	if d, _ := lookupRule("ssh.bruteforce"); d != rules["ssh.bruteforce"] {
+		t.Fatal("a custom file must not replace a built-in rule")
+	}
+	s := &Server{state: &State{Agents: map[string]*AgentRec{}, Canaries: map[string]*CanaryRec{}, KnownLogins: map[string]time.Time{}}}
+	a := &AgentRec{ID: "a1", Name: "web"}
+	ev := func(typ string, d map[string]any, at time.Duration) *Record {
+		ts := time.Date(2026, 10, 16, 12, 0, 0, 0, time.UTC).Add(at)
+		return &Record{Agent: "a1", Source: "agent", Event: proto.Event{Type: typ, TS: ts, Data: d}}
+	}
+	f := s.evaluateCustom(a, ev("sudo.command", map[string]any{"user": "alice", "command": "/bin/bash"}, 0))
+	if len(f) != 1 || f[0].Rule != "custom.sudo_shell" {
+		t.Fatalf("sudo shell: %+v", f)
+	}
+	if got := renderTitle(f[0].Rule, f[0].Params, "de"); got != "alice hat mit sudo eine Root-Shell gestartet: /bin/bash" {
+		t.Fatalf("title: %q", got)
+	}
+	if f := s.evaluateCustom(a, ev("sudo.command", map[string]any{"user": "alice", "command": "/usr/bin/systemctl restart nginx"}, 0)); len(f) != 0 {
+		t.Fatal("a normal sudo command must not match")
+	}
+	if f := s.evaluateCustom(a, ev("port.opened", map[string]any{"port": float64(2375), "addr": "0.0.0.0"}, 0)); len(f) != 1 {
+		t.Fatal("docker api port")
+	}
+	var fired []finding
+	for i := 0; i < 6; i++ {
+		fired = append(fired, s.evaluateCustom(a, ev("ssh.failed", map[string]any{"ip": "203.0.113.9", "users": []any{"oracle", "root"}}, time.Duration(i)*5*time.Minute))...)
+		s.evaluateCustom(a, ev("ssh.failed", map[string]any{"ip": "198.51.100.1", "users": []any{"root"}}, time.Duration(i)*20*time.Minute))
+	}
+	if len(fired) != 1 || fired[0].Params["count"] != "5" || fired[0].Params["ip"] != "203.0.113.9" {
+		t.Fatalf("threshold: %+v", fired)
+	}
+	if !Suppressible("custom.sudo_shell") {
+		t.Fatal("non-critical custom rules can be suppressed")
+	}
+}

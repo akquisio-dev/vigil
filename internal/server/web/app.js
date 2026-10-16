@@ -42,6 +42,8 @@ const T = {
     investigating: "investigating", contained: "contained", closed: "closed", openInc: "open", activeInc: "Active",
     notes: "Notes", addNote: "Add note", timeline: "Timeline", startedBy: "Session started by", newIncident: "Open incident",
     mttc: "Median time to close", alertsN: "alerts", unowned: "nobody", setStatus: "Status",
+    rules: "Rules", customRules: "Custom rules", builtinRules: "Built-in rules", ruleErrors: "Not loaded", noCustom: "No custom rules (rules_dir in server.json)",
+    rule: "Rule", file: "File", title: "Title", builtin: "built-in", customShort: "custom",
   },
   de: {
     overview: "Lage", alerts: "Alarme", events: "Ereignisse", canaries: "Köder", settings: "Einstellungen",
@@ -81,6 +83,8 @@ const T = {
     investigating: "in Arbeit", contained: "eingedämmt", closed: "geschlossen", openInc: "offen", activeInc: "Aktiv",
     notes: "Notizen", addNote: "Notiz hinzufügen", timeline: "Zeitstrahl", startedBy: "Sitzung begonnen von", newIncident: "Vorfall anlegen",
     mttc: "Median bis geschlossen", alertsN: "Alarme", unowned: "niemand", setStatus: "Status",
+    rules: "Regeln", customRules: "Eigene Regeln", builtinRules: "Eingebaute Regeln", ruleErrors: "Nicht geladen", noCustom: "Keine eigenen Regeln (rules_dir in server.json)",
+    rule: "Regel", file: "Datei", title: "Titel", builtin: "eingebaut", customShort: "eigene",
   },
 };
 
@@ -152,7 +156,7 @@ function summary(data) {
 }
 
 // Tabler Icons (MIT, https://tabler.io/icons), outline paths.
-const ICONS = {"stack-2": ["M12 4l-8 4l8 4l8 -4l-8 -4", "M4 12l8 4l8 -4", "M4 16l8 4l8 -4"], "bell-off": ["M9.346 5.353c.21 -.129 .428 -.246 .654 -.353a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3m-1 3h-13a4 4 0 0 0 2 -3v-3a6.996 6.996 0 0 1 1.273 -3.707", "M9 17v1a3 3 0 0 0 6 0v-1", "M3 3l18 18"], "clock": ["M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0", "M12 7v5l3 3"], "user-x": ["M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0", "M6 21v-2a4 4 0 0 1 4 -4h3.5", "M22 22l-5 -5", "M17 22l5 -5"], "plus": ["M12 5l0 14", "M5 12l14 0"], "alert-triangle": ["M12 9v4", "M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z", "M12 16h.01"], "fish-hook": ["M16 9v6a5 5 0 0 1 -10 0v-4l3 3", "M16 7m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0", "M16 5v-2"], "layout-dashboard": ["M5 4h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1", "M5 16h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1", "M15 12h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1", "M15 4h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1"], "list-details": ["M13 5h8", "M13 9h5", "M13 15h8", "M13 19h5", "M3 4m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z", "M3 14m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z"], "logout": ["M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2", "M9 12h12l-3 -3", "M18 15l3 -3"], "server": ["M3 4m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z", "M3 12m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z", "M7 8l0 .01", "M7 16l0 .01"], "settings": ["M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z", "M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"], "shield-check": ["M11.46 20.846a12 12 0 0 1 -7.96 -14.846a12 12 0 0 0 8.5 -3a12 12 0 0 0 8.5 3a12 12 0 0 1 -.09 7.06", "M15 19l2 2l4 -4"]};
+const ICONS = {"book": ["M3 19a9 9 0 0 1 9 0a9 9 0 0 1 9 0", "M3 6a9 9 0 0 1 9 0a9 9 0 0 1 9 0", "M3 6l0 13", "M12 6l0 13", "M21 6l0 13"], "stack-2": ["M12 4l-8 4l8 4l8 -4l-8 -4", "M4 12l8 4l8 -4", "M4 16l8 4l8 -4"], "bell-off": ["M9.346 5.353c.21 -.129 .428 -.246 .654 -.353a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3m-1 3h-13a4 4 0 0 0 2 -3v-3a6.996 6.996 0 0 1 1.273 -3.707", "M9 17v1a3 3 0 0 0 6 0v-1", "M3 3l18 18"], "clock": ["M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0", "M12 7v5l3 3"], "user-x": ["M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0", "M6 21v-2a4 4 0 0 1 4 -4h3.5", "M22 22l-5 -5", "M17 22l5 -5"], "plus": ["M12 5l0 14", "M5 12l14 0"], "alert-triangle": ["M12 9v4", "M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z", "M12 16h.01"], "fish-hook": ["M16 9v6a5 5 0 0 1 -10 0v-4l3 3", "M16 7m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0", "M16 5v-2"], "layout-dashboard": ["M5 4h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1", "M5 16h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1", "M15 12h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1", "M15 4h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1"], "list-details": ["M13 5h8", "M13 9h5", "M13 15h8", "M13 19h5", "M3 4m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z", "M3 14m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z"], "logout": ["M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2", "M9 12h12l-3 -3", "M18 15l3 -3"], "server": ["M3 4m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z", "M3 12m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z", "M7 8l0 .01", "M7 16l0 .01"], "settings": ["M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z", "M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"], "shield-check": ["M11.46 20.846a12 12 0 0 1 -7.96 -14.846a12 12 0 0 0 8.5 -3a12 12 0 0 0 8.5 3a12 12 0 0 1 -.09 7.06", "M15 19l2 2l4 -4"]};
 
 const SVG = "http://www.w3.org/2000/svg";
 function icon(name, viewBox = "0 0 24 24", paths = ICONS[name]) {
@@ -189,7 +193,7 @@ const sections = [
   ["sectionOverview", [["overview", "#/", "layout-dashboard"]]],
   ["sectionDetect", [["incidents", "#/incidents", "stack-2"], ["alerts", "#/alerts", "alert-triangle"], ["events", "#/events", "list-details"], ["canaries", "#/canaries", "fish-hook"],
     ["suppressions", "#/suppressions", "bell-off"]]],
-  ["sectionSystem", [["settings", "#/settings", "settings"]]],
+  ["sectionSystem", [["rules", "#/rules", "book"], ["settings", "#/settings", "settings"]]],
 ];
 let openAlerts = 0;
 
@@ -727,6 +731,23 @@ async function incidentDetail(id) {
     h("h2", null, t("timeline")), h("div", { class: "card" }, tl)));
 }
 
+async function rulesView() {
+  const r = await api("/api/ui/rules");
+  const technique = (x) => x ? h("a", { href: "https://attack.mitre.org/techniques/" + x.replace(".", "/") + "/", target: "_blank", rel: "noopener noreferrer", class: "mono" }, x) : "·";
+  const table = (list, custom) => h("div", { class: "tablewrap" }, h("table", { class: "rules" },
+    h("thead", null, h("tr", null, [t("severity"), t("rule"), "ATT&CK", t("title"), custom ? t("file") : ""].map((x) => h("th", null, x)))),
+    h("tbody", null, list.map((x) => h("tr", null,
+      h("td", null, sevChip(x.Severity)), h("td", { class: "mono nowrap" }, x.ID), h("td", { class: "nowrap" }, technique(x.Technique)),
+      h("td", null, h("div", null, x.Title), x.Trigger ? h("div", { class: "muted small-text" }, x.Trigger) : null),
+      h("td", { class: "muted mono" }, custom ? x.File : (r.suppressible[x.ID] ? "" : h("span", { class: "pill", title: t("suppress") }, icon("bell-off"))) ))))));
+  mount(shell("rules", h("h1", null, t("rules")),
+    h("div", { class: "crumbs" }, r.builtin.length + " " + t("builtin") + ", " + (r.custom || []).length + " " + t("customShort")),
+    h("h2", null, t("customRules")),
+    r.errors && r.errors.length ? h("div", { class: "card err-box" }, h("h3", null, t("ruleErrors")), r.errors.map((e) => h("div", { class: "mono" }, e))) : null,
+    (r.custom || []).length ? table(r.custom, true) : h("div", { class: "card empty" }, t("noCustom")),
+    h("h2", null, t("builtinRules")), table(r.builtin, false)));
+}
+
 async function suppressionsView() {
   const list = await api("/api/ui/suppressions");
   const act = (sp, action, ask) => async () => {
@@ -804,6 +825,7 @@ async function render() {
     else if (parts[0] === "events") await eventsView(params);
     else if (parts[0] === "canaries") await canariesView();
     else if (parts[0] === "suppressions") await suppressionsView();
+    else if (parts[0] === "rules") await rulesView();
     else if (parts[0] === "incidents" && parts[1]) await incidentDetail(parts[1]);
     else if (parts[0] === "incidents") await incidentsView();
     else if (parts[0] === "settings") await settingsView();

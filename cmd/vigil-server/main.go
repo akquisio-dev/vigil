@@ -25,6 +25,8 @@ const usage = `usage:
   vigil-server user remove [-config ...] NAME
   vigil-server user list   [-config ...]
   vigil-server verify      [-config ...]
+  vigil-server rules check DIR
+  vigil-server rules test  FILE EVENTS.jsonl
   vigil-server version`
 
 func main() {
@@ -36,6 +38,10 @@ func main() {
 	cmd := args[0]
 	args = args[1:]
 	sub := ""
+	if cmd == "rules" {
+		rulesCmd(args)
+		return
+	}
 	if cmd == "user" {
 		if len(args) == 0 {
 			fail()
@@ -69,6 +75,33 @@ func main() {
 		fmt.Printf("ok, %d records, head %s\n", seq, head)
 	case "user":
 		userCmd(mustConfig(*cfgPath).DataDir, sub, fs.Args())
+	default:
+		fail()
+	}
+}
+
+func rulesCmd(args []string) {
+	switch {
+	case len(args) == 2 && args[0] == "check":
+		n, errs := server.LoadCustomRules(args[1])
+		for _, e := range errs {
+			fmt.Println("error:", e)
+		}
+		fmt.Printf("%d rules loaded\n", n)
+		if len(errs) > 0 {
+			os.Exit(1)
+		}
+	case len(args) == 3 && args[0] == "test":
+		f, err := os.Open(args[2])
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer f.Close()
+		n, err := server.TryCustomRules(args[1], f, os.Stdout)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("%d findings\n", n)
 	default:
 		fail()
 	}

@@ -66,7 +66,7 @@ var words = map[string]map[string]string{
 }
 
 func renderTitle(rule string, params map[string]string, lang string) string {
-	def, ok := rules[rule]
+	def, ok := lookupRule(rule)
 	if !ok {
 		return rule
 	}
@@ -308,7 +308,7 @@ func (s *Server) raise(fs []finding, agentID string, seq uint64) []*Alert {
 	var fresh []*Alert
 	now := time.Now().UTC()
 	for _, f := range fs {
-		def := rules[f.Rule]
+		def, _ := lookupRule(f.Rule)
 		if s.suppressed(f, agentID, now) != nil {
 			continue
 		}

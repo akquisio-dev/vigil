@@ -437,3 +437,8 @@ textarea:focus { border-color: var(--accent); }
 .tl-item.tl-login { border-left-color: var(--accent); }
 a.tl-item:hover .feed-title { text-decoration: underline; }
 @media (max-width: 640px) { .tl-item { grid-template-columns: 1fr; gap: 2px; } }
+.err-box { border-color: var(--red); color: var(--red); }
+.err-box h3 { color: var(--red); }
+.small-text { font-size: 11px; margin-top: 2px; }
+.pill svg.ic { width: 11px; height: 11px; vertical-align: -1px; }
+table.rules td:nth-child(4) { min-width: 300px; }

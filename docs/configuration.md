@@ -78,6 +78,7 @@ and only here. The dashboard cannot widen `canary_roots`.
 | `heartbeat_url` | | fetched every minute, for an outside watchdog |
 | `notifiers` | none | see below |
 | `brand` | none | your own name and logo, see below |
+| `rules_dir` | none | directory with [custom rules](custom-rules.md) |
 
 Only enable `trust_proxy` when the dashboard listener is reachable through the
 proxy alone. Otherwise clients can choose their own address for rate limits
