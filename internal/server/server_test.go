@@ -135,3 +135,17 @@ func TestRestartAlwaysAlerts(t *testing.T) {
 		t.Fatal("maintenance set from the dashboard suppresses agent alerts")
 	}
 }
+
+func TestEveryRuleIsDocumented(t *testing.T) {
+	for id := range rules {
+		d, ok := ruleDocs[id]
+		if !ok || d.Trigger == "" || d.FalsePositives == "" || d.Response == "" {
+			t.Errorf("rule %s has no complete entry in ruleDocs", id)
+		}
+	}
+	for id := range ruleDocs {
+		if _, ok := rules[id]; !ok {
+			t.Errorf("ruleDocs has %s, which is not a rule", id)
+		}
+	}
+}

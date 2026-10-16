@@ -1,0 +1,62 @@
+site_name: vigil
+site_description: A small security operations center for small server fleets.
+site_url: https://akquisio-dev.github.io/vigil/
+repo_url: https://github.com/akquisio-dev/vigil
+repo_name: akquisio-dev/vigil
+edit_uri: edit/main/docs/
+copyright: vigil is licensed under the AGPL-3.0-or-later
+
+nav:
+  - Home: index.md
+  - Installation: getting-started.md
+  - Configuration: configuration.md
+  - Detection rules: rules.md
+  - Canaries: canaries.md
+  - Operations: operations.md
+  - Architecture: architecture.md
+  - Threat model: threat-model.md
+
+theme:
+  name: material
+  font: false
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-night
+        name: Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-sunny
+        name: Light mode
+  features:
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - search.highlight
+    - content.code.copy
+    - content.action.edit
+    - toc.follow
+
+extra_css:
+  - assets/extra.css
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.highlight
+  - pymdownx.superfences
+
+validation:
+  links:
+    not_found: warn
+    anchors: warn

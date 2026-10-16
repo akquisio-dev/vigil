@@ -1,0 +1,25 @@
+:root {
+  --md-primary-fg-color: #222222;
+  --md-primary-fg-color--light: #55554f;
+  --md-primary-fg-color--dark: #000000;
+  --md-accent-fg-color: #2a78d6;
+}
+[data-md-color-scheme="default"] {
+  --md-default-bg-color: #f7f7f5;
+}
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color: #1f1f1e;
+  --md-default-bg-color: #161615;
+  --md-accent-fg-color: #3987e5;
+}
+.md-typeset h1, .md-typeset h2 {
+  font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+[data-md-color-scheme="default"] {
+  --md-typeset-a-color: #1f63b5;
+}
+[data-md-color-scheme="slate"] {
+  --md-typeset-a-color: #7ab0f0;
+}

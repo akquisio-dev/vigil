@@ -71,6 +71,9 @@ Decisions that matter for trust:
 See [docs/threat-model.md](docs/threat-model.md) for what vigil does and
 does not protect against.
 
+Full documentation, including the catalogue of all detection rules:
+**https://akquisio-dev.github.io/vigil/**
+
 ## Quick start
 
 Build (Go 1.25+):
