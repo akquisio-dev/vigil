@@ -1,0 +1,18 @@
+{
+  "listen": "127.0.0.1:8470",
+  "agent_listen": "10.0.0.1:8471",
+  "data_dir": "/var/lib/vigil",
+  "public_url": "https://soc.example.com",
+  "language": "en",
+  "trust_proxy": true,
+  "retention_days": 90,
+  "deadman_seconds": 120,
+  "anchor_daily": true,
+  "heartbeat_url": "",
+  "notifiers": [
+    { "type": "discord", "name": "soc-channel", "min_severity": "high", "url": "https://discord.com/api/webhooks/..." },
+    { "type": "smtp", "name": "mail", "min_severity": "critical",
+      "smtp_host": "smtp.example.com", "smtp_port": 587, "smtp_user": "alerts@example.com", "smtp_pass": "...",
+      "from": "alerts@example.com", "to": ["oncall@example.com"] }
+  ]
+}

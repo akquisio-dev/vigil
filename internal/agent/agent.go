@@ -1,0 +1,274 @@
+// Package agent is the host sensor. It runs as root, opens no listening
+// socket, executes only journalctl and iptables-save, and talks to the
+// server with outbound, signed requests.
+package agent
+
+import (
+	"bytes"
+	"context"
+	"crypto/ed25519"
+	"crypto/rand"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"os"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/akquisio-dev/vigil/internal/proto"
+)
+
+var Version = "dev"
+
+type Agent struct {
+	cfg   *Config
+	id    *Identity
+	state *State
+	http  *http.Client
+	watch *canaryWatch
+
+	mu          sync.Mutex
+	queue       []proto.Event
+	dropped     int
+	keyNames    map[string]keyRef
+	sshFails    map[string]*failures
+	canaryPaths map[string]string
+	portsSent   bool
+	lastSeq     int64
+	flushNow    chan struct{}
+}
+
+func New(cfg *Config) (*Agent, error) {
+	id, err := LoadIdentity(cfg.StateDir)
+	if err != nil {
+		return nil, err
+	}
+	st, err := LoadState(cfg.StateDir)
+	if err != nil {
+		return nil, err
+	}
+	if cfg.Server == "" {
+		cfg.Server = id.Server
+	}
+	return &Agent{
+		cfg: cfg, id: id, state: st,
+		http:        &http.Client{Timeout: 15 * time.Second},
+		keyNames:    map[string]keyRef{},
+		sshFails:    map[string]*failures{},
+		canaryPaths: map[string]string{},
+		flushNow:    make(chan struct{}, 1),
+	}, nil
+}
+
+// emit queues an event. When the server is unreachable for long, the oldest
+// events are dropped and the loss is reported once the link is back.
+func (a *Agent) emit(ev proto.Event) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if len(a.queue) >= a.cfg.MaxQueue {
+		a.queue = a.queue[1:]
+		a.dropped++
+	}
+	a.queue = append(a.queue, ev)
+}
+
+func (a *Agent) flushSoon() {
+	select {
+	case a.flushNow <- struct{}{}:
+	default:
+	}
+}
+
+func (a *Agent) Run(ctx context.Context) error {
+	if len(a.cfg.CanaryRoots) > 0 {
+		w, err := newCanaryWatch()
+		if err != nil {
+			a.emit(proto.NewEvent("agent.warning", map[string]any{"collector": "canary", "error": err.Error()}))
+		} else {
+			a.watch = w
+			go a.runCanaryWatch()
+		}
+	}
+	host, _ := os.Hostname()
+	a.emit(proto.NewEvent("agent.started", map[string]any{"version": Version, "hostname": host, "canary_roots": a.cfg.CanaryRoots}))
+
+	a.scan()
+	if !a.state.Initialized {
+		a.state.Initialized = true
+		a.emit(proto.NewEvent("baseline.created", map[string]any{"files": len(a.state.Files), "users": len(a.state.Users), "ports": len(a.state.Ports)}))
+	}
+	a.remarkCanaries()
+	a.saveState()
+
+	if on(a.cfg.SSH) {
+		go a.runSSH(ctx)
+	}
+
+	send := time.NewTicker(a.cfg.interval())
+	scan := time.NewTicker(a.cfg.scan())
+	defer send.Stop()
+	defer scan.Stop()
+	a.send(ctx)
+	for {
+		select {
+		case <-ctx.Done():
+			a.emit(proto.NewEvent("agent.stopping", nil))
+			sctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			a.send(sctx)
+			cancel()
+			a.saveState()
+			return nil
+		case <-scan.C:
+			a.scan()
+			a.saveState()
+		case <-send.C:
+			a.send(ctx)
+		case <-a.flushNow:
+			a.send(ctx)
+		}
+	}
+}
+
+func (a *Agent) scan() {
+	a.scanFiles()
+	a.scanPorts()
+	a.checkCanaries()
+}
+
+func (a *Agent) saveState() {
+	if err := a.state.Save(a.cfg.StateDir); err != nil {
+		log.Printf("state: %v", err)
+	}
+}
+
+func (a *Agent) nextSeq() int64 {
+	s := time.Now().UnixNano()
+	if s <= a.lastSeq {
+		s = a.lastSeq + 1
+	}
+	a.lastSeq = s
+	return s
+}
+
+func (a *Agent) send(ctx context.Context) {
+	a.flushSSHFailures()
+	a.mu.Lock()
+	events := a.queue
+	a.queue = nil
+	dropped := a.dropped
+	a.dropped = 0
+	a.mu.Unlock()
+	if dropped > 0 {
+		events = append(events, proto.NewEvent("agent.dropped", map[string]any{"count": dropped}))
+	}
+	if events == nil {
+		events = []proto.Event{}
+	}
+
+	b := proto.Batch{AgentID: a.id.AgentID, Seq: a.nextSeq(), SentAt: time.Now().UTC(), ConfigVersion: a.state.ConfigVersion, Events: events}
+	resp, err := a.post(ctx, "/api/agent/events", b)
+	if err != nil {
+		log.Printf("send: %v", err)
+		a.mu.Lock()
+		// Put events back in front, the cap still applies.
+		a.queue = append(events, a.queue...)
+		if over := len(a.queue) - a.cfg.MaxQueue; over > 0 {
+			a.queue = a.queue[over:]
+			a.dropped += over
+		}
+		a.mu.Unlock()
+		return
+	}
+	var br proto.BatchResponse
+	if err := json.Unmarshal(resp, &br); err != nil {
+		log.Printf("send: bad response: %v", err)
+		return
+	}
+	if len(br.Config) > 0 {
+		a.handleConfig(br)
+	}
+}
+
+func (a *Agent) handleConfig(br proto.BatchResponse) {
+	if err := proto.Verify(a.id.ServerKey, br.Config, br.ConfigSig); err != nil {
+		a.emit(proto.NewEvent("agent.config_rejected", map[string]any{"reason": "signature"}))
+		return
+	}
+	var cfg proto.AgentConfig
+	if err := json.Unmarshal(br.Config, &cfg); err != nil || cfg.AgentID != a.id.AgentID {
+		a.emit(proto.NewEvent("agent.config_rejected", map[string]any{"reason": "content"}))
+		return
+	}
+	if cfg.Version <= a.state.ConfigVersion {
+		return
+	}
+	a.applyConfig(cfg)
+	a.saveState()
+	a.flushSoon()
+}
+
+func (a *Agent) post(ctx context.Context, path string, v any) ([]byte, error) {
+	body, err := json.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, strings.TrimRight(a.cfg.Server, "/")+path, bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(proto.SigHeader, proto.Sign(a.id.PrivateKey, body))
+	res, err := a.http.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+	out, err := io.ReadAll(io.LimitReader(res.Body, proto.MaxBodyBytes))
+	if err != nil {
+		return nil, err
+	}
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("server answered %s: %s", res.Status, strings.TrimSpace(string(out)))
+	}
+	return out, nil
+}
+
+// Enroll registers this host with a one-time token from the dashboard and
+// stores the resulting identity.
+func Enroll(cfg *Config, server, token string) (*Identity, error) {
+	if _, err := LoadIdentity(cfg.StateDir); err == nil {
+		return nil, errors.New("already enrolled; delete identity.json to enroll again")
+	}
+	pub, priv, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		return nil, err
+	}
+	host, _ := os.Hostname()
+	body, _ := json.Marshal(proto.EnrollRequest{Token: token, Hostname: host, PublicKey: proto.EncodeKey(pub), Version: Version})
+	res, err := (&http.Client{Timeout: 15 * time.Second}).Post(strings.TrimRight(server, "/")+"/api/agent/enroll", "application/json", bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+	raw, _ := io.ReadAll(io.LimitReader(res.Body, 64<<10))
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("enrollment refused: %s", strings.TrimSpace(string(raw)))
+	}
+	var er proto.EnrollResponse
+	if err := json.Unmarshal(raw, &er); err != nil {
+		return nil, err
+	}
+	sk, err := proto.DecodePublicKey(er.ServerKey)
+	if err != nil {
+		return nil, err
+	}
+	id := &Identity{AgentID: er.AgentID, Server: server, PrivateKey: priv, ServerKey: sk}
+	if err := SaveIdentity(cfg.StateDir, id); err != nil {
+		return nil, err
+	}
+	return id, nil
+}

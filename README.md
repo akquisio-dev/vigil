@@ -1,0 +1,151 @@
+# vigil
+
+A small security operations center for small server fleets.
+
+vigil is for people who run one to a few dozen Linux servers and want real
+detection without running Elasticsearch next to their workload. One agent per
+host (a static binary, around 10 MB of memory), one central server, no
+external dependencies.
+
+> Status: early. The pieces below work and are tested on Ubuntu 24.04, but
+> the project has not been audited yet. Run it next to your existing
+> controls, not instead of them.
+
+## What it detects
+
+| Area | Examples | ATT&CK |
+|---|---|---|
+| SSH access | logins with key name and source, password logins, logins with keys outside `authorized_keys`, first login from a new address, brute-force waves | T1078, T1098.004, T1110 |
+| Persistence | changes to `authorized_keys`, cron, systemd units, sudoers, PAM, shell init files, `ld.so.preload` | T1098.004, T1053.003, T1543.002, T1548.003, T1556.003, T1546.004, T1574.006 |
+| Accounts | new accounts, accounts that gain uid 0 | T1136.001, T1078.003 |
+| Exposure | new listening ports, **Docker publications that bypass host firewalls like ufw** (read from the NAT table, not only from sockets) | |
+| Canaries | decoy credentials, `.env` files, SSH keys and SQL dumps; any open is reported with process, user and parent chain | T1552.001, T1070.004 |
+| Defense evasion | agents that stop or go silent (dead man's switch), forged or replayed agent traffic, edits to the event log | T1562.001, T1557, T1565.001 |
+
+Changes that happen while an agent is down are found on its next start,
+because each agent compares against its last known state.
+
+## Design
+
+```
+ host A                host B
+ vigil-agent           vigil-agent        outbound only, signed batches
+     \                    /
+      \   VPN or HTTPS   /
+       v                v
+          vigil-server  ─── hash-chained event log
+               │        ─── rules → alerts → Discord / webhook / mail
+               │        ─── daily chain anchor to the notifiers
+           dashboard (localhost, behind your TLS proxy)
+```
+
+Decisions that matter for trust:
+
+- **Agents never listen.** They make outbound requests only. Each batch is
+  signed with the agent's ed25519 key and carries a strictly increasing
+  sequence number, so forged and replayed batches are rejected and alerted.
+- **Canaries cannot be abused as a write primitive.** The dashboard only
+  names a canary *type* and a path. The agent generates the content itself,
+  accepts only paths below `canary_roots` from its *local* config, walks
+  directories with `openat` and `O_NOFOLLOW`, never overwrites a file, never
+  sets an exec bit, refuses names like `authorized_keys`, `.bashrc` or
+  `*.service`, and deletes only the exact file it created. A compromised
+  server can place a decoy, not a backdoor.
+- **Notification-only fanotify.** Canary opens are observed with
+  `FAN_CLASS_NOTIF`; vigil never sits in the path of a file open, so a hung
+  agent cannot freeze anything.
+- **The log is tamper-evident.** Every record is chained to the previous one
+  by SHA-256. The server verifies the chain on start, daily and on demand,
+  and can post the chain head to your notifiers once a day, which leaves a
+  copy outside the machine.
+- **No dependencies.** Both binaries use only the Go standard library.
+- **The dashboard is the crown jewel.** It binds to loopback, requires a
+  password plus TOTP for every login, rate-limits attempts, uses strict
+  cookies, a CSRF token and a strict Content Security Policy, renders
+  agent data only as text, and records every admin action in the chain.
+
+See [docs/threat-model.md](docs/threat-model.md) for what vigil does and
+does not protect against.
+
+## Quick start
+
+Build (Go 1.25+):
+
+```sh
+make build        # dist/vigil-agent, dist/vigil-server
+make test
+```
+
+Server:
+
+```sh
+install -m 0755 dist/vigil-server /usr/local/bin/
+install -d -m 0700 /etc/vigil
+cp deploy/examples/server.json /etc/vigil/server.json      # edit it
+cp deploy/systemd/vigil-server.service /etc/systemd/system/
+systemctl enable --now vigil-server
+vigil-server user add -config /etc/vigil/server.json alice  # prints the TOTP secret
+```
+
+Put the dashboard behind a TLS proxy (`deploy/examples/nginx.conf`) and, if
+you can, restrict it to known networks. Serve the agent API on a VPN address
+with `agent_listen`.
+
+Each host:
+
+```sh
+install -m 0755 dist/vigil-agent /usr/local/bin/
+install -d -m 0700 /etc/vigil
+cp deploy/examples/agent.json /etc/vigil/agent.json         # set server, canary_roots
+vigil-agent enroll -server http://10.0.0.1:8471 -token vgl_...   # token from Settings
+cp deploy/systemd/vigil-agent.service /etc/systemd/system/
+systemctl enable --now vigil-agent
+```
+
+The first scan becomes the baseline; nothing is alerted for what already
+exists. Open ports seen on the first snapshot count as expected, everything
+after that has to be accepted in the dashboard.
+
+## Configuration
+
+`agent.json`
+
+| Key | Default | Meaning |
+|---|---|---|
+| `server` | from enrollment | server URL |
+| `interval_seconds` | 30 | batch interval, also the heartbeat |
+| `scan_seconds` | 60 | file, port and canary scan interval |
+| `watch_files` / `extra_watch` | built-in list | globs to hash and diff |
+| `canary_roots` | none | directories the dashboard may place canaries in; empty disables canaries |
+| `canary_ignore_exe` | none | executables whose canary opens are ignored (backup tools) |
+| `ssh`, `ports`, `docker` | true | collectors on/off |
+
+`server.json`
+
+| Key | Default | Meaning |
+|---|---|---|
+| `listen` | 127.0.0.1:8470 | dashboard |
+| `agent_listen` | same as `listen` | agent API, e.g. a VPN address |
+| `public_url` | | used for links in notifications |
+| `language` | en | notification language, `en` or `de` |
+| `trust_proxy` | false | take the client address from `X-Forwarded-For` |
+| `deadman_seconds` | 120 | silence before an agent counts as gone |
+| `retention_days` | 90 | days of event log to keep |
+| `anchor_daily` | false | post the chain head to all notifiers once a day |
+| `heartbeat_url` | | fetched every minute, for an outside watchdog |
+| `notifiers` | | `discord`, `webhook` or `smtp`, each with `min_severity` |
+
+## Limitations
+
+- Linux only; canary watching needs amd64 or arm64.
+- Short-lived readers of a canary (`cat`, `head`) are often gone before vigil
+  can read their executable path; the process name, user and parent chain
+  are still reported.
+- The dashboard shows the most recent events from memory (`recent_events`);
+  older events stay on disk in the log files.
+- A root attacker on a host can stop its agent. vigil cannot prevent that,
+  it makes sure you hear about it.
+
+## License
+
+Not decided yet.

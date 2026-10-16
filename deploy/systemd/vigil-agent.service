@@ -1,0 +1,38 @@
+[Unit]
+Description=vigil agent (host sensor)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+ExecStart=/usr/local/bin/vigil-agent run -config /etc/vigil/agent.json
+Restart=always
+RestartSec=5
+
+# The agent needs root to read auth logs, hash protected files, watch
+# canaries with fanotify and map sockets to processes. Everything else is
+# taken away.
+User=root
+CapabilityBoundingSet=CAP_DAC_READ_SEARCH CAP_DAC_OVERRIDE CAP_SYS_ADMIN CAP_SYS_PTRACE CAP_NET_ADMIN CAP_NET_RAW CAP_FOWNER
+NoNewPrivileges=yes
+ProtectSystem=full
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+RestrictRealtime=yes
+RestrictNamespaces=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+StateDirectory=vigil-agent
+StateDirectoryMode=0700
+
+# Stay out of the way of the workloads on this host.
+MemoryMax=96M
+CPUQuota=15%
+Nice=10
+IOSchedulingClass=idle
+
+[Install]
+WantedBy=multi-user.target

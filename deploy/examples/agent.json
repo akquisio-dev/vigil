@@ -1,0 +1,8 @@
+{
+  "server": "http://10.0.0.1:8471",
+  "state_dir": "/var/lib/vigil-agent",
+  "interval_seconds": 30,
+  "scan_seconds": 60,
+  "canary_roots": ["/root", "/home", "/opt", "/srv", "/var/backups"],
+  "canary_ignore_exe": []
+}
