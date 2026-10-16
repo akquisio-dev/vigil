@@ -3,6 +3,7 @@
   "agent_listen": "10.0.0.1:8471",
   "data_dir": "/var/lib/vigil",
   "public_url": "https://soc.example.com",
+  "agent_url": "http://10.0.0.1:8471",
   "language": "en",
   "trust_proxy": true,
   "retention_days": 90,

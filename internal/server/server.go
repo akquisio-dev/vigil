@@ -231,11 +231,7 @@ func (s *Server) checkDeadman() {
 	now := time.Now()
 	changed := false
 	for _, a := range s.state.Agents {
-		limit := s.cfg.deadman()
-		if a.Stopped {
-			limit *= 10 // a clean stop already raised its own alert
-		}
-		if a.Silent || a.LastSeen.IsZero() || now.Sub(a.LastSeen) < limit {
+		if a.Silent || a.LastSeen.IsZero() || now.Sub(a.LastSeen) < s.cfg.deadman() || now.Before(a.MaintenanceUntil) {
 			continue
 		}
 		a.Silent = true
@@ -355,6 +351,7 @@ func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.LastSeq = b.Seq
+	a.prevSeen = a.LastSeen
 	a.LastSeen = time.Now().UTC()
 	a.LastIP = ip
 	a.AckedVersion = b.ConfigVersion
@@ -391,9 +388,6 @@ func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 	for _, rec := range recs {
 		if rec.Source != "agent" {
 			continue
-		}
-		if rec.Event.Type == "agent.started" {
-			s.resolveRecent("agent.stopped|"+a.ID+"|", 10*time.Minute)
 		}
 		fresh = append(fresh, s.raise(s.evaluate(a, rec), a.ID, rec.Seq)...)
 	}
@@ -439,14 +433,6 @@ func (s *Server) resolve(prefix, by string) {
 	for _, al := range s.state.Alerts {
 		if al.Status == "open" && strings.HasPrefix(al.Key, prefix) {
 			al.Status, al.By, al.Updated = "resolved", by, time.Now().UTC()
-		}
-	}
-}
-
-func (s *Server) resolveRecent(prefix string, within time.Duration) {
-	for _, al := range s.state.Alerts {
-		if al.Status == "open" && strings.HasPrefix(al.Key, prefix) && time.Since(al.Created) < within {
-			al.Status, al.By, al.Updated = "resolved", "system", time.Now().UTC()
 		}
 	}
 }

@@ -39,6 +39,7 @@ type Agent struct {
 	canaryPaths map[string]string
 	portsSent   bool
 	lastSeq     int64
+	cursor      string
 	flushNow    chan struct{}
 }
 
@@ -61,6 +62,7 @@ func New(cfg *Config) (*Agent, error) {
 		sshFails:    map[string]*failures{},
 		canaryPaths: map[string]string{},
 		flushNow:    make(chan struct{}, 1),
+		cursor:      st.JournalCursor,
 	}, nil
 }
 
@@ -140,6 +142,9 @@ func (a *Agent) scan() {
 }
 
 func (a *Agent) saveState() {
+	a.mu.Lock()
+	a.state.JournalCursor = a.cursor
+	a.mu.Unlock()
 	if err := a.state.Save(a.cfg.StateDir); err != nil {
 		log.Printf("state: %v", err)
 	}

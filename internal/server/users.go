@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"syscall"
 )
 
 // Users live in their own file so `vigil-server user add` works while the
@@ -46,6 +47,16 @@ func SaveUsers(dir string, users map[string]*User) error {
 	if err := tmp.Chmod(0o600); err != nil {
 		tmp.Close()
 		return err
+	}
+	// `vigil-server user add` run as root must not leave a root-owned file
+	// that the service user cannot read.
+	if fi, err := os.Stat(dir); err == nil && os.Geteuid() == 0 {
+		if st, ok := fi.Sys().(*syscall.Stat_t); ok {
+			if err := tmp.Chown(int(st.Uid), int(st.Gid)); err != nil {
+				tmp.Close()
+				return err
+			}
+		}
 	}
 	if err := tmp.Sync(); err != nil {
 		tmp.Close()

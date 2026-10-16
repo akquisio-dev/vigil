@@ -48,8 +48,10 @@ var rules = map[string]ruleDef{
 	"canary.overflow":      {"medium", "", "Canary event queue overflowed on {host}", "Köder-Warteschlange auf {host} übergelaufen"},
 
 	"agent.silent":          {"high", "T1562.001", "Agent {host} silent", "Agent {host} meldet sich nicht"},
-	"agent.stopped":         {"medium", "T1562.001", "Agent {host} was stopped", "Agent {host} wurde beendet"},
+	"agent.stopped":         {"high", "T1562.001", "Agent {host} was stopped", "Agent {host} wurde beendet"},
+	"agent.restarted":       {"high", "T1562.001", "Agent {host} restarted after {gap} without monitoring", "Agent {host} neu gestartet nach {gap} ohne Überwachung"},
 	"agent.config_rejected": {"high", "T1557", "Agent {host} rejected a configuration ({reason})", "Agent {host} hat eine Konfiguration abgelehnt ({reason})"},
+	"log.spoofed":           {"high", "T1070", "Fake {identifier} log entry written by {comm} (uid {uid})", "Gefälschter {identifier}-Logeintrag von {comm} (uid {uid})"},
 	"agent.dropped":         {"low", "", "Agent {host} dropped {count} events", "Agent {host} hat {count} Ereignisse verworfen"},
 	"agent.forged":          {"high", "T1557", "Request with invalid signature for agent {agent} from {ip}", "Anfrage mit ungültiger Signatur für Agent {agent} von {ip}"},
 	"chain.broken":          {"critical", "T1565.001", "Event chain broken: {error}", "Ereigniskette gebrochen: {error}"},
@@ -128,6 +130,9 @@ func (s *Server) evaluate(a *AgentRec, r *Record) []finding {
 			params = map[string]string{}
 		}
 		params["host"] = host
+		if strings.HasPrefix(rule, "agent.") && time.Now().Before(a.MaintenanceUntil) {
+			return // the event itself stays in the log
+		}
 		out = append(out, finding{Rule: rule, Key: rule + "|" + a.ID + "|" + key, Params: params})
 	}
 
@@ -190,7 +195,7 @@ func (s *Server) evaluate(a *AgentRec, r *Record) []finding {
 			a.BaselineSet = true
 		}
 	case "port.opened":
-		if !a.BaselineSet || a.Baseline[str(d, "key")] {
+		if !a.BaselineSet || portExpected(a, d) {
 			break
 		}
 		// sshd opens 127.0.0.1:60xx for every X11-forwarded session.
@@ -245,6 +250,14 @@ func (s *Server) evaluate(a *AgentRec, r *Record) []finding {
 	case "canary.overflow":
 		add("canary.overflow", "", nil)
 	case "agent.started":
+		if a.StartedOnce {
+			gap := "?"
+			if !a.prevSeen.IsZero() {
+				gap = r.Event.TS.Sub(a.prevSeen).Round(time.Second).String()
+			}
+			add("agent.restarted", r.Event.TS.Format(time.RFC3339), map[string]string{"gap": gap})
+		}
+		a.StartedOnce = true
 		a.Stopped = false
 		if v := str(d, "version"); v != "" {
 			a.Version = v
@@ -262,10 +275,30 @@ func (s *Server) evaluate(a *AgentRec, r *Record) []finding {
 		add("agent.stopped", "", nil)
 	case "agent.config_rejected":
 		add("agent.config_rejected", str(d, "reason"), map[string]string{"reason": str(d, "reason")})
+	case "log.spoofed":
+		add("log.spoofed", str(d, "comm")+"|"+str(d, "uid"), map[string]string{"identifier": str(d, "identifier"), "comm": str(d, "comm"), "uid": str(d, "uid")})
 	case "agent.dropped":
 		add("agent.dropped", "", map[string]string{"count": str(d, "count")})
 	}
 	return out
+}
+
+// procKey allows every port a named process opens with this protocol and
+// scope. Game servers and similar tools pick random ports on each start.
+func procKey(p map[string]any) string {
+	name, _, _ := strings.Cut(str(p, "process"), "/")
+	if name == "" {
+		return ""
+	}
+	return "proc:" + name + "/" + str(p, "proto") + "/" + str(p, "scope")
+}
+
+func portExpected(a *AgentRec, p map[string]any) bool {
+	if a.Baseline[str(p, "key")] {
+		return true
+	}
+	k := procKey(p)
+	return k != "" && a.Baseline[k]
 }
 
 // raise records findings as alerts. A finding whose key matches an open
@@ -285,6 +318,9 @@ func (s *Server) raise(fs []finding, agentID string, seq uint64) []*Alert {
 			}
 		}
 		if hit != nil {
+			if severityRank[def.Severity] > severityRank[hit.Severity] {
+				hit.Severity = def.Severity
+			}
 			hit.Count++
 			hit.Updated = now
 			if len(hit.Seqs) < 20 && seq > 0 {
@@ -294,9 +330,10 @@ func (s *Server) raise(fs []finding, agentID string, seq uint64) []*Alert {
 		}
 		al := &Alert{
 			ID: newID(8), Key: f.Key, Rule: f.Rule, Severity: def.Severity, Technique: def.Technique,
-			Title: renderTitle(f.Rule, f.Params, "en"), Detail: encodeParams(f.Params),
-			Agent: agentID, Created: now, Updated: now, Count: 1, Status: "open",
+			Detail: encodeParams(f.Params),
+			Agent:  agentID, Created: now, Updated: now, Count: 1, Status: "open",
 		}
+		al.Title = renderTitle(f.Rule, decodeParams(al.Detail), "en")
 		if seq > 0 {
 			al.Seqs = []uint64{seq}
 		}
@@ -310,6 +347,21 @@ func (s *Server) raise(fs []finding, agentID string, seq uint64) []*Alert {
 }
 
 // Params are kept as "k=v" lines so titles can be rendered per language.
+// Params carry agent-controlled strings into notification titles and mail
+// headers, so control characters (CR included) are dropped here.
+func cleanParam(v string) string {
+	v = strings.Map(func(r rune) rune {
+		if r < 0x20 || r == 0x7f || (r >= 0x80 && r < 0xa0) || r == 0x2028 || r == 0x2029 {
+			return -1
+		}
+		return r
+	}, v)
+	if len(v) > 300 {
+		v = v[:300]
+	}
+	return v
+}
+
 func encodeParams(p map[string]string) string {
 	keys := make([]string, 0, len(p))
 	for k := range p {
@@ -318,7 +370,7 @@ func encodeParams(p map[string]string) string {
 	sort.Strings(keys)
 	var b strings.Builder
 	for _, k := range keys {
-		b.WriteString(k + "=" + strings.ReplaceAll(p[k], "\n", " ") + "\n")
+		b.WriteString(cleanParam(k) + "=" + cleanParam(p[k]) + "\n")
 	}
 	return b.String()
 }

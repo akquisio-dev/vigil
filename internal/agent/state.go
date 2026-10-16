@@ -18,6 +18,9 @@ type State struct {
 
 	ConfigVersion int64 `json:"config_version"`
 	Initialized   bool  `json:"initialized"`
+	// JournalCursor lets the agent pick up SSH and sudo entries that were
+	// written while it was not running.
+	JournalCursor string `json:"journal_cursor,omitempty"`
 }
 
 type FileState struct {

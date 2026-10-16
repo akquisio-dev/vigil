@@ -20,10 +20,14 @@ external dependencies.
 | Accounts | new accounts, accounts that gain uid 0 | T1136.001, T1078.003 |
 | Exposure | new listening ports, **Docker publications that bypass host firewalls like ufw** (read from the NAT table, not only from sockets) | |
 | Canaries | decoy credentials, `.env` files, SSH keys and SQL dumps; any open is reported with process, user and parent chain | T1552.001, T1070.004 |
-| Defense evasion | agents that stop or go silent (dead man's switch), forged or replayed agent traffic, edits to the event log | T1562.001, T1557, T1565.001 |
+| Defense evasion | agents that stop, restart or go silent (dead man's switch), forged or replayed agent traffic, fake `sshd`/`sudo` lines written to the journal by other processes, edits to the event log | T1562.001, T1557, T1070, T1565.001 |
 
 Changes that happen while an agent is down are found on its next start,
-because each agent compares against its last known state.
+because each agent compares against its last known state and resumes the
+journal from its saved cursor. Every stop and every restart raises a high
+alert with the length of the gap, whatever the agent says about it; planned
+work is announced with a maintenance window in the dashboard, which is
+recorded in the log.
 
 ## Design
 
@@ -79,13 +83,17 @@ make test
 Server:
 
 ```sh
+useradd --system --home-dir /var/lib/vigil --shell /usr/sbin/nologin vigil
 install -m 0755 dist/vigil-server /usr/local/bin/
-install -d -m 0700 /etc/vigil
-cp deploy/examples/server.json /etc/vigil/server.json      # edit it
+install -d -m 0750 -o root -g vigil /etc/vigil
+install -m 0640 -o root -g vigil deploy/examples/server.json /etc/vigil/server.json   # edit it
 cp deploy/systemd/vigil-server.service /etc/systemd/system/
 systemctl enable --now vigil-server
 vigil-server user add -config /etc/vigil/server.json alice  # prints the TOTP secret
 ```
+
+`user add` works while the server is running; the server rereads the user
+file on every login.
 
 Put the dashboard behind a TLS proxy (`deploy/examples/nginx.conf`) and, if
 you can, restrict it to known networks. Serve the agent API on a VPN address
@@ -104,7 +112,8 @@ systemctl enable --now vigil-agent
 
 The first scan becomes the baseline; nothing is alerted for what already
 exists. Open ports seen on the first snapshot count as expected, everything
-after that has to be accepted in the dashboard.
+after that has to be accepted in the dashboard, either one port or all ports
+of a process (for programs that pick random ports on every start).
 
 ## Configuration
 
@@ -127,6 +136,7 @@ after that has to be accepted in the dashboard.
 | `listen` | 127.0.0.1:8470 | dashboard |
 | `agent_listen` | same as `listen` | agent API, e.g. a VPN address |
 | `public_url` | | used for links in notifications |
+| `agent_url` | | how agents reach `agent_listen`; shown in the enrollment command |
 | `language` | en | notification language, `en` or `de` |
 | `trust_proxy` | false | take the client address from `X-Forwarded-For` |
 | `deadman_seconds` | 120 | silence before an agent counts as gone |

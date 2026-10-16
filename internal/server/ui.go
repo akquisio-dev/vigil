@@ -64,7 +64,7 @@ func (s *Server) uiHandler() http.Handler {
 		writeJSON(w, map[string]bool{"ok": true})
 	}))
 	mux.HandleFunc("GET /api/ui/me", s.auth(func(w http.ResponseWriter, r *http.Request, sess *session) {
-		writeJSON(w, map[string]any{"user": sess.User, "csrf": sess.CSRF, "version": Version})
+		writeJSON(w, map[string]any{"user": sess.User, "csrf": sess.CSRF, "version": Version, "agent_url": s.cfg.AgentURL})
 	}))
 	mux.HandleFunc("GET /api/ui/overview", s.auth(s.handleOverview))
 	mux.HandleFunc("GET /api/ui/alerts", s.auth(s.handleAlerts))
@@ -120,23 +120,24 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	s.audit(sess.User, "admin.login", map[string]any{"ip": ip})
 	s.setCookie(w, tok, s.cfg.SessionHours*3600)
-	writeJSON(w, map[string]any{"user": sess.User, "csrf": sess.CSRF})
+	writeJSON(w, map[string]any{"user": sess.User, "csrf": sess.CSRF, "version": Version, "agent_url": s.cfg.AgentURL})
 }
 
 type agentView struct {
-	ID          string    `json:"id"`
-	Name        string    `json:"name"`
-	Hostname    string    `json:"hostname"`
-	Version     string    `json:"version"`
-	Status      string    `json:"status"`
-	LastSeen    time.Time `json:"last_seen"`
-	LastIP      string    `json:"last_ip"`
-	Enrolled    time.Time `json:"enrolled"`
-	OpenAlerts  int       `json:"open_alerts"`
-	Ports       int       `json:"ports"`
-	Canaries    int       `json:"canaries"`
-	CanaryRoots []string  `json:"canary_roots"`
-	ConfigSync  bool      `json:"config_sync"`
+	ID          string     `json:"id"`
+	Name        string     `json:"name"`
+	Hostname    string     `json:"hostname"`
+	Version     string     `json:"version"`
+	Status      string     `json:"status"`
+	LastSeen    time.Time  `json:"last_seen"`
+	LastIP      string     `json:"last_ip"`
+	Enrolled    time.Time  `json:"enrolled"`
+	OpenAlerts  int        `json:"open_alerts"`
+	Ports       int        `json:"ports"`
+	Canaries    int        `json:"canaries"`
+	CanaryRoots []string   `json:"canary_roots"`
+	ConfigSync  bool       `json:"config_sync"`
+	Maintenance *time.Time `json:"maintenance_until,omitempty"`
 }
 
 func (s *Server) viewAgent(a *AgentRec) agentView {
@@ -152,6 +153,10 @@ func (s *Server) viewAgent(a *AgentRec) agentView {
 	v := agentView{ID: a.ID, Name: a.Name, Hostname: a.Hostname, Version: a.Version, Status: status,
 		LastSeen: a.LastSeen, LastIP: a.LastIP, Enrolled: a.Enrolled, Ports: len(a.Ports),
 		CanaryRoots: a.CanaryRoots, ConfigSync: a.AckedVersion >= a.ConfigVersion}
+	if time.Now().Before(a.MaintenanceUntil) {
+		until := a.MaintenanceUntil
+		v.Maintenance = &until
+	}
 	for _, al := range s.state.Alerts {
 		if al.Agent == a.ID && al.Status == "open" {
 			v.OpenAlerts++
@@ -314,7 +319,8 @@ func (s *Server) handleAgent(w http.ResponseWriter, r *http.Request, sess *sessi
 		for k, v := range p {
 			cp[k] = v
 		}
-		cp["expected"] = a.Baseline[str(p, "key")]
+		cp["expected"] = portExpected(a, p)
+		cp["proc_key"] = procKey(p)
 		ports = append(ports, cp)
 	}
 	view := s.viewAgent(a)
@@ -326,8 +332,9 @@ func (s *Server) handleAgent(w http.ResponseWriter, r *http.Request, sess *sessi
 func (s *Server) handleAgentAction(w http.ResponseWriter, r *http.Request, sess *session) {
 	id, action := r.PathValue("id"), r.PathValue("action")
 	var req struct {
-		Name string `json:"name"`
-		Key  string `json:"key"`
+		Name    string `json:"name"`
+		Key     string `json:"key"`
+		Minutes int    `json:"minutes"`
 	}
 	if !decode(r, w, &req) {
 		return
@@ -354,19 +361,40 @@ func (s *Server) handleAgentAction(w http.ResponseWriter, r *http.Request, sess 
 		if a.Baseline == nil {
 			a.Baseline = map[string]bool{}
 		}
+		var accepted []map[string]any
 		for _, p := range a.Ports {
-			if k := str(p, "key"); req.Key == "*" || k == req.Key {
+			k := str(p, "key")
+			switch {
+			case req.Key == "*" || k == req.Key:
 				a.Baseline[k] = true
+				accepted = append(accepted, p)
+			case strings.HasPrefix(req.Key, "proc:") && procKey(p) == req.Key:
+				accepted = append(accepted, p)
 			}
 		}
+		if strings.HasPrefix(req.Key, "proc:") {
+			a.Baseline[clip(req.Key, 200)] = true
+		}
 		for _, al := range s.state.Alerts {
-			if al.Agent == id && al.Status == "open" && strings.HasPrefix(al.Rule, "port.") {
-				if p := decodeParams(al.Detail); req.Key == "*" || p["key"] == req.Key {
+			if al.Agent != id || al.Status != "open" || !strings.HasPrefix(al.Rule, "port.") {
+				continue
+			}
+			k := decodeParams(al.Detail)["key"]
+			for _, p := range accepted {
+				if str(p, "key") == k {
 					al.Status, al.By, al.Updated = "resolved", sess.User, time.Now().UTC()
 				}
 			}
 		}
 		data["key"] = req.Key
+	case "maintenance":
+		if req.Minutes < 0 || req.Minutes > 240 {
+			s.mu.Unlock()
+			http.Error(w, "minutes must be between 0 and 240", http.StatusBadRequest)
+			return
+		}
+		a.MaintenanceUntil = time.Now().UTC().Add(time.Duration(req.Minutes) * time.Minute)
+		data["minutes"] = req.Minutes
 	case "forget-port":
 		delete(a.Baseline, req.Key)
 		data["key"] = req.Key

@@ -15,6 +15,9 @@ type Config struct {
 	AgentListen string `json:"agent_listen"`
 	DataDir     string `json:"data_dir"`
 	PublicURL   string `json:"public_url"`
+	// AgentURL is how agents reach AgentListen; shown in the enrollment
+	// command.
+	AgentURL string `json:"agent_url"`
 	// Language of notifications: en | de.
 	Language string `json:"language"`
 

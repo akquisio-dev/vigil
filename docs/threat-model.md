@@ -21,9 +21,27 @@ Issues and reviews against it are welcome.
 ## What vigil promises
 
 **An attacker who gets root on a monitored host cannot silently erase what
-the agent already sent.** Events leave the host every interval. Stopping the
-agent produces a stop event or, if killed, a dead man's alert. Editing state
-files on the host only changes what the agent compares against next time.
+the agent already sent.** Events leave the host every interval. Editing
+state files on the host only changes what the agent compares against next
+time.
+
+**Stopping the agent is never quiet.** A clean stop raises a high alert, a
+kill raises the dead man's alert, and every restart raises a high alert with
+the length of the gap. None of these is softened by anything the agent
+reports; only a maintenance window set in the dashboard (and recorded in the
+log) suppresses them. SSH and sudo entries written during the gap are read on
+restart from the saved journal cursor. Canary opens during the gap are not
+seen; the restart alert is the signal.
+
+This holds against an attacker who stops or kills the agent. It does not
+hold against one who reads the agent key from `identity.json` and replaces
+the agent with an impostor that keeps sending heartbeats. From that point
+the host is lying, as with any host-based sensor; see below.
+
+**Log lines cannot be faked by other processes.** Any local user can write
+an entry that claims to come from `sshd`. The agent only trusts entries whose
+journald-assigned `_COMM` and `_UID` match sshd or sudo running as root, and
+reports the rest as spoofed.
 
 **A network attacker cannot forge or replay agent traffic.** Batches are
 signed with a per-agent ed25519 key created at enrollment; sequence numbers
@@ -73,6 +91,10 @@ agent-supplied strings are only rendered as text.
 
 - Enrollment tokens are bearer secrets valid for one hour and one use. Hand
   them over on a trusted channel.
+- Behind a CDN or a second proxy, make sure the address the dashboard sees
+  is the client's (for example nginx `real_ip_header CF-Connecting-IP` with
+  the CDN's ranges in `set_real_ip_from`), or rate limits and audit records
+  show the CDN.
 - `trust_proxy` must only be enabled when the dashboard listener is reachable
   exclusively through the proxy, otherwise clients can spoof their address
   for rate limiting and audit records.

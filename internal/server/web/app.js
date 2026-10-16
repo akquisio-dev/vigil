@@ -27,6 +27,8 @@ const T = {
     params: "Parameters", logins: "SSH logins", ip: "IP", key: "Key", method: "Method", configSync: "Config",
     synced: "applied", waiting: "pending", alertsOpen: "open alerts", canariesOpened: "opened",
     active: "active", tampered: "tampered", error: "error",
+    maintenance: "Maintenance", maintenanceUntil: "Maintenance until", start: "Start", end: "End", minutes: "min",
+    acceptProcess: "Allow process",
   },
   de: {
     overview: "Lage", alerts: "Alarme", events: "Ereignisse", canaries: "Köder", settings: "Einstellungen",
@@ -51,6 +53,8 @@ const T = {
     params: "Parameter", logins: "SSH-Anmeldungen", ip: "IP", key: "Schlüssel", method: "Methode", configSync: "Konfiguration",
     synced: "übernommen", waiting: "ausstehend", alertsOpen: "offene Alarme", canariesOpened: "geöffnet",
     active: "aktiv", tampered: "manipuliert", error: "Fehler",
+    maintenance: "Wartung", maintenanceUntil: "Wartung bis", start: "Starten", end: "Beenden", minutes: "Min.",
+    acceptProcess: "Prozess erlauben",
   },
 };
 
@@ -284,7 +288,9 @@ async function hostView(id) {
     h("td", null, p.via),
     h("td", { class: "mono" }, p.process || p.target || ""),
     h("td", null, p.expected ? h("span", { class: "pill" }, t("expected"))
-      : h("button", { class: "btn small", onclick: action("accept-port", { key: p.key }) }, t("accept")))));
+      : h("div", { class: "flex" },
+        h("button", { class: "btn small", onclick: action("accept-port", { key: p.key }) }, t("accept")),
+        p.proc_key ? h("button", { class: "btn small ghost", title: p.proc_key, onclick: action("accept-port", { key: p.proc_key }) }, t("acceptProcess")) : null))));
   const loginRows = d.logins.map((r) => h("tr", null,
     h("td", { class: "nowrap" }, timeEl(r.event.ts)),
     h("td", null, r.event.data.user),
@@ -292,6 +298,7 @@ async function hostView(id) {
     h("td", null, r.event.data.method),
     h("td", { class: "mono" }, r.event.data.key_comment || r.event.data.fingerprint || "")));
   const renameInput = h("input", { value: a.name, maxlength: 100 });
+  const minutesSel = h("select", null, [30, 60, 120, 240].map((m) => h("option", { value: m }, m + " " + t("minutes"))));
 
   mount(shell("overview",
     h("div", { class: "crumbs" }, h("a", { href: "#/" }, t("overview")), " / ", t("hosts")),
@@ -310,13 +317,18 @@ async function hostView(id) {
       h("div", { class: "card" },
         h("form", { class: "inline", onsubmit: async (e) => { e.preventDefault(); await post("/api/ui/agents/" + a.id + "/rename", { name: renameInput.value }); render(); } },
           h("label", null, t("rename"), renameInput), h("button", { class: "btn ghost", type: "submit" }, t("rename"))),
+        a.maintenance_until
+          ? h("div", { class: "flex mt" }, h("span", { class: "chip" }, h("span", { class: "dot stopped" }), t("maintenanceUntil") + " " + abs(a.maintenance_until)),
+            h("button", { class: "btn small ghost", onclick: action("maintenance", { minutes: 0 }) }, t("end")))
+          : h("form", { class: "inline mt", onsubmit: async (e) => { e.preventDefault(); await post("/api/ui/agents/" + a.id + "/maintenance", { minutes: Number(minutesSel.value) }); render(); } },
+            h("label", null, t("maintenance"), minutesSel), h("button", { class: "btn ghost", type: "submit" }, t("start"))),
         h("div", { class: "actions" },
           h("a", { class: "btn ghost", href: "#/events?agent=" + a.id }, t("events")),
           h("a", { class: "btn ghost", href: "#/alerts" }, t("alerts")),
           h("button", { class: "btn danger", onclick: async () => { if (confirm(t("confirmDelete"))) { await post("/api/ui/agents/" + a.id + "/delete"); location.hash = "#/"; } } }, t("deleteHost"))))),
     h("div", { class: "flex" }, h("h2", null, t("ports")),
       d.ports.some((p) => !p.expected) ? h("button", { class: "btn small right", onclick: action("accept-port", { key: "*" }) }, t("acceptAll")) : null),
-    h("div", { class: "tablewrap" }, h("table", null,
+    h("div", { class: "tablewrap" }, h("table", { class: "nowrap" },
       h("thead", null, h("tr", null, ["Port", "Addr", t("scope"), t("via"), t("process"), ""].map((x) => h("th", null, x)))),
       h("tbody", null, portRows))),
     h("h2", null, t("logins")),
@@ -427,7 +439,7 @@ async function settingsView() {
         h("button", { class: "btn", onclick: async () => {
           const r = await post("/api/ui/tokens");
           tokenBox.replaceChildren(
-            h("div", { class: "secret mt" }, "vigil-agent enroll -server " + location.origin + " -token " + r.token),
+            h("div", { class: "secret mt" }, "vigil-agent enroll -server " + (me.agent_url || location.origin) + " -token " + r.token),
             h("div", { class: "muted mt" }, t("validUntil") + " " + abs(r.expires)));
         } }, t("newToken")), tokenBox),
       h("div", { class: "card" }, h("h3", null, t("chain")), chainBox,

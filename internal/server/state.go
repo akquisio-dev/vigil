@@ -21,6 +21,14 @@ type AgentRec struct {
 
 	Silent  bool `json:"silent"`
 	Stopped bool `json:"stopped"`
+	// StartedOnce separates the first start after enrollment from restarts.
+	StartedOnce bool `json:"started_once"`
+	// MaintenanceUntil is set from the dashboard only. A stop announced by
+	// the agent itself never lowers anything, because the host announcing
+	// it may be the one under attack.
+	MaintenanceUntil time.Time `json:"maintenance_until,omitempty"`
+
+	prevSeen time.Time // LastSeen before the batch being evaluated
 
 	CanaryRoots []string `json:"canary_roots"`
 

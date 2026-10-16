@@ -136,7 +136,7 @@ table { width: 100%; border-collapse: collapse; font-size: 14px; }
 th { text-align: left; font-weight: 600; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; padding: 14px 16px 10px; white-space: nowrap; }
 td { padding: 10px 16px; border-top: 1px solid var(--line); vertical-align: top; }
 td.mono, .mono { font-family: var(--mono); font-size: 13px; overflow-wrap: anywhere; }
-td.nowrap { white-space: nowrap; }
+td.nowrap, table.nowrap td { white-space: nowrap; overflow-wrap: normal; }
 
 .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
 .tabs button { background: transparent; border: 0; border-radius: 999px; padding: 6px 14px; cursor: pointer; color: var(--text-2); }

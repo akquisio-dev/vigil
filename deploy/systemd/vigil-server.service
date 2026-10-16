@@ -8,10 +8,12 @@ ExecStart=/usr/local/bin/vigil-server run -config /etc/vigil/server.json
 Restart=always
 RestartSec=5
 
-DynamicUser=yes
+# Create the user once: useradd --system --home-dir /var/lib/vigil --shell /usr/sbin/nologin vigil
+# Config: /etc/vigil root:vigil 0750, server.json root:vigil 0640.
+User=vigil
+Group=vigil
 StateDirectory=vigil
 StateDirectoryMode=0700
-ConfigurationDirectory=vigil
 NoNewPrivileges=yes
 ProtectSystem=strict
 ProtectHome=yes

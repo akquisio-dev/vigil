@@ -22,6 +22,15 @@ var (
 	reSudo       = regexp.MustCompile(`^\s*(\S+) : .*?(?:TTY=(\S+) ; )?PWD=(\S+) ; USER=(\S+) ; COMMAND=(.*)$`)
 )
 
+var trustedComm = map[string]bool{"sshd": true, "sshd-session": true, "sudo": true}
+
+func clip(s string) string {
+	if len(s) > 300 {
+		return s[:300]
+	}
+	return s
+}
+
 // failures aggregates failed SSH attempts per source so a brute-force wave
 // becomes one event per interval instead of thousands.
 type failures struct {
@@ -58,8 +67,17 @@ func (a *Agent) runSSH(ctx context.Context) {
 }
 
 func (a *Agent) followJournal(ctx context.Context, bin string) error {
-	cmd := exec.CommandContext(ctx, bin, "-f", "-n", "0", "-o", "json", "--no-pager",
-		"SYSLOG_IDENTIFIER=sshd", "SYSLOG_IDENTIFIER=sshd-session", "SYSLOG_IDENTIFIER=sudo")
+	args := []string{"-f", "-o", "json", "--no-pager"}
+	a.mu.Lock()
+	cursor := a.cursor
+	a.mu.Unlock()
+	if cursor != "" {
+		args = append(args, "--after-cursor="+cursor)
+	} else {
+		args = append(args, "-n", "0")
+	}
+	args = append(args, "SYSLOG_IDENTIFIER=sshd", "SYSLOG_IDENTIFIER=sshd-session", "SYSLOG_IDENTIFIER=sudo")
+	cmd := exec.CommandContext(ctx, bin, args...)
 	out, err := cmd.StdoutPipe()
 	if err != nil {
 		return err
@@ -74,8 +92,23 @@ func (a *Agent) followJournal(ctx context.Context, bin string) error {
 		if json.Unmarshal(sc.Bytes(), &entry) != nil {
 			continue
 		}
+		if c, ok := entry["__CURSOR"].(string); ok {
+			a.mu.Lock()
+			a.cursor = c
+			a.mu.Unlock()
+		}
 		msg, _ := entry["MESSAGE"].(string)
 		ident, _ := entry["SYSLOG_IDENTIFIER"].(string)
+		// SYSLOG_IDENTIFIER is chosen by the sender (`logger -t sshd` works
+		// for anyone). _COMM and _UID are set by journald and cannot be faked.
+		comm, _ := entry["_COMM"].(string)
+		uid, _ := entry["_UID"].(string)
+		if uid != "0" || !trustedComm[comm] {
+			if ident != "" && trustedComm[ident] {
+				a.emit(proto.NewEvent("log.spoofed", map[string]any{"identifier": ident, "comm": clip(comm), "uid": uid, "message": clip(msg)}))
+			}
+			continue
+		}
 		ts := time.Now().UTC()
 		if us, ok := entry["__REALTIME_TIMESTAMP"].(string); ok {
 			if n, err := strconv.ParseInt(us, 10, 64); err == nil {
