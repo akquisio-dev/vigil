@@ -127,9 +127,11 @@ func TestWriteDemoData(t *testing.T) {
 		if err := s.store.Append(rec); err != nil {
 			t.Fatal(err)
 		}
-		for _, al := range s.raise(s.evaluate(e.host, rec), e.host.ID, rec.Seq) {
+		fresh := s.raise(s.evaluate(e.host, rec), e.host.ID, rec.Seq)
+		for _, al := range fresh {
 			al.Created, al.Updated = e.at, e.at
 		}
+		s.correlate(fresh)
 	}
 	// a few alerts that a person already looked at
 	for i, al := range s.state.Alerts {

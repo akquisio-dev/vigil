@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -250,5 +251,49 @@ func TestSuppressions(t *testing.T) {
 	s.state.Alerts = nil
 	if got := s.raise(cron("/etc/cron.d/backup"), "a1", 4); len(got) != 1 {
 		t.Fatal("expired suppression must not match")
+	}
+}
+
+func TestIncidentGrouping(t *testing.T) {
+	s := &Server{state: &State{Agents: map[string]*AgentRec{"a1": {ID: "a1"}, "a2": {ID: "a2"}}, Canaries: map[string]*CanaryRec{}, KnownLogins: map[string]time.Time{}}}
+	t0 := time.Date(2026, 10, 12, 2, 0, 0, 0, time.UTC)
+	n := 0
+	alert := func(agent, rule, sev string, at time.Duration) *Alert {
+		n++
+		al := &Alert{ID: fmt.Sprint("al", n), Agent: agent, Rule: rule, Severity: sev, Created: t0.Add(at), Status: "open"}
+		s.state.Alerts = append(s.state.Alerts, al)
+		s.correlate([]*Alert{al})
+		return al
+	}
+	login := alert("a1", "ssh.new_source", "medium", 0)
+	if login.Incident != "" {
+		t.Fatal("a medium alert alone must not open an incident")
+	}
+	pw := alert("a1", "ssh.password_login", "high", time.Minute)
+	unit := alert("a1", "file.systemd", "medium", 4*time.Minute)
+	canary := alert("a1", "canary.opened", "critical", 6*time.Minute)
+	other := alert("a2", "file.cron", "high", 5*time.Minute)
+	later := alert("a1", "file.cron", "high", 5*time.Hour)
+	restart := alert("a2", "agent.restarted", "high", 9*time.Hour)
+
+	inc := s.incident(pw.Incident)
+	if inc == nil || login.Incident != inc.ID || unit.Incident != inc.ID || canary.Incident != inc.ID {
+		t.Fatalf("intrusion not grouped: login=%q pw=%q unit=%q canary=%q", login.Incident, pw.Incident, unit.Incident, canary.Incident)
+	}
+	if inc.Severity != "critical" || len(inc.Alerts) != 4 || inc.Start != pw.ID {
+		t.Fatalf("incident: %+v", inc)
+	}
+	if other.Incident == inc.ID || other.Incident == "" {
+		t.Fatal("another host gets its own incident")
+	}
+	if later.Incident == inc.ID || later.Incident == "" {
+		t.Fatal("an alert hours later opens a new incident")
+	}
+	if restart.Incident != "" {
+		t.Fatal("agent alerts never open an incident")
+	}
+	inc.Status = "closed"
+	if again := alert("a1", "file.sudo", "high", 7*time.Minute); again.Incident == inc.ID {
+		t.Fatal("closed incidents take no new alerts")
 	}
 }

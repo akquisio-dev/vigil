@@ -14,6 +14,27 @@ of a new one.
 
 Every alert names its rule. The [rule catalogue](rules.md) explains each one.
 
+## Incidents
+
+Alerts that belong together are grouped into incidents, so an intrusion is
+handled as one case:
+
+- An alert joins the newest incident on its host that is not closed, if the
+  incident had an alert within two hours before or after it.
+- Otherwise a high or critical alert opens a new incident. It takes along the
+  host's alerts from the two hours before that are in no incident yet, for
+  example the login from a new address that came first.
+- Alerts about the agent itself (stopped, restarted, silent) never open an
+  incident, but they join one.
+
+An incident page shows its alerts and the host's raw events from 30 minutes
+before the first to 30 minutes after the last alert, with the SSH login that
+most likely started the session at the top. Take it over, set the status
+(open, investigating, contained, closed) and write notes; every change is in
+the event chain. **Open incident** on an alert starts one by hand.
+
+Notifications are still sent per alert.
+
 ## Suppressions
 
 When a finding is expected (a backup job that rewrites a cron file every night,

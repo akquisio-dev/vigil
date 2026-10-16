@@ -76,6 +76,7 @@ type Alert struct {
 	Status    string     `json:"status"` // open | acked | resolved
 	By        string     `json:"by,omitempty"`
 	Acked     *time.Time `json:"acked,omitempty"` // first time a person acknowledged or resolved it
+	Incident  string     `json:"incident,omitempty"`
 	Seqs      []uint64   `json:"seqs"`
 }
 
@@ -95,6 +96,7 @@ type State struct {
 	Alerts       []*Alert                `json:"alerts"`
 	KnownLogins  map[string]time.Time    `json:"known_logins"` // "user|ip"
 	Suppressions []*Suppression          `json:"suppressions"`
+	Incidents    []*Incident             `json:"incidents"`
 	LastAnchor   time.Time               `json:"last_anchor"`
 }
 

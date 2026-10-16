@@ -238,6 +238,7 @@ func (s *Server) checkDeadman() {
 		a.Silent = true
 		changed = true
 		fresh := s.raise([]finding{{Rule: "agent.silent", Key: "agent.silent|" + a.ID + "|", Params: map[string]string{"host": a.Name}}}, a.ID, 0)
+		s.correlate(fresh)
 		s.notifyAlerts(fresh)
 	}
 	if changed {
@@ -392,6 +393,7 @@ func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 		}
 		fresh = append(fresh, s.raise(s.evaluate(a, rec), a.ID, rec.Seq)...)
 	}
+	s.correlate(fresh)
 	resp := proto.BatchResponse{ConfigVersion: a.ConfigVersion}
 	if a.ConfigVersion > b.ConfigVersion {
 		resp.Config, resp.ConfigSig = s.agentConfig(a)
@@ -412,6 +414,7 @@ func (s *Server) forgedRequest(a *AgentRec, ip, reason string) {
 	s.forged.fail("forged:" + ip)
 	s.mu.Lock()
 	fresh := s.raise([]finding{{Rule: "agent.forged", Key: "agent.forged|" + a.ID + "|" + ip, Params: map[string]string{"agent": a.Name, "ip": ip}}}, a.ID, 0)
+	s.correlate(fresh)
 	s.saveLocked()
 	s.notifyAlerts(fresh)
 	s.mu.Unlock()

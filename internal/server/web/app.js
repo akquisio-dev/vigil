@@ -38,6 +38,10 @@ const T = {
     onlyHost: "Only this host", reason: "Reason", duration: "Duration", days: "days", hits: "Hits", expires: "Expires",
     expired: "Expired", renew: "Renew", allHostsLbl: "all hosts", noSuppressions: "No suppressions", confirmSuppressionDelete: "Delete this suppression?",
     activeCount: "active", match: "Match", severity: "Severity",
+    incidents: "Incidents", incident: "Incident", noIncidents: "No incidents", owner: "Owner", assignMe: "Take over",
+    investigating: "investigating", contained: "contained", closed: "closed", openInc: "open", activeInc: "Active",
+    notes: "Notes", addNote: "Add note", timeline: "Timeline", startedBy: "Session started by", newIncident: "Open incident",
+    mttc: "Median time to close", alertsN: "alerts", unowned: "nobody", setStatus: "Status",
   },
   de: {
     overview: "Lage", alerts: "Alarme", events: "Ereignisse", canaries: "Köder", settings: "Einstellungen",
@@ -73,6 +77,10 @@ const T = {
     onlyHost: "Nur dieser Host", reason: "Begründung", duration: "Dauer", days: "Tage", hits: "Treffer", expires: "Läuft ab",
     expired: "Abgelaufen", renew: "Verlängern", allHostsLbl: "alle Hosts", noSuppressions: "Keine Ausnahmen", confirmSuppressionDelete: "Diese Ausnahme löschen?",
     activeCount: "aktiv", match: "Bedingung", severity: "Schwere",
+    incidents: "Vorfälle", incident: "Vorfall", noIncidents: "Keine Vorfälle", owner: "Zuständig", assignMe: "Übernehmen",
+    investigating: "in Arbeit", contained: "eingedämmt", closed: "geschlossen", openInc: "offen", activeInc: "Aktiv",
+    notes: "Notizen", addNote: "Notiz hinzufügen", timeline: "Zeitstrahl", startedBy: "Sitzung begonnen von", newIncident: "Vorfall anlegen",
+    mttc: "Median bis geschlossen", alertsN: "Alarme", unowned: "niemand", setStatus: "Status",
   },
 };
 
@@ -131,6 +139,8 @@ const abs = (ts) => (ts && !ts.startsWith("0001") ? new Date(ts).toLocaleString(
 const timeEl = (ts) => h("time", { datetime: ts, title: abs(ts) }, ago(ts));
 
 const sevChip = (sev) => h("span", { class: "sev " + sev }, t(sev));
+const incChip = (st) => h("span", { class: "chip" }, h("span", { class: "dot " + ({ open: "critical", investigating: "medium", contained: "low", closed: "ok" }[st] || "") }),
+  t(st === "open" ? "openInc" : st));
 const statusChip = (st) => h("span", { class: "chip" }, h("span", { class: "dot " + st }), t(st) || st);
 
 function summary(data) {
@@ -142,7 +152,7 @@ function summary(data) {
 }
 
 // Tabler Icons (MIT, https://tabler.io/icons), outline paths.
-const ICONS = {"bell-off": ["M9.346 5.353c.21 -.129 .428 -.246 .654 -.353a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3m-1 3h-13a4 4 0 0 0 2 -3v-3a6.996 6.996 0 0 1 1.273 -3.707", "M9 17v1a3 3 0 0 0 6 0v-1", "M3 3l18 18"], "clock": ["M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0", "M12 7v5l3 3"], "user-x": ["M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0", "M6 21v-2a4 4 0 0 1 4 -4h3.5", "M22 22l-5 -5", "M17 22l5 -5"], "plus": ["M12 5l0 14", "M5 12l14 0"], "alert-triangle": ["M12 9v4", "M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z", "M12 16h.01"], "fish-hook": ["M16 9v6a5 5 0 0 1 -10 0v-4l3 3", "M16 7m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0", "M16 5v-2"], "layout-dashboard": ["M5 4h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1", "M5 16h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1", "M15 12h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1", "M15 4h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1"], "list-details": ["M13 5h8", "M13 9h5", "M13 15h8", "M13 19h5", "M3 4m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z", "M3 14m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z"], "logout": ["M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2", "M9 12h12l-3 -3", "M18 15l3 -3"], "server": ["M3 4m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z", "M3 12m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z", "M7 8l0 .01", "M7 16l0 .01"], "settings": ["M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z", "M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"], "shield-check": ["M11.46 20.846a12 12 0 0 1 -7.96 -14.846a12 12 0 0 0 8.5 -3a12 12 0 0 0 8.5 3a12 12 0 0 1 -.09 7.06", "M15 19l2 2l4 -4"]};
+const ICONS = {"stack-2": ["M12 4l-8 4l8 4l8 -4l-8 -4", "M4 12l8 4l8 -4", "M4 16l8 4l8 -4"], "bell-off": ["M9.346 5.353c.21 -.129 .428 -.246 .654 -.353a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3m-1 3h-13a4 4 0 0 0 2 -3v-3a6.996 6.996 0 0 1 1.273 -3.707", "M9 17v1a3 3 0 0 0 6 0v-1", "M3 3l18 18"], "clock": ["M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0", "M12 7v5l3 3"], "user-x": ["M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0", "M6 21v-2a4 4 0 0 1 4 -4h3.5", "M22 22l-5 -5", "M17 22l5 -5"], "plus": ["M12 5l0 14", "M5 12l14 0"], "alert-triangle": ["M12 9v4", "M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z", "M12 16h.01"], "fish-hook": ["M16 9v6a5 5 0 0 1 -10 0v-4l3 3", "M16 7m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0", "M16 5v-2"], "layout-dashboard": ["M5 4h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1", "M5 16h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1", "M15 12h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1", "M15 4h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1"], "list-details": ["M13 5h8", "M13 9h5", "M13 15h8", "M13 19h5", "M3 4m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z", "M3 14m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z"], "logout": ["M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2", "M9 12h12l-3 -3", "M18 15l3 -3"], "server": ["M3 4m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z", "M3 12m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z", "M7 8l0 .01", "M7 16l0 .01"], "settings": ["M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z", "M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"], "shield-check": ["M11.46 20.846a12 12 0 0 1 -7.96 -14.846a12 12 0 0 0 8.5 -3a12 12 0 0 0 8.5 3a12 12 0 0 1 -.09 7.06", "M15 19l2 2l4 -4"]};
 
 const SVG = "http://www.w3.org/2000/svg";
 function icon(name, viewBox = "0 0 24 24", paths = ICONS[name]) {
@@ -177,7 +187,7 @@ function logo() {
 
 const sections = [
   ["sectionOverview", [["overview", "#/", "layout-dashboard"]]],
-  ["sectionDetect", [["alerts", "#/alerts", "alert-triangle"], ["events", "#/events", "list-details"], ["canaries", "#/canaries", "fish-hook"],
+  ["sectionDetect", [["incidents", "#/incidents", "stack-2"], ["alerts", "#/alerts", "alert-triangle"], ["events", "#/events", "list-details"], ["canaries", "#/canaries", "fish-hook"],
     ["suppressions", "#/suppressions", "bell-off"]]],
   ["sectionSystem", [["settings", "#/settings", "settings"]]],
 ];
@@ -379,7 +389,7 @@ function rankList(items, opts = {}) {
 const sevCounts = (m) => h("span", { class: "sevcounts" }, SEVS.filter((s) => m && m[s]).map((s) => h("span", { class: "sev " + s }, m[s])));
 
 async function overview() {
-  const o = await api("/api/ui/overview");
+  const [o, inc] = await Promise.all([api("/api/ui/overview"), api("/api/ui/incidents?status=active")]);
   openAlerts = Object.values(o.open_by_severity).reduce((a, b) => a + b, 0);
   const online = o.agents.filter((a) => a.status === "online").length;
   const bySev = SEVS.filter((s) => o.open_by_severity[s]).map((s) => o.open_by_severity[s] + " " + t(s));
@@ -427,7 +437,12 @@ async function overview() {
       panel(t("attackers"), "24 h", rankList(o.top_attackers, { mono: true, tone: "red", empty: t("noEvents"),
         href: (i) => "#/events?type=ssh.failed" }))),
     h("h2", null, t("hosts")), hostTable,
-    h("div", { class: "grid two mt" },
+    h("div", { class: "grid dash-b mt" },
+      panel(t("incidents"), h("a", { href: "#/incidents" }, inc.incidents.length + " " + t("activeInc").toLowerCase()),
+        h("div", { class: "feed" }, inc.incidents.length ? inc.incidents.slice(0, 5).map((c) => h("a", { class: "feed-row", href: "#/incidents/" + c.id },
+          h("div", { class: "flex nowrap-flex" }, sevChip(c.severity), h("span", { class: "feed-title" }, c.title)),
+          h("div", { class: "feed-sub" }, [c.host, c.count + " " + t("alertsN"), t(c.status === "open" ? "openInc" : c.status)].join("  ·  ")),
+          h("div", { class: "feed-time" }, timeEl(c.last)))) : h("div", { class: "empty small" }, t("noIncidents")))),
       panel(t("alerts"), h("a", { href: "#/alerts" }, t("all")),
         h("div", { class: "feed" }, o.recent_alerts.length ? o.recent_alerts.slice(0, 6).map((a) => h("a", { class: "feed-row", href: "#/alerts/" + a.id },
           h("div", { class: "flex nowrap-flex" }, sevChip(a.severity), h("span", { class: "feed-title" }, a.title)),
@@ -496,7 +511,11 @@ async function alertDetail(id) {
         a.status === "open" ? h("button", { class: "btn", onclick: act("ack") }, t("ack")) : null,
         a.status !== "resolved" ? h("button", { class: "btn ghost", onclick: act("resolve") }, t("resolve")) : null,
         a.status !== "open" ? h("button", { class: "btn ghost", onclick: act("reopen") }, t("reopen")) : null,
-        a.suppressible ? h("button", { class: "btn ghost", onclick: () => { box.hidden = false; reason.focus(); } }, icon("bell-off"), t("suppress")) : null)),
+        a.suppressible ? h("button", { class: "btn ghost", onclick: () => { box.hidden = false; reason.focus(); } }, icon("bell-off"), t("suppress")) : null,
+        a.incident ? h("a", { class: "btn ghost", href: "#/incidents/" + a.incident }, icon("stack-2"), t("incident"))
+          : a.agent ? h("button", { class: "btn ghost", onclick: async () => {
+            const r = await post("/api/ui/incidents/new/create", { alert: a.id }); location.hash = "#/incidents/" + r.id;
+          } }, icon("stack-2"), t("newIncident")) : null)),
     box));
 }
 
@@ -646,6 +665,68 @@ async function canariesView() {
     h("div", { class: "list" }, rows.length ? rows : h("div", { class: "empty" }, t("noCanaries")))));
 }
 
+let incTab = "active";
+const incRow = (c) => h("a", { class: "row", href: "#/incidents/" + c.id },
+  sevChip(c.severity),
+  h("div", null, h("div", { class: "title" }, c.title || c.id),
+    h("div", { class: "sub" }, [c.host, c.count + " " + t("alertsN"), t("owner") + ": " + (c.owner || t("unowned"))].join("  ·  "))),
+  h("div", { class: "meta" }, incChip(c.status), timeEl(c.last)));
+
+async function incidentsView() {
+  const r = await api("/api/ui/incidents?status=" + (incTab === "all" ? "" : incTab));
+  const tabs = h("div", { class: "tabs" }, [["active", t("activeInc")], ["closed", t("closed")], ["all", t("all")]].map(([k, l]) =>
+    h("button", { class: k === incTab ? "on" : null, onclick: () => { incTab = k; render(); } }, l)));
+  mount(shell("incidents", h("h1", null, t("incidents")),
+    h("div", { class: "crumbs" }, r.incidents.length + " " + (incTab === "all" ? t("incidents") : (incTab === "active" ? t("activeInc") : t("closed")).toLowerCase())
+      + (r.mttc_seconds != null ? "  ·  " + t("mttc") + " " + duration(r.mttc_seconds) : "")),
+    tabs, h("div", { class: "list" }, r.incidents.length ? r.incidents.map(incRow) : h("div", { class: "empty" }, t("noIncidents")))));
+}
+
+async function incidentDetail(id) {
+  const d = await api("/api/ui/incidents/" + encodeURIComponent(id));
+  const c = d.incident;
+  const act = (action, body) => async () => { await post("/api/ui/incidents/" + c.id + "/" + action, body || {}); render(); };
+  const note = h("textarea", { rows: 3, maxlength: 4000, required: true });
+  // timeline: alerts and raw events in time order, the session's login first
+  const items = [
+    ...d.alerts.map((a) => ({ ts: a.created, kind: "alert", a })),
+    ...d.events.map((e) => ({ ts: e.event.ts, kind: "event", e })),
+  ].sort((x, y) => new Date(x.ts) - new Date(y.ts));
+  const tl = h("div", { class: "timeline" },
+    d.login ? h("div", { class: "tl-item tl-login" }, h("span", { class: "tl-time" }, abs(d.login.event.ts)),
+      h("div", null, h("div", { class: "strong" }, t("startedBy") + " " + d.login.event.data.user),
+        h("div", { class: "mono muted" }, summary(d.login.event.data)))) : null,
+    items.map((it) => it.kind === "alert"
+      ? h("a", { class: "tl-item alert " + it.a.severity, href: "#/alerts/" + it.a.id }, h("span", { class: "tl-time" }, abs(it.ts)),
+        h("div", null, h("div", { class: "flex nowrap-flex" }, sevChip(it.a.severity), h("span", { class: "feed-title" }, it.a.title)),
+          h("div", { class: "mono muted" }, it.a.rule + (it.a.technique ? "  ·  " + it.a.technique : ""))))
+      : h("div", { class: "tl-item" }, h("span", { class: "tl-time" }, abs(it.ts)),
+        h("div", null, h("span", { class: "mono" }, it.e.event.type), " ", h("span", { class: "mono muted" }, summary(it.e.event.data))))));
+  mount(shell("incidents",
+    h("div", { class: "crumbs" }, h("a", { href: "#/incidents" }, t("incidents")), " / " + c.id),
+    h("h1", null, c.title || c.id),
+    h("div", { class: "page-actions" }, c.owner !== me.user ? h("button", { class: "btn", onclick: act("assign") }, t("assignMe")) : null),
+    h("div", { class: "grid two" },
+      h("div", { class: "card" }, h("dl", { class: "kv" },
+        h("dt", null, t("status")), h("dd", null, incChip(c.status)),
+        h("dt", null, t("severity")), h("dd", null, sevChip(c.severity)),
+        h("dt", null, t("host")), h("dd", null, h("a", { href: "#/hosts/" + c.agent }, c.host || c.agent)),
+        h("dt", null, t("owner")), h("dd", null, c.owner || t("unowned")),
+        h("dt", null, t("created")), h("dd", null, abs(c.created)),
+        h("dt", null, t("updated")), h("dd", null, abs(c.last)),
+        h("dt", null, t("alerts")), h("dd", null, c.count + (c.open_alerts ? " (" + c.open_alerts + " " + t("open").toLowerCase() + ")" : ""))),
+        h("div", { class: "actions" }, h("span", { class: "muted" }, t("setStatus")),
+          h("div", { class: "tabs" }, ["open", "investigating", "contained", "closed"].map((st) =>
+            h("button", { class: st === c.status ? "on" : null, onclick: act("status", { status: st }) }, t(st === "open" ? "openInc" : st)))))),
+      h("div", { class: "card" }, h("h3", null, t("notes")),
+        h("div", { class: "notes" }, (c.notes || []).map((n) => h("div", { class: "note" },
+          h("div", { class: "note-head" }, h("span", { class: "strong" }, n.by), " ", h("span", { class: "muted" }, abs(n.at))),
+          h("div", { class: "note-text" }, n.text)))),
+        h("form", { class: "stack mt", onsubmit: async (e) => { e.preventDefault(); await act("note", { note: note.value })(); } },
+          note, h("div", null, h("button", { class: "btn ghost", type: "submit" }, t("addNote")))))),
+    h("h2", null, t("timeline")), h("div", { class: "card" }, tl)));
+}
+
 async function suppressionsView() {
   const list = await api("/api/ui/suppressions");
   const act = (sp, action, ask) => async () => {
@@ -723,6 +804,8 @@ async function render() {
     else if (parts[0] === "events") await eventsView(params);
     else if (parts[0] === "canaries") await canariesView();
     else if (parts[0] === "suppressions") await suppressionsView();
+    else if (parts[0] === "incidents" && parts[1]) await incidentDetail(parts[1]);
+    else if (parts[0] === "incidents") await incidentsView();
     else if (parts[0] === "settings") await settingsView();
     else await overview();
   } catch (x) {
