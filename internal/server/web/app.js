@@ -34,6 +34,10 @@ const T = {
     mttaSub: "median, 30 days", noneYet: "nothing acknowledged yet", hoursShort: "h", daysShort: "d",
     alertsWeek: "Alerts, last 7 days", openBySev: "Open by severity", tactics: "ATT&CK tactics", topRules: "Top rules",
     attackers: "Attacking addresses", days7: "7 days", theme: "Appearance", light: "Light", dark: "Dark", system: "System",
+    suppressions: "Suppressions", suppress: "Suppress similar", suppressHint: "Matching findings stay in the event log but raise no alert.",
+    onlyHost: "Only this host", reason: "Reason", duration: "Duration", days: "days", hits: "Hits", expires: "Expires",
+    expired: "Expired", renew: "Renew", allHostsLbl: "all hosts", noSuppressions: "No suppressions", confirmSuppressionDelete: "Delete this suppression?",
+    activeCount: "active", match: "Match", severity: "Severity",
   },
   de: {
     overview: "Lage", alerts: "Alarme", events: "Ereignisse", canaries: "Köder", settings: "Einstellungen",
@@ -65,6 +69,10 @@ const T = {
     mttaSub: "Median, 30 Tage", noneYet: "noch nichts gesehen", hoursShort: "Std.", daysShort: "Tg.",
     alertsWeek: "Alarme, letzte 7 Tage", openBySev: "Offen nach Schwere", tactics: "ATT&CK-Taktiken", topRules: "Häufigste Regeln",
     attackers: "Angreifende Adressen", days7: "7 Tage", theme: "Darstellung", light: "Hell", dark: "Dunkel", system: "System",
+    suppressions: "Ausnahmen", suppress: "Ähnliche stummschalten", suppressHint: "Passende Funde bleiben im Ereignisprotokoll, lösen aber keinen Alarm aus.",
+    onlyHost: "Nur dieser Host", reason: "Begründung", duration: "Dauer", days: "Tage", hits: "Treffer", expires: "Läuft ab",
+    expired: "Abgelaufen", renew: "Verlängern", allHostsLbl: "alle Hosts", noSuppressions: "Keine Ausnahmen", confirmSuppressionDelete: "Diese Ausnahme löschen?",
+    activeCount: "aktiv", match: "Bedingung", severity: "Schwere",
   },
 };
 
@@ -134,7 +142,7 @@ function summary(data) {
 }
 
 // Tabler Icons (MIT, https://tabler.io/icons), outline paths.
-const ICONS = {"clock": ["M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0", "M12 7v5l3 3"], "user-x": ["M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0", "M6 21v-2a4 4 0 0 1 4 -4h3.5", "M22 22l-5 -5", "M17 22l5 -5"], "plus": ["M12 5l0 14", "M5 12l14 0"], "alert-triangle": ["M12 9v4", "M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z", "M12 16h.01"], "fish-hook": ["M16 9v6a5 5 0 0 1 -10 0v-4l3 3", "M16 7m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0", "M16 5v-2"], "layout-dashboard": ["M5 4h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1", "M5 16h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1", "M15 12h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1", "M15 4h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1"], "list-details": ["M13 5h8", "M13 9h5", "M13 15h8", "M13 19h5", "M3 4m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z", "M3 14m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z"], "logout": ["M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2", "M9 12h12l-3 -3", "M18 15l3 -3"], "server": ["M3 4m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z", "M3 12m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z", "M7 8l0 .01", "M7 16l0 .01"], "settings": ["M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z", "M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"], "shield-check": ["M11.46 20.846a12 12 0 0 1 -7.96 -14.846a12 12 0 0 0 8.5 -3a12 12 0 0 0 8.5 3a12 12 0 0 1 -.09 7.06", "M15 19l2 2l4 -4"]};
+const ICONS = {"bell-off": ["M9.346 5.353c.21 -.129 .428 -.246 .654 -.353a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3m-1 3h-13a4 4 0 0 0 2 -3v-3a6.996 6.996 0 0 1 1.273 -3.707", "M9 17v1a3 3 0 0 0 6 0v-1", "M3 3l18 18"], "clock": ["M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0", "M12 7v5l3 3"], "user-x": ["M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0", "M6 21v-2a4 4 0 0 1 4 -4h3.5", "M22 22l-5 -5", "M17 22l5 -5"], "plus": ["M12 5l0 14", "M5 12l14 0"], "alert-triangle": ["M12 9v4", "M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z", "M12 16h.01"], "fish-hook": ["M16 9v6a5 5 0 0 1 -10 0v-4l3 3", "M16 7m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0", "M16 5v-2"], "layout-dashboard": ["M5 4h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1", "M5 16h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1", "M15 12h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1", "M15 4h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1"], "list-details": ["M13 5h8", "M13 9h5", "M13 15h8", "M13 19h5", "M3 4m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z", "M3 14m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z"], "logout": ["M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2", "M9 12h12l-3 -3", "M18 15l3 -3"], "server": ["M3 4m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z", "M3 12m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z", "M7 8l0 .01", "M7 16l0 .01"], "settings": ["M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z", "M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"], "shield-check": ["M11.46 20.846a12 12 0 0 1 -7.96 -14.846a12 12 0 0 0 8.5 -3a12 12 0 0 0 8.5 3a12 12 0 0 1 -.09 7.06", "M15 19l2 2l4 -4"]};
 
 const SVG = "http://www.w3.org/2000/svg";
 function icon(name, viewBox = "0 0 24 24", paths = ICONS[name]) {
@@ -169,7 +177,8 @@ function logo() {
 
 const sections = [
   ["sectionOverview", [["overview", "#/", "layout-dashboard"]]],
-  ["sectionDetect", [["alerts", "#/alerts", "alert-triangle"], ["events", "#/events", "list-details"], ["canaries", "#/canaries", "fish-hook"]]],
+  ["sectionDetect", [["alerts", "#/alerts", "alert-triangle"], ["events", "#/events", "list-details"], ["canaries", "#/canaries", "fish-hook"],
+    ["suppressions", "#/suppressions", "bell-off"]]],
   ["sectionSystem", [["settings", "#/settings", "settings"]]],
 ];
 let openAlerts = 0;
@@ -446,13 +455,37 @@ async function alertDetail(id) {
   if (!a) { location.hash = "#/alerts"; return; }
   const params = (a.detail || "").split("\n").filter(Boolean).map((l) => l.split(/=(.*)/s));
   const act = (action) => async () => { await post("/api/ui/alerts/" + a.id + "/" + action); render(); };
+  // suppression form, prefilled from the alert; volatile parameters start unchecked
+  const volatile = new Set(["count", "pid", "gap", "fingerprint"]);
+  const onlyHost = h("input", { type: "checkbox", checked: Boolean(a.agent) });
+  const checks = params.filter(([k]) => k && k !== "host").map(([k, v]) => ({ k, v, box: h("input", { type: "checkbox", checked: !volatile.has(k) }) }));
+  const reason = h("input", { maxlength: 500, required: true });
+  const daysSel = h("select", null, [7, 30, 90].map((d) => h("option", { value: d, selected: d === 30 }, d + " " + t("days"))));
+  const err = h("div", { class: "err" });
+  const box = h("form", { class: "card stack mt", hidden: true, onsubmit: async (e) => {
+    e.preventDefault();
+    err.textContent = "";
+    const match = {};
+    for (const c of checks) if (c.box.checked) match[c.k] = c.v;
+    try {
+      await post("/api/ui/suppressions", { rule: a.rule, agent: onlyHost.checked ? a.agent : "", match, reason: reason.value, days: Number(daysSel.value) });
+      if (a.status !== "resolved") await post("/api/ui/alerts/" + a.id + "/resolve");
+      location.hash = "#/suppressions";
+    } catch (x) { err.textContent = x.message; }
+  } },
+    h("h3", null, t("suppress")),
+    h("div", { class: "muted" }, t("suppressHint")),
+    a.agent ? h("label", { class: "check" }, onlyHost, t("onlyHost") + " (" + (a.host || a.agent) + ")") : null,
+    checks.map((c) => h("label", { class: "check" }, c.box, h("span", { class: "mono" }, c.k + " = " + (c.v || "·")))),
+    h("div", { class: "grid two" }, h("label", null, t("reason"), reason), h("label", null, t("duration"), daysSel)),
+    err, h("div", null, h("button", { class: "btn", type: "submit" }, t("suppress"))));
   mount(shell("alerts",
     h("div", { class: "crumbs" }, h("a", { href: "#/alerts" }, t("alerts")), " / ", a.rule),
     h("h1", null, a.title),
     h("div", { class: "card" },
       h("dl", { class: "kv" },
         h("dt", null, t("status")), h("dd", null, t(a.status) + (a.by ? " · " + a.by : "")),
-        h("dt", null, "Severity"), h("dd", null, sevChip(a.severity)),
+        h("dt", null, t("severity")), h("dd", null, sevChip(a.severity)),
         h("dt", null, t("host")), h("dd", null, a.agent ? h("a", { href: "#/hosts/" + a.agent }, a.host || a.agent) : "·"),
         h("dt", null, t("technique")), h("dd", null, a.technique ? h("a", { href: "https://attack.mitre.org/techniques/" + a.technique.replace(".", "/") + "/", target: "_blank", rel: "noopener noreferrer" }, a.technique) : "·"),
         h("dt", null, t("count")), h("dd", null, a.count),
@@ -462,7 +495,9 @@ async function alertDetail(id) {
       h("div", { class: "actions" },
         a.status === "open" ? h("button", { class: "btn", onclick: act("ack") }, t("ack")) : null,
         a.status !== "resolved" ? h("button", { class: "btn ghost", onclick: act("resolve") }, t("resolve")) : null,
-        a.status !== "open" ? h("button", { class: "btn ghost", onclick: act("reopen") }, t("reopen")) : null))));
+        a.status !== "open" ? h("button", { class: "btn ghost", onclick: act("reopen") }, t("reopen")) : null,
+        a.suppressible ? h("button", { class: "btn ghost", onclick: () => { box.hidden = false; reason.focus(); } }, icon("bell-off"), t("suppress")) : null)),
+    box));
 }
 
 async function hostView(id) {
@@ -611,6 +646,28 @@ async function canariesView() {
     h("div", { class: "list" }, rows.length ? rows : h("div", { class: "empty" }, t("noCanaries")))));
 }
 
+async function suppressionsView() {
+  const list = await api("/api/ui/suppressions");
+  const act = (sp, action, ask) => async () => {
+    if (ask && !confirm(ask)) return;
+    await post("/api/ui/suppressions/" + sp.id + "/" + action, { days: 30 }); render();
+  };
+  const row = (sp) => h("div", { class: "row" + (sp.active ? "" : " faded") },
+    h("span", { class: "chip" }, h("span", { class: "dot " + (sp.active ? "ok" : "pending") }), sp.active ? t("active") : t("expired")),
+    h("div", null,
+      h("div", { class: "title" }, h("span", { class: "mono" }, sp.rule), "  ", h("span", { class: "muted" }, sp.host || t("allHostsLbl"))),
+      Object.keys(sp.match || {}).length ? h("div", { class: "sub mono" }, Object.entries(sp.match).map(([k, v]) => k + " = " + v).join("  ·  ")) : null,
+      h("div", { class: "sub" }, sp.reason + "  ·  " + sp.by)),
+    h("div", { class: "meta" },
+      h("span", null, t("hits") + " " + sp.hits),
+      h("span", { title: abs(sp.expires) }, (sp.active ? t("expires") + " " : t("expired") + " ") + abs(sp.expires).split(",")[0]),
+      h("button", { class: "btn small ghost", onclick: act(sp, "renew") }, t("renew")),
+      h("button", { class: "btn small ghost", onclick: act(sp, "delete", t("confirmSuppressionDelete")) }, t("remove"))));
+  const active = list.filter((x) => x.active).length;
+  mount(shell("suppressions", h("h1", null, t("suppressions")), h("div", { class: "crumbs" }, active + " " + t("activeCount")),
+    h("div", { class: "list" }, list.length ? list.map(row) : h("div", { class: "empty" }, t("noSuppressions")))));
+}
+
 async function settingsView() {
   const chain = await api("/api/ui/chain");
   const tokenBox = h("div");
@@ -665,6 +722,7 @@ async function render() {
     else if (parts[0] === "hosts" && parts[1]) await hostView(parts[1]);
     else if (parts[0] === "events") await eventsView(params);
     else if (parts[0] === "canaries") await canariesView();
+    else if (parts[0] === "suppressions") await suppressionsView();
     else if (parts[0] === "settings") await settingsView();
     else await overview();
   } catch (x) {

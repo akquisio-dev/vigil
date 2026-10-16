@@ -212,3 +212,43 @@ func TestTacticsCoverEveryTechnique(t *testing.T) {
 		}
 	}
 }
+
+func TestSuppressions(t *testing.T) {
+	s := &Server{state: &State{Agents: map[string]*AgentRec{"a1": {ID: "a1"}, "a2": {ID: "a2"}}, Canaries: map[string]*CanaryRec{}, KnownLogins: map[string]time.Time{}}}
+	cron := func(path string) []finding {
+		return []finding{{Rule: "file.cron", Key: "file.cron|a1|" + path, Params: map[string]string{"path": path, "change": "changed"}}}
+	}
+	if _, err := s.newSuppression("u", "canary.opened", "", "noise", nil, 0); err == nil {
+		t.Fatal("a critical canary rule must not be suppressible")
+	}
+	for _, r := range []string{"agent.restarted", "agent.forged", "chain.broken", "log.spoofed", "user.root", "nope"} {
+		if Suppressible(r) {
+			t.Errorf("%s must not be suppressible", r)
+		}
+	}
+	if _, err := s.newSuppression("u", "file.cron", "", " ", nil, 0); err == nil {
+		t.Fatal("a reason is required")
+	}
+	sp, err := s.newSuppression("u", "file.cron", "a1", "nightly backup job", map[string]string{"path": "/etc/cron.d/backup"}, 400)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d := sp.Expires.Sub(sp.Created); d != suppressMaxDays*24*time.Hour {
+		t.Fatalf("expiry not capped: %v", d)
+	}
+	s.state.Suppressions = []*Suppression{sp}
+	if got := s.raise(cron("/etc/cron.d/backup"), "a1", 1); len(got) != 0 || sp.Hits != 1 {
+		t.Fatalf("matching finding raised %d alerts, hits %d", len(got), sp.Hits)
+	}
+	if got := s.raise(cron("/etc/cron.d/other"), "a1", 2); len(got) != 1 {
+		t.Fatal("other path must still alert")
+	}
+	if got := s.raise(cron("/etc/cron.d/backup"), "a2", 3); len(got) != 1 {
+		t.Fatal("other host must still alert")
+	}
+	sp.Expires = time.Now().Add(-time.Minute)
+	s.state.Alerts = nil
+	if got := s.raise(cron("/etc/cron.d/backup"), "a1", 4); len(got) != 1 {
+		t.Fatal("expired suppression must not match")
+	}
+}

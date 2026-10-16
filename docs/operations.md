@@ -14,6 +14,23 @@ of a new one.
 
 Every alert names its rule. The [rule catalogue](rules.md) explains each one.
 
+## Suppressions
+
+When a finding is expected (a backup job that rewrites a cron file every night,
+a deploy runner that logs in from a fixed address), open the alert and use
+**Suppress similar**. Choose which of the alert's parameters must match, whether
+it applies to this host only, a reason and a duration (at most 90 days).
+
+- Matching findings raise no alert and no notification. The events that caused
+  them stay in the event log, and each suppression counts its hits.
+- Creating, renewing, deleting and expiring a suppression are written to the
+  event chain with the user's name.
+- Expired suppressions stay listed under **Suppressions** for 30 days, so they
+  can be renewed.
+- Rules an attacker would want silenced cannot be suppressed: every critical
+  rule, and all rules about agents, canaries, the event chain and log spoofing.
+  Use a maintenance window for planned agent restarts instead.
+
 ## Planned work on a host
 
 Every agent stop and restart raises a high alert, because an attacker would do

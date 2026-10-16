@@ -296,7 +296,7 @@ td.nowrap, table.nowrap td { white-space: nowrap; overflow-wrap: normal; }
 .btn:disabled { opacity: 0.5; cursor: default; }
 .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
 
-form.stack { display: grid; gap: 12px; }
+form.stack { display: grid; gap: 12px; align-content: start; }
 form.inline { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
 form.inline label { flex: 1 1 180px; }
 label { display: grid; gap: 5px; font-size: 12px; font-weight: 500; color: var(--text-primary); }
@@ -412,3 +412,7 @@ tr.click:hover td { background: var(--bg); }
 .sev.high { background: var(--red-bg); color: var(--red); }
 .sev.medium { background: var(--amber-bg); color: var(--amber); }
 .sev.low { background: var(--bg); color: var(--text-secondary); }
+label.check { display: flex; align-items: center; gap: 8px; font-weight: 400; }
+label.check input { width: auto; }
+.row.faded { opacity: 0.55; }
+[hidden] { display: none !important; }

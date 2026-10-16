@@ -309,6 +309,9 @@ func (s *Server) raise(fs []finding, agentID string, seq uint64) []*Alert {
 	now := time.Now().UTC()
 	for _, f := range fs {
 		def := rules[f.Rule]
+		if s.suppressed(f, agentID, now) != nil {
+			continue
+		}
 		var hit *Alert
 		for i := len(s.state.Alerts) - 1; i >= 0; i-- {
 			al := s.state.Alerts[i]

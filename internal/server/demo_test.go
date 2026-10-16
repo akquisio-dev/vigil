@@ -55,6 +55,10 @@ func TestWriteDemoData(t *testing.T) {
 	s.state.Canaries["demo-canary-2"] = &CanaryRec{ID: "demo-canary-2", AgentID: "demo-web", Type: "credentials", Path: "/root/zugangsdaten-alt.txt",
 		Created: start, By: "demo", Status: "active"}
 
+	s.state.Suppressions = []*Suppression{{ID: "demo-sup", Rule: "ssh.new_source", Agent: "demo-web",
+		Match: map[string]string{"user": "deploy", "ip": "192.0.2.80"}, Reason: "CI deploy runner", By: "demo",
+		Created: start, Expires: now.Add(23 * 24 * time.Hour)}}
+
 	type ev struct {
 		at   time.Time
 		host *AgentRec

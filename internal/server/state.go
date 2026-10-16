@@ -89,12 +89,13 @@ type User struct {
 }
 
 type State struct {
-	Agents      map[string]*AgentRec    `json:"agents"`
-	Tokens      map[string]*EnrollToken `json:"tokens"`
-	Canaries    map[string]*CanaryRec   `json:"canaries"`
-	Alerts      []*Alert                `json:"alerts"`
-	KnownLogins map[string]time.Time    `json:"known_logins"` // "user|ip"
-	LastAnchor  time.Time               `json:"last_anchor"`
+	Agents       map[string]*AgentRec    `json:"agents"`
+	Tokens       map[string]*EnrollToken `json:"tokens"`
+	Canaries     map[string]*CanaryRec   `json:"canaries"`
+	Alerts       []*Alert                `json:"alerts"`
+	KnownLogins  map[string]time.Time    `json:"known_logins"` // "user|ip"
+	Suppressions []*Suppression          `json:"suppressions"`
+	LastAnchor   time.Time               `json:"last_anchor"`
 }
 
 const maxAlerts = 5000

@@ -173,6 +173,7 @@ func (s *Server) loop(ctx context.Context) {
 		case <-dead.C:
 			s.checkDeadman()
 		case <-beat.C:
+			s.expireSuppressions()
 			if s.cfg.HeartbeatURL != "" {
 				go func() {
 					c := &http.Client{Timeout: 10 * time.Second}

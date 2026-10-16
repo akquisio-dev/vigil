@@ -107,6 +107,9 @@ func (s *Server) uiHandler() http.Handler {
 	mux.HandleFunc("GET /api/ui/canaries", s.auth(s.handleCanaries))
 	mux.HandleFunc("POST /api/ui/canaries", s.auth(s.handleCanaryCreate))
 	mux.HandleFunc("POST /api/ui/canaries/{id}/delete", s.auth(s.handleCanaryDelete))
+	mux.HandleFunc("GET /api/ui/suppressions", s.auth(s.handleSuppressions))
+	mux.HandleFunc("POST /api/ui/suppressions", s.auth(s.handleSuppressionCreate))
+	mux.HandleFunc("POST /api/ui/suppressions/{id}/{action}", s.auth(s.handleSuppressionAction))
 	mux.HandleFunc("GET /api/ui/chain", s.auth(s.handleChain))
 	mux.HandleFunc("POST /api/ui/chain/verify", s.auth(s.handleChainVerify))
 	mux.HandleFunc("POST /api/ui/notify/test", s.auth(func(w http.ResponseWriter, r *http.Request, sess *session) {
@@ -221,13 +224,14 @@ func (s *Server) viewAgent(a *AgentRec) agentView {
 
 type alertView struct {
 	*Alert
-	Host string `json:"host"`
+	Host         string `json:"host"`
+	Suppressible bool   `json:"suppressible"`
 }
 
 func (s *Server) viewAlert(al *Alert, lg string) alertView {
 	cp := *al
 	cp.Title = renderTitle(al.Rule, decodeParams(al.Detail), lg)
-	v := alertView{Alert: &cp}
+	v := alertView{Alert: &cp, Suppressible: Suppressible(al.Rule)}
 	if a := s.state.Agents[al.Agent]; a != nil {
 		v.Host = a.Name
 	}
@@ -271,6 +275,12 @@ func (s *Server) handleOverview(w http.ResponseWriter, r *http.Request, sess *se
 			}
 		}
 	}
+	activeSuppressions := 0
+	for _, sp := range s.state.Suppressions {
+		if sp.active(now) {
+			activeSuppressions++
+		}
+	}
 	canaries, triggered := 0, 0
 	for _, c := range s.state.Canaries {
 		canaries++
@@ -284,7 +294,7 @@ func (s *Server) handleOverview(w http.ResponseWriter, r *http.Request, sess *se
 		"agents": agents, "open_by_severity": bySev, "recent_alerts": recent,
 		"events_per_hour": hours, "ssh_failed_per_hour": sshFailed,
 		"hour_start": hourStart.Add(-23 * time.Hour),
-		"canaries":   canaries, "canaries_triggered": triggered,
+		"canaries":   canaries, "canaries_triggered": triggered, "suppressions": activeSuppressions,
 		"chain": map[string]any{"ok": s.store.ChainOK, "seq": seq, "head": head, "verified_at": s.store.VerifiedAt},
 	} {
 		out[k] = v
