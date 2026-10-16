@@ -156,6 +156,12 @@ of a process (for programs that pick random ports on every start).
 - A root attacker on a host can stop its agent. vigil cannot prevent that,
   it makes sure you hear about it.
 
+## Maintainers
+
+vigil is led by [Thaddäus Bischoff](https://github.com/TBjunior) (@TBjunior)
+and developed under the [akquisio-dev](https://github.com/akquisio-dev)
+organization. Pull requests are assigned to the project lead for review.
+
 ## License
 
 Not decided yet.
