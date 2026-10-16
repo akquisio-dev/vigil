@@ -160,7 +160,7 @@ of a process (for programs that pick random ports on every start).
 
 vigil is led by [Thaddäus Bischoff](https://github.com/TBjunior) (@TBjunior)
 and developed under the [akquisio-dev](https://github.com/akquisio-dev)
-organization. Pull requests are assigned to the project lead for review.
+account. Pull requests are assigned to the project lead for review.
 
 ## License
 
