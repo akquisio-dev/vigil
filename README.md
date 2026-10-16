@@ -164,4 +164,12 @@ account. Pull requests are assigned to the project lead for review.
 
 ## License
 
-Not decided yet.
+Copyright (C) 2026 akquisio-dev and the vigil contributors.
+
+vigil is free software: you can redistribute it and/or modify it under the
+terms of the GNU Affero General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option) any
+later version. See [LICENSE](LICENSE).
+
+If you run a modified vigil as a service for others, the AGPL requires you to
+offer them the source of your modified version.
