@@ -7,8 +7,10 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/base32"
 	"encoding/binary"
 	"encoding/json"
+	"github.com/akquisio-dev/vigil/internal/proto"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -247,5 +249,59 @@ func TestRolesAndPasskeyLogin(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 	if w := call("GET", "/api/ui/overview", "", vtok, ""); w.Code != http.StatusUnauthorized {
 		t.Fatalf("removed user still has access: %d", w.Code)
+	}
+}
+
+func TestResponseActionsFlow(t *testing.T) {
+	dir := t.TempDir()
+	s, err := New(&Config{DataDir: dir, SessionHours: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	admin, _, _ := NewUser("ada", "admin")
+	analyst, _, _ := NewUser("ana", "analyst")
+	SaveUsers(dir, map[string]*User{"ada": admin, "ana": analyst})
+	s.state.Agents["a1"] = &AgentRec{ID: "a1", Name: "web", ResponseTypes: []string{"block_ip"}}
+	h := s.uiHandler()
+	call := func(tok, csrf, body string) *httptest.ResponseRecorder {
+		r := httptest.NewRequest("POST", "/api/ui/agents/a1/respond", strings.NewReader(body))
+		r.AddCookie(&http.Cookie{Name: cookieName, Value: tok})
+		r.Header.Set("X-CSRF", csrf)
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, r)
+		return w
+	}
+	secret := func(u *User) []byte {
+		b, _ := base32.StdEncoding.WithPadding(base32.NoPadding).DecodeString(u.TOTPSecret)
+		return b
+	}
+	code := func(u *User) string { return totpAt(secret(u), time.Now().Unix()/30) }
+	atok, as := s.newSession("ana", "1.2.3.4")
+	if w := call(atok, as.CSRF, `{"type":"block_ip","params":{"ip":"203.0.113.9"},"code":"`+code(analyst)+`"}`); w.Code != http.StatusForbidden {
+		t.Fatalf("analysts cannot start response actions: %d", w.Code)
+	}
+	tok, ss := s.newSession("ada", "1.2.3.4")
+	if w := call(tok, ss.CSRF, `{"type":"block_ip","params":{"ip":"10.0.0.5"},"code":"`+code(admin)+`"}`); w.Code != http.StatusBadRequest {
+		t.Fatalf("private addresses are refused: %d", w.Code)
+	}
+	if w := call(tok, ss.CSRF, `{"type":"block_ip","params":{"ip":"203.0.113.9"},"code":"000000"}`); w.Code != http.StatusForbidden {
+		t.Fatalf("a wrong code is refused: %d", w.Code)
+	}
+	w := call(tok, ss.CSRF, `{"type":"block_ip","params":{"ip":"203.0.113.9","minutes":"60"},"code":"`+code(admin)+`"}`)
+	if w.Code != 200 {
+		t.Fatalf("respond: %d %s", w.Code, w.Body.String())
+	}
+	raw, sig := s.agentConfig(s.state.Agents["a1"])
+	if proto.Verify(s.key.Public().(ed25519.PublicKey), raw, sig) != nil {
+		t.Fatal("config must be signed")
+	}
+	var cfg proto.AgentConfig
+	json.Unmarshal(raw, &cfg)
+	if len(cfg.Actions) != 1 || cfg.Actions[0].Params["ip"] != "203.0.113.9" || cfg.Version != 1 {
+		t.Fatalf("config: %+v", cfg)
+	}
+	s.evaluate(s.state.Agents["a1"], &Record{Event: proto.Event{Type: "response.result", Data: map[string]any{"action_id": cfg.Actions[0].ID, "ok": true, "detail": "blocked"}}})
+	if s.state.Actions[0].Status != "done" || len(s.pendingActions("a1")) != 0 {
+		t.Fatalf("result: %+v", s.state.Actions[0])
 	}
 }

@@ -98,7 +98,14 @@ func (a *Agent) Run(ctx context.Context) error {
 		}
 	}
 	host, _ := os.Hostname()
-	a.emit(proto.NewEvent("agent.started", map[string]any{"version": Version, "hostname": host, "canary_roots": a.cfg.CanaryRoots}))
+	// The dashboard only offers response actions this host accepts.
+	allowed := []string{}
+	for _, t := range proto.ActionTypes {
+		if a.cfg.Response.allows(t) {
+			allowed = append(allowed, t)
+		}
+	}
+	a.emit(proto.NewEvent("agent.started", map[string]any{"version": Version, "hostname": host, "canary_roots": a.cfg.CanaryRoots, "response": allowed}))
 
 	a.scan()
 	if !a.state.Initialized {

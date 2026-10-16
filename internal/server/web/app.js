@@ -54,6 +54,10 @@ const T = {
     updates: "Updates", securityShort: "security", rebootShort: "reboot", upToDate: "up to date", pendingShort: "pending",
     kernel: "Kernel", unattended: "Automatic updates", listsAge: "Package lists", daysAgo: "days old", on: "on", off: "off",
     securityPackages: "Security updates", newestInstalled: "newest installed",
+    response: "Response", notEnabled: "not enabled on this host (response in agent.json)", actBlock: "Block {ip} for 24 h",
+    actSession: "End SSH session of {user}", actProcess: "Stop process {pid}", actKey: "Remove key {fingerprint}",
+    requested: "requested, waiting for the agent", done: "done", failed: "failed", expiredAct: "expired", pendingAct: "pending",
+    confirmAction: "Run this on the host?",
   },
   de: {
     overview: "Lage", alerts: "Alarme", events: "Ereignisse", canaries: "Köder", settings: "Einstellungen",
@@ -105,6 +109,10 @@ const T = {
     updates: "Updates", securityShort: "Sicherheit", rebootShort: "Neustart", upToDate: "aktuell", pendingShort: "offen",
     kernel: "Kernel", unattended: "Automatische Updates", listsAge: "Paketlisten", daysAgo: "Tage alt", on: "an", off: "aus",
     securityPackages: "Sicherheitsupdates", newestInstalled: "neuester installiert",
+    response: "Gegenmaßnahmen", notEnabled: "auf diesem Host nicht freigeschaltet (response in agent.json)", actBlock: "{ip} für 24 Std. sperren",
+    actSession: "SSH-Sitzung von {user} beenden", actProcess: "Prozess {pid} beenden", actKey: "Schlüssel {fingerprint} entfernen",
+    requested: "angefordert, wartet auf den Agent", done: "erledigt", failed: "fehlgeschlagen", expiredAct: "abgelaufen", pendingAct: "wartet",
+    confirmAction: "Das auf dem Host ausführen?",
   },
 };
 
@@ -531,6 +539,31 @@ async function alertsView() {
     h("div", { class: "list" }, list.length ? list.map(alertRow) : h("div", { class: "empty" }, t("noAlerts")))));
 }
 
+const actLabel = (a) => t({ block_ip: "actBlock", kill_session: "actSession", kill_process: "actProcess", remove_key: "actKey" }[a.type])
+  .replace(/\{(\w+)\}/g, (_, k) => (a.params[k] || "").slice(0, 24));
+const actStatus = (st) => h("span", { class: "chip" }, h("span", { class: "dot " + ({ done: "ok", failed: "critical", expired: "low", pending: "medium" }[st] || "") }),
+  t({ done: "done", failed: "failed", expired: "expiredAct", pending: "pendingAct" }[st] || st));
+
+async function responseCard(a) {
+  if (!can("admin") || !a.agent) return null;
+  const r = await api("/api/ui/alerts/" + a.id + "/actions");
+  if (!r.suggested.length) return null;
+  const out = h("div", { class: "muted" });
+  return h("div", { class: "card mt" }, h("h3", null, t("response")),
+    h("div", { class: "actions" }, r.suggested.map((s) => {
+      const ok = (r.allowed || []).includes(s.type);
+      return h("button", { class: "btn " + (s.type === "block_ip" ? "" : "ghost"), disabled: !ok, title: ok ? "" : t("notEnabled"), onclick: async () => {
+        if (!confirm(actLabel(s) + "\n\n" + t("confirmAction"))) return;
+        const code = prompt(t("codePrompt")); if (!code) return;
+        try {
+          await post("/api/ui/agents/" + a.agent + "/respond", { type: s.type, params: s.params, alert: a.id, code: code.trim() });
+          out.textContent = actLabel(s) + ": " + t("requested");
+        } catch (x) { out.textContent = x.message; }
+      } }, actLabel(s));
+    })),
+    (r.allowed || []).length ? null : h("div", { class: "muted mt" }, t("notEnabled")), out);
+}
+
 async function alertDetail(id) {
   const all = await api("/api/ui/alerts");
   const a = all.find((x) => x.id === id);
@@ -583,11 +616,11 @@ async function alertDetail(id) {
           : a.agent ? h("button", { class: "btn ghost", onclick: async () => {
             const r = await post("/api/ui/incidents/new/create", { alert: a.id }); location.hash = "#/incidents/" + r.id;
           } }, icon("stack-2"), t("newIncident")) : null)),
-    box));
+    box, await responseCard(a)));
 }
 
 async function hostView(id) {
-  const d = await api("/api/ui/agents/" + encodeURIComponent(id));
+  const [d, actions] = await Promise.all([api("/api/ui/agents/" + encodeURIComponent(id)), api("/api/ui/actions?agent=" + encodeURIComponent(id))]);
   const a = d.agent;
   const action = (name, body) => async () => { await post("/api/ui/agents/" + a.id + "/" + name, body || {}); render(); };
   const portRows = d.ports.map((p) => h("tr", null,
@@ -646,6 +679,10 @@ async function hostView(id) {
     h("div", { class: "tablewrap" }, h("table", { class: "nowrap" },
       h("thead", null, h("tr", null, ["Port", "Addr", t("scope"), t("via"), t("process"), ""].map((x) => h("th", null, x)))),
       h("tbody", null, portRows))),
+    actions.length ? [h("h2", null, t("response")), h("div", { class: "list" }, actions.map((x) => h("div", { class: "row" },
+      actStatus(x.status),
+      h("div", null, h("div", { class: "title" }, actLabel(x)), h("div", { class: "sub" }, [x.by, x.result].filter(Boolean).join("  ·  "))),
+      h("div", { class: "meta" }, timeEl(x.created)))))] : null,
     h("h2", null, t("logins")),
     d.logins.length ? h("div", { class: "tablewrap" }, h("table", null,
       h("thead", null, h("tr", null, [t("time"), t("user"), t("ip"), t("method"), t("key")].map((x) => h("th", null, x)))),

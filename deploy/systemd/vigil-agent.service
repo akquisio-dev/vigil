@@ -12,7 +12,9 @@ RestartSec=5
 # canaries with fanotify and map sockets to processes. Everything else is
 # taken away.
 User=root
-CapabilityBoundingSet=CAP_DAC_READ_SEARCH CAP_DAC_OVERRIDE CAP_SYS_ADMIN CAP_SYS_PTRACE CAP_NET_ADMIN CAP_NET_RAW CAP_FOWNER
+# CAP_KILL is only used by response actions, which are off unless agent.json
+# enables them.
+CapabilityBoundingSet=CAP_DAC_READ_SEARCH CAP_DAC_OVERRIDE CAP_SYS_ADMIN CAP_SYS_PTRACE CAP_NET_ADMIN CAP_NET_RAW CAP_FOWNER CAP_KILL
 NoNewPrivileges=yes
 ProtectSystem=full
 ProtectKernelTunables=yes

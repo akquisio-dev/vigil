@@ -33,10 +33,26 @@ the defaults below.
 | `outbound` | true | report new outbound TCP destinations with their process |
 | `updates` | true | report pending (security) updates and pending reboots, Debian and Ubuntu |
 | `web_logs` | none | access logs to watch, see below |
+| `response` | off | allow response actions from the dashboard, see below |
 | `max_queue` | 5000 | events kept while the server is unreachable |
 
 Everything that limits what the server may ask of an agent lives in this file
 and only here. The dashboard cannot widen `canary_roots`.
+
+### Response actions
+
+```json
+"response": {
+  "enabled": true,
+  "allow": ["block_ip", "kill_session", "kill_process", "remove_key"],
+  "never_block": ["10.90.0.0/24", "192.0.2.50"]
+}
+```
+
+Off unless `enabled` is true. `allow` limits the types (empty: all four).
+`block_ip` refuses loopback and local addresses, the vigil server and
+everything in `never_block`; put your admins' addresses and VPN there.
+See [Operations](operations.md#response-actions) for what each action does.
 
 ### Web server logs
 

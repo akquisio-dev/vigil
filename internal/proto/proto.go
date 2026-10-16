@@ -71,7 +71,20 @@ type AgentConfig struct {
 	AgentID  string   `json:"agent_id"`
 	Version  int64    `json:"version"`
 	Canaries []Canary `json:"canaries"`
+	// Actions are response actions an admin started in the dashboard. The
+	// agent runs each id at most once, only before Expires, and only if its
+	// own configuration allows the type.
+	Actions []Action `json:"actions,omitempty"`
 }
+
+type Action struct {
+	ID      string            `json:"id"`
+	Type    string            `json:"type"` // block_ip | kill_session | kill_process | remove_key
+	Params  map[string]string `json:"params"`
+	Expires time.Time         `json:"expires"`
+}
+
+var ActionTypes = []string{"block_ip", "kill_session", "kill_process", "remove_key"}
 
 type Canary struct {
 	ID     string            `json:"id"`

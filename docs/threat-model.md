@@ -103,6 +103,15 @@ a password change ends the user's other sessions.
   configuration; knowing *that* canaries exist does not tell anyone *which*
   file is one.
 
+**Response actions are bounded.** Enabling them lets the dashboard change a
+host, so a compromised server could block addresses, end sessions, stop
+processes and remove SSH keys there. Each host decides in its own
+`agent.json` whether and which actions it accepts; `never_block` protects the
+admins' addresses; the last key of an `authorized_keys` file is never
+removed; actions expire after ten minutes and run at most once; and none of
+them runs arbitrary commands. Hosts where this risk is not acceptable leave
+`response` off.
+
 ## Known weak spots
 
 - Enrollment tokens are bearer secrets valid for one hour and one use. Hand

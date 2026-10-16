@@ -437,7 +437,7 @@ func (s *Server) forgedRequest(a *AgentRec, ip, reason string) {
 
 // agentConfig builds and signs the canary set for one agent. Caller holds s.mu.
 func (s *Server) agentConfig(a *AgentRec) (json.RawMessage, string) {
-	cfg := proto.AgentConfig{AgentID: a.ID, Version: a.ConfigVersion, Canaries: []proto.Canary{}}
+	cfg := proto.AgentConfig{AgentID: a.ID, Version: a.ConfigVersion, Canaries: []proto.Canary{}, Actions: s.pendingActions(a.ID)}
 	for _, c := range s.state.Canaries {
 		if c.AgentID == a.ID {
 			cfg.Canaries = append(cfg.Canaries, proto.Canary{ID: c.ID, Type: c.Type, Path: c.Path, Params: c.Params})

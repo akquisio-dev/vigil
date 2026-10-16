@@ -282,6 +282,7 @@ func (s *Server) evaluate(a *AgentRec, r *Record) []finding {
 		if v := str(d, "version"); v != "" {
 			a.Version = v
 		}
+		a.ResponseTypes = strSlice(d["response"])
 		a.CanaryRoots = a.CanaryRoots[:0]
 		if roots, ok := d["canary_roots"].([]any); ok {
 			for _, root := range roots {
@@ -374,6 +375,8 @@ func (s *Server) evaluate(a *AgentRec, r *Record) []finding {
 		if num(d, "logins") >= 20 {
 			add("web.login_bruteforce", str(d, "ip"), p)
 		}
+	case "response.result":
+		s.actionResult(a.ID, d)
 	case "process.rate_limited":
 		add("process.rate_limited", "", map[string]string{"dropped": str(d, "dropped")})
 	case "log.spoofed":

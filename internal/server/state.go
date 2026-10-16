@@ -39,6 +39,9 @@ type AgentRec struct {
 	ConfigVersion int64 `json:"config_version"`
 	AckedVersion  int64 `json:"acked_version"`
 
+	// ResponseTypes are the response actions the agent accepts (from agent.json).
+	ResponseTypes []string `json:"response_types,omitempty"`
+
 	// Updates is the host's latest patch state as reported by the agent.
 	Updates map[string]any `json:"updates,omitempty"`
 }
@@ -104,6 +107,7 @@ type State struct {
 	KnownLogins  map[string]time.Time    `json:"known_logins"` // "user|ip"
 	Suppressions []*Suppression          `json:"suppressions"`
 	Incidents    []*Incident             `json:"incidents"`
+	Actions      []*ActionRec            `json:"actions,omitempty"`
 	LastAnchor   time.Time               `json:"last_anchor"`
 }
 

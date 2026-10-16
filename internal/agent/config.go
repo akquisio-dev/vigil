@@ -41,6 +41,8 @@ type Config struct {
 	Updates *bool `json:"updates,omitempty"`
 	// Outbound reports new outbound TCP destinations with their process.
 	Outbound *bool `json:"outbound,omitempty"`
+	// Response allows response actions from the dashboard. Off by default.
+	Response *ResponseConfig `json:"response,omitempty"`
 	// WebLogs are access logs to watch for scans and attacks.
 	WebLogs []WebLog `json:"web_logs,omitempty"`
 

@@ -14,6 +14,26 @@ of a new one.
 
 Every alert names its rule. The [rule catalogue](rules.md) explains each one.
 
+## Response actions
+
+On an alert, admins can contain an attack on the host directly, if the host's
+`agent.json` allows it ([configuration](configuration.md#response-actions)):
+
+| Action | What the agent does | Refuses |
+|---|---|---|
+| Block address | adds it for 24 hours to an nftables set in its own table `inet vigil`, dropping traffic from and to it (input, forward, output) | loopback, local, the vigil server, `never_block` |
+| End SSH session | stops the sshd process of the login (`SIGTERM`, then `SIGKILL`) | anything that is not an sshd session, the SSH daemon itself |
+| Stop process | stops the process | a pid that now runs another program, pid 1, the agent |
+| Remove key | removes the key from `authorized_keys`, after a backup in the agent's state directory | the last key of a file, files that are not `authorized_keys` |
+
+Every action needs a fresh code from the authenticator app, reaches the
+agent in the next signed configuration, is valid for ten minutes and runs at
+most once. The request and the agent's result are in the event chain, and
+the host page lists them. There is no way to run arbitrary commands.
+
+To lift a block early: `nft delete element inet vigil blocked4 { 203.0.113.9 }`,
+or remove the whole table with `nft delete table inet vigil`.
+
 ## Accounts and roles
 
 | Role | May |

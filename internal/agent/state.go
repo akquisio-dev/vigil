@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 // State is what the agent remembers between runs. Comparing against it on
@@ -25,6 +26,9 @@ type State struct {
 	// down are read on start.
 	Offsets map[string]LogOffset `json:"offsets,omitempty"`
 	Updates UpdateState          `json:"updates"`
+	// ActionsDone remembers response actions already run, so a replayed
+	// configuration never runs one twice.
+	ActionsDone map[string]time.Time `json:"actions_done,omitempty"`
 }
 
 type LogOffset struct {

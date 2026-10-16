@@ -146,6 +146,9 @@ func (s *Server) uiHandler() http.Handler {
 		custom, errs := CustomInfo()
 		writeJSON(w, map[string]any{"builtin": Catalog(), "custom": custom, "errors": errs, "suppressible": suppressibleList()})
 	}))
+	mux.HandleFunc("GET /api/ui/alerts/{id}/actions", s.auth(s.handleAlertActions))
+	mux.HandleFunc("POST /api/ui/agents/{id}/respond", s.adminOnly(s.handleRespond))
+	mux.HandleFunc("GET /api/ui/actions", s.auth(s.handleActions))
 	mux.HandleFunc("GET /api/ui/intel", s.auth(func(w http.ResponseWriter, r *http.Request, sess *session) {
 		writeJSON(w, map[string]any{"enabled": s.cfg.ThreatIntel, "lists": s.intel.status()})
 	}))

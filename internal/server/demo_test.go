@@ -50,6 +50,7 @@ func TestWriteDemoData(t *testing.T) {
 		s.state.Agents[a.ID] = a
 	}
 	hosts[2].Silent, hosts[2].LastSeen = true, now.Add(-47*time.Minute)
+	hosts[0].ResponseTypes = []string{"block_ip", "kill_session", "kill_process", "remove_key"}
 	s.state.Canaries["demo-canary"] = &CanaryRec{ID: "demo-canary", AgentID: "demo-app", Type: "env", Path: "/srv/app/.env.backup",
 		Created: start, By: "demo", Status: "active"}
 	s.state.Canaries["demo-canary-2"] = &CanaryRec{ID: "demo-canary-2", AgentID: "demo-web", Type: "credentials", Path: "/root/zugangsdaten-alt.txt",

@@ -230,6 +230,7 @@ func (a *Agent) applyConfig(cfg proto.AgentConfig) {
 	}
 	a.state.ConfigVersion = cfg.Version
 	a.remarkCanaries()
+	a.runActions(cfg.Actions)
 }
 
 // checkCanaries notices canaries that were deleted, replaced or edited.
