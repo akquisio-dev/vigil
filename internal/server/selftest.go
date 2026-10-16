@@ -18,8 +18,11 @@ import (
 //
 // Findings are matched to the test by a random marker in the trace (the test
 // id), never by time: an attacker acting while a test runs must still raise
-// a normal alert. Matched findings raise no alert; they are kept in the
-// event log like every other event.
+// a normal alert. The marker is not secret (local users see it in `ps` while
+// the step runs), so a finding only counts as the test's own when its rule is
+// a step rule and its event has the exact shape of the agent's trace, which
+// only root can produce. Matched findings raise no alert; they are kept in
+// the event log like every other event.
 
 // selfTestSteps maps each step to the rule that must fire for it.
 var selfTestSteps = []struct{ Step, Rule string }{
@@ -56,6 +59,15 @@ type SelfTest struct {
 func (t *SelfTest) marker() string { return "vigil-selftest-" + t.ID }
 
 func (t *SelfTest) open() bool { return t.Status == "pending" || t.Status == "running" }
+
+func (t *SelfTest) stepFor(rule string) *SelfTestStep {
+	for _, st := range t.Steps {
+		if st.Rule == rule {
+			return st
+		}
+	}
+	return nil
+}
 
 func (t *SelfTest) step(name string) *SelfTestStep {
 	for _, st := range t.Steps {
@@ -100,10 +112,37 @@ func (s *Server) pendingSelfTest(agentID string) *proto.SelfTest {
 	return nil
 }
 
-// selfTestFindings takes the findings of a record that carries the marker of
-// an open test on this agent, records them as step results and returns the
-// findings that remain (none, if the record belongs to the test). Caller
-// holds s.mu.
+// selfTestCronDirs must match the agent's list.
+var selfTestCronDirs = []string{"/var/spool/cron/crontabs", "/etc/cron.d"}
+
+// ownTrace reports whether a finding is exactly the trace the agent leaves
+// for this step. Every check needs root on the host to fake: the cron
+// directories are root-only, the program runs as uid 0, the log line is
+// written by root.
+func ownTrace(rule, marker string, d map[string]any) bool {
+	switch rule {
+	case "file.cron":
+		p := str(d, "path")
+		for _, dir := range selfTestCronDirs {
+			if p == dir+"/"+marker {
+				return true
+			}
+		}
+	case "process.tmp_exec":
+		exe := str(d, "exe")
+		rest, ok := strings.CutPrefix(exe, "/tmp/"+marker+"-")
+		sigs := strSlice(d["signals"])
+		return ok && str(d, "uid") == "0" && len(sigs) == 1 && sigs[0] == "tmp_exe" &&
+			strings.HasSuffix(rest, "/sleep") && strings.Count(rest, "/") == 1
+	case "log.spoofed":
+		return str(d, "uid") == "0" && strings.HasPrefix(str(d, "message"), marker+" ")
+	}
+	return false
+}
+
+// selfTestFindings records the findings that are an open test's own traces
+// as step results and returns all other findings unchanged. Caller holds
+// s.mu.
 func (s *Server) selfTestFindings(a *AgentRec, rec *Record, fs []finding) []finding {
 	if len(fs) == 0 {
 		return fs
@@ -120,18 +159,22 @@ func (s *Server) selfTestFindings(a *AgentRec, rec *Record, fs []finding) []find
 		return fs
 	}
 	now := time.Now()
+	var keep []finding
 	for _, f := range fs {
-		for _, st := range t.Steps {
-			if st.Rule != f.Rule || st.Status == "ok" || st.Status == "suppressed" {
-				continue
-			}
-			st.Status, st.Detail = "ok", renderTitle(f.Rule, f.Params, s.cfg.Language)
-			if sp := s.suppressed(f, a.ID, now); sp != nil {
-				st.Status, st.Detail = "suppressed", sp.Reason
-			}
+		st := t.stepFor(f.Rule)
+		if st == nil || !ownTrace(f.Rule, t.marker(), rec.Event.Data) {
+			keep = append(keep, f)
+			continue
+		}
+		if st.Status == "ok" || st.Status == "suppressed" {
+			continue // the removal of the test file, a second sighting
+		}
+		st.Status, st.Detail = "ok", renderTitle(f.Rule, f.Params, s.cfg.Language)
+		if sp := s.suppressed(f, a.ID, now); sp != nil {
+			st.Status, st.Detail = "suppressed", sp.Reason
 		}
 	}
-	return nil
+	return keep
 }
 
 // selfTestEvent handles the agent's own reports. Caller holds s.mu.

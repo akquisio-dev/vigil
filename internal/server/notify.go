@@ -164,8 +164,10 @@ func (s *Server) noteDelivery(n NotifierConfig, err error) {
 	s.mu.Lock()
 	fresh := s.raise([]finding{{Rule: "notify.failed", Key: key, Params: map[string]string{"notifier": n.Name, "type": n.Type, "error": clip(err.Error(), 200)}}}, "", 0)
 	s.saveLocked()
+	// Forced past min_severity: a phone channel set to critical must hear
+	// that the chat channel went dead.
 	for _, al := range fresh {
-		s.notifyExcept(s.alertMessage(al), false, n.Name)
+		s.notifyExcept(s.alertMessage(al), true, n.Name)
 	}
 	s.mu.Unlock()
 }
@@ -403,20 +405,35 @@ func deliverSMTP(n NotifierConfig, m message) error {
 	if n.SMTPUser != "" {
 		auth = smtp.PlainAuth("", n.SMTPUser, n.SMTPPass, n.SMTPHost)
 	}
-	if port != 465 {
-		// SendMail upgrades with STARTTLS and PlainAuth refuses to send
-		// credentials over an unencrypted remote connection.
-		return smtp.SendMail(addr, auth, n.From, n.To, []byte(msg))
+	dialer := &net.Dialer{Timeout: 15 * time.Second}
+	var conn net.Conn
+	var err error
+	if port == 465 {
+		conn, err = tls.DialWithDialer(dialer, "tcp", addr, &tls.Config{ServerName: n.SMTPHost})
+	} else {
+		conn, err = dialer.Dial("tcp", addr)
 	}
-	conn, err := tls.DialWithDialer(&net.Dialer{Timeout: 15 * time.Second}, "tcp", addr, &tls.Config{ServerName: n.SMTPHost})
 	if err != nil {
 		return err
 	}
+	// A mail server that accepts the connection and then stalls must not
+	// hold a delivery (or the dashboard's test request) forever.
+	conn.SetDeadline(time.Now().Add(30 * time.Second))
 	c, err := smtp.NewClient(conn, n.SMTPHost)
 	if err != nil {
+		conn.Close()
 		return err
 	}
 	defer c.Close()
+	if port != 465 {
+		if ok, _ := c.Extension("STARTTLS"); ok {
+			if err := c.StartTLS(&tls.Config{ServerName: n.SMTPHost}); err != nil {
+				return err
+			}
+		}
+	}
+	// PlainAuth refuses to send credentials over an unencrypted connection
+	// to a remote host, so a server without STARTTLS fails here.
 	if auth != nil {
 		if err := c.Auth(auth); err != nil {
 			return err

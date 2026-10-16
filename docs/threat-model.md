@@ -129,11 +129,15 @@ them runs arbitrary commands. Hosts where this risk is not acceptable leave
 - Dashboard sessions live in memory; restarting the server logs everyone out.
 - The agent needs broad privileges (root with a reduced capability set) to
   read what it watches. The systemd unit drops everything it does not need.
-- A finding that carries the id of a running self test raises no alert. The
-  id is random and only known to the server, the agent and dashboard users,
-  and a test stays open for a few minutes at most. Someone who has it and
-  root on the host could hide one finding during that window; with root on
-  the host they could also stop the agent, which is never quiet.
+- While a self test runs, its random id is visible to local users on the
+  host for a few seconds (in `ps` and `/tmp`). Knowing it does not help: the
+  server only swallows a finding when its rule is one of the three step rules
+  and the event has the exact shape of the agent's own trace (the exact file
+  name in a root-only cron directory, `sleep` run as uid 0 from the test
+  directory with no other signal, a log line written by root). Every other
+  finding, critical ones included, raises its alert as usual. Faking the
+  exact traces needs root, and root could stop the agent instead, which is
+  never quiet.
 - Program starts are read from `/proc` after the kernel reports them. A
   program that exits within a millisecond or two can be gone before the agent
   looks, and is then not reported.

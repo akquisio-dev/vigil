@@ -538,7 +538,7 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 
 **Alert:** `Notifier {notifier} ({type}) failed: {error}`
 
-**Fires when:** A notifier could not deliver a message after three attempts. The alert goes out through the other notifiers only, and resolves itself with the next successful delivery.
+**Fires when:** A notifier could not deliver a message after three attempts. The alert goes out through all other notifiers, whatever their `min_severity`, and resolves itself with the next successful delivery.
 
 **Known false positives:** Short outages of the chat or mail service.
 

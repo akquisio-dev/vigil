@@ -283,7 +283,7 @@ var ruleDocs = map[string]ruleDoc{
 		"The alert names the step that went missing. Check the agent log (`journalctl -u vigil-agent`) for collector warnings, then run the test again from the host page. A sensor that stopped working silently, for example after a kernel update, is exactly what this catches.",
 	},
 	"notify.failed": {
-		"A notifier could not deliver a message after three attempts. The alert goes out through the other notifiers only, and resolves itself with the next successful delivery.",
+		"A notifier could not deliver a message after three attempts. The alert goes out through all other notifiers, whatever their `min_severity`, and resolves itself with the next successful delivery.",
 		"Short outages of the chat or mail service.",
 		"Run `vigil-server notify test -name <notifier>` on the server. A revoked webhook, an expired token or a blocked outbound connection are the usual causes. While it fails, alerts reach you only through the dashboard and other notifiers.",
 	},
