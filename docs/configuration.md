@@ -77,10 +77,28 @@ and only here. The dashboard cannot widen `canary_roots`.
 | `anchor_daily` | false | post the head of the event chain to all notifiers once a day |
 | `heartbeat_url` | | fetched every minute, for an outside watchdog |
 | `notifiers` | none | see below |
+| `brand` | none | your own name and logo, see below |
 
 Only enable `trust_proxy` when the dashboard listener is reachable through the
 proxy alone. Otherwise clients can choose their own address for rate limits
 and the audit log.
+
+## Your own name and logo
+
+```json
+"brand": {
+  "name": "Example vigil",
+  "logo": "/etc/vigil/brand/logo.svg",
+  "icon": "/etc/vigil/brand/icon.svg"
+}
+```
+
+`logo` is a horizontal SVG with the mark on the left. The collapsed sidebar
+shows only its left square, the expanded sidebar and the login page the whole
+logo. It is placed inline in the page, so `fill="currentColor"` follows light
+and dark mode. `icon` is the browser tab icon. Files with scripts, event
+handlers or external references are refused and the vigil logo is used
+instead; the server log says why. Restart the server after changing them.
 
 ## Notifiers
 

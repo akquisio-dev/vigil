@@ -7,6 +7,17 @@ import (
 	"time"
 )
 
+type BrandConfig struct {
+	// Name is shown in the window title, e.g. "Example vigil".
+	Name string `json:"name"`
+	// Logo is an SVG file (wordmark with the mark on the left). It is placed
+	// inline, so fill="currentColor" follows light and dark mode, and the
+	// collapsed sidebar shows only its left square.
+	Logo string `json:"logo"`
+	// Icon is an SVG file used as the browser tab icon.
+	Icon string `json:"icon,omitempty"`
+}
+
 type Config struct {
 	// Listen serves the dashboard. Keep it on loopback behind a TLS proxy.
 	Listen string `json:"listen"`
@@ -32,6 +43,10 @@ type Config struct {
 	DeadmanSeconds int `json:"deadman_seconds"`
 	RecentEvents   int `json:"recent_events"`
 	SessionHours   int `json:"session_hours"`
+
+	// Brand replaces the vigil name and logo in the dashboard, for teams
+	// that run vigil under their own name.
+	Brand *BrandConfig `json:"brand,omitempty"`
 
 	Notifiers []NotifierConfig `json:"notifiers"`
 	// HeartbeatURL is fetched every minute so an outside service notices

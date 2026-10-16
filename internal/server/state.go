@@ -62,20 +62,21 @@ type CanaryRec struct {
 }
 
 type Alert struct {
-	ID        string    `json:"id"`
-	Key       string    `json:"key"`
-	Rule      string    `json:"rule"`
-	Severity  string    `json:"severity"`
-	Technique string    `json:"technique,omitempty"`
-	Title     string    `json:"title"`
-	Detail    string    `json:"detail,omitempty"`
-	Agent     string    `json:"agent,omitempty"`
-	Created   time.Time `json:"created"`
-	Updated   time.Time `json:"updated"`
-	Count     int       `json:"count"`
-	Status    string    `json:"status"` // open | acked | resolved
-	By        string    `json:"by,omitempty"`
-	Seqs      []uint64  `json:"seqs"`
+	ID        string     `json:"id"`
+	Key       string     `json:"key"`
+	Rule      string     `json:"rule"`
+	Severity  string     `json:"severity"`
+	Technique string     `json:"technique,omitempty"`
+	Title     string     `json:"title"`
+	Detail    string     `json:"detail,omitempty"`
+	Agent     string     `json:"agent,omitempty"`
+	Created   time.Time  `json:"created"`
+	Updated   time.Time  `json:"updated"`
+	Count     int        `json:"count"`
+	Status    string     `json:"status"` // open | acked | resolved
+	By        string     `json:"by,omitempty"`
+	Acked     *time.Time `json:"acked,omitempty"` // first time a person acknowledged or resolved it
+	Seqs      []uint64   `json:"seqs"`
 }
 
 type User struct {

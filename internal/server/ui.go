@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"io/fs"
+	"log"
 	"net/http"
 	"path/filepath"
 	"slices"
@@ -58,8 +59,18 @@ func (s *Server) uiHandler() http.Handler {
 	mux := http.NewServeMux()
 	static, _ := fs.Sub(webFS, "web")
 	index, version := versionedIndex(static)
+	index, brand, err := applyBrand(index, s.cfg.Brand)
+	if err != nil {
+		log.Printf("brand: %v; using the vigil logo", err)
+	}
 	files := http.FileServerFS(static)
 	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/brand-icon.svg" && brand.icon != "" {
+			w.Header().Set("Content-Type", "image/svg+xml")
+			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+			w.Write([]byte(brand.icon))
+			return
+		}
 		if r.URL.Path == "/" || r.URL.Path == "/index.html" {
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			w.Header().Set("Cache-Control", "no-cache")
@@ -110,13 +121,13 @@ func (s *Server) uiHandler() http.Handler {
 // the embedded assets.
 func versionedIndex(static fs.FS) ([]byte, string) {
 	h := sha256.New()
-	for _, name := range []string{"app.js", "style.css", "favicon.svg"} {
+	for _, name := range []string{"app.js", "theme.js", "style.css", "favicon.svg"} {
 		b, _ := fs.ReadFile(static, name)
 		h.Write(b)
 	}
 	version := hex.EncodeToString(h.Sum(nil))[:12]
 	index, _ := fs.ReadFile(static, "index.html")
-	for _, name := range []string{"app.js", "style.css", "favicon.svg"} {
+	for _, name := range []string{"app.js", "theme.js", "style.css", "favicon.svg"} {
 		index = bytes.ReplaceAll(index, []byte(`"`+name+`"`), []byte(`"`+name+"?v="+version+`"`))
 	}
 	return index, version
@@ -160,20 +171,21 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 type agentView struct {
-	ID          string     `json:"id"`
-	Name        string     `json:"name"`
-	Hostname    string     `json:"hostname"`
-	Version     string     `json:"version"`
-	Status      string     `json:"status"`
-	LastSeen    time.Time  `json:"last_seen"`
-	LastIP      string     `json:"last_ip"`
-	Enrolled    time.Time  `json:"enrolled"`
-	OpenAlerts  int        `json:"open_alerts"`
-	Ports       int        `json:"ports"`
-	Canaries    int        `json:"canaries"`
-	CanaryRoots []string   `json:"canary_roots"`
-	ConfigSync  bool       `json:"config_sync"`
-	Maintenance *time.Time `json:"maintenance_until,omitempty"`
+	ID          string         `json:"id"`
+	Name        string         `json:"name"`
+	Hostname    string         `json:"hostname"`
+	Version     string         `json:"version"`
+	Status      string         `json:"status"`
+	LastSeen    time.Time      `json:"last_seen"`
+	LastIP      string         `json:"last_ip"`
+	Enrolled    time.Time      `json:"enrolled"`
+	OpenAlerts  int            `json:"open_alerts"`
+	OpenBySev   map[string]int `json:"open_by_severity"`
+	Ports       int            `json:"ports"`
+	Canaries    int            `json:"canaries"`
+	CanaryRoots []string       `json:"canary_roots"`
+	ConfigSync  bool           `json:"config_sync"`
+	Maintenance *time.Time     `json:"maintenance_until,omitempty"`
 }
 
 func (s *Server) viewAgent(a *AgentRec) agentView {
@@ -188,7 +200,7 @@ func (s *Server) viewAgent(a *AgentRec) agentView {
 	}
 	v := agentView{ID: a.ID, Name: a.Name, Hostname: a.Hostname, Version: a.Version, Status: status,
 		LastSeen: a.LastSeen, LastIP: a.LastIP, Enrolled: a.Enrolled, Ports: len(a.Ports),
-		CanaryRoots: a.CanaryRoots, ConfigSync: a.AckedVersion >= a.ConfigVersion}
+		CanaryRoots: a.CanaryRoots, ConfigSync: a.AckedVersion >= a.ConfigVersion, OpenBySev: map[string]int{}}
 	if time.Now().Before(a.MaintenanceUntil) {
 		until := a.MaintenanceUntil
 		v.Maintenance = &until
@@ -196,6 +208,7 @@ func (s *Server) viewAgent(a *AgentRec) agentView {
 	for _, al := range s.state.Alerts {
 		if al.Agent == a.ID && al.Status == "open" {
 			v.OpenAlerts++
+			v.OpenBySev[al.Severity]++
 		}
 	}
 	for _, c := range s.state.Canaries {
@@ -226,19 +239,17 @@ func (s *Server) handleOverview(w http.ResponseWriter, r *http.Request, sess *se
 	hourStart := now.Truncate(time.Hour)
 	var hours [24]int
 	var sshFailed [24]int
-	logins := 0
+	var window []Record
 	s.store.Each(func(rec Record) {
+		window = append(window, rec)
 		age := hourStart.Sub(rec.Time.Truncate(time.Hour))
 		idx := 23 - int(age/time.Hour)
 		if idx < 0 || idx > 23 {
 			return
 		}
 		hours[idx]++
-		switch rec.Event.Type {
-		case "ssh.failed":
+		if rec.Event.Type == "ssh.failed" {
 			sshFailed[idx] += int(num(rec.Event.Data, "count"))
-		case "ssh.login":
-			logins++
 		}
 	})
 
@@ -268,13 +279,17 @@ func (s *Server) handleOverview(w http.ResponseWriter, r *http.Request, sess *se
 		}
 	}
 	seq, head := s.store.Head()
-	writeJSON(w, map[string]any{
+	out := s.dashboard(now, window)
+	for k, v := range map[string]any{
 		"agents": agents, "open_by_severity": bySev, "recent_alerts": recent,
-		"events_per_hour": hours, "ssh_failed_per_hour": sshFailed, "logins_24h": logins,
+		"events_per_hour": hours, "ssh_failed_per_hour": sshFailed,
 		"hour_start": hourStart.Add(-23 * time.Hour),
 		"canaries":   canaries, "canaries_triggered": triggered,
 		"chain": map[string]any{"ok": s.store.ChainOK, "seq": seq, "head": head, "verified_at": s.store.VerifiedAt},
-	})
+	} {
+		out[k] = v
+	}
+	writeJSON(w, out)
 }
 
 func (s *Server) handleAlerts(w http.ResponseWriter, r *http.Request, sess *session) {
@@ -312,7 +327,11 @@ func (s *Server) handleAlertAction(w http.ResponseWriter, r *http.Request, sess 
 		http.NotFound(w, r)
 		return
 	}
-	hit.Status, hit.By, hit.Updated = next, sess.User, time.Now().UTC()
+	now := time.Now().UTC()
+	hit.Status, hit.By, hit.Updated = next, sess.User, now
+	if next != "open" && hit.Acked == nil {
+		hit.Acked = &now
+	}
 	s.saveLocked()
 	s.mu.Unlock()
 	s.audit(sess.User, "alert."+action, map[string]any{"alert": id, "rule": hit.Rule})

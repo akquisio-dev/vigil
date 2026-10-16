@@ -149,3 +149,66 @@ func TestEveryRuleIsDocumented(t *testing.T) {
 		}
 	}
 }
+
+func TestDashboardAggregates(t *testing.T) {
+	now := time.Date(2026, 10, 16, 12, 0, 0, 0, time.UTC)
+	acked := now.Add(-time.Hour)
+	s := &Server{state: &State{Agents: map[string]*AgentRec{"a1": {ID: "a1", Name: "web"}}}}
+	s.state.Alerts = []*Alert{
+		{Rule: "ssh.key_added", Severity: "high", Technique: "T1098.004", Created: now.Add(-90 * time.Minute), Acked: &acked},
+		{Rule: "ssh.key_added", Severity: "high", Technique: "T1098.004", Created: now.Add(-24 * time.Hour)},
+		{Rule: "ssh.bruteforce", Severity: "medium", Technique: "T1110", Created: now.Add(-8 * 24 * time.Hour)},
+	}
+	ev := func(ago time.Duration, typ string, d map[string]any) Record {
+		return Record{Time: now.Add(-ago), Agent: "a1", Source: "agent", Event: proto.Event{Type: typ, TS: now.Add(-ago), Data: d}}
+	}
+	d := s.dashboard(now, []Record{
+		ev(time.Hour, "ssh.failed", map[string]any{"ip": "203.0.113.9", "count": float64(40), "users": []any{"root", "admin"}}),
+		ev(2*time.Hour, "ssh.failed", map[string]any{"ip": "203.0.113.9", "count": float64(10), "users": []any{"root"}}),
+		ev(3*time.Hour, "ssh.failed", map[string]any{"ip": "198.51.100.7", "count": float64(5)}),
+		ev(30*time.Hour, "ssh.failed", map[string]any{"ip": "192.0.2.1", "count": float64(99)}),
+		ev(time.Minute, "ssh.login", map[string]any{"user": "root", "ip": "192.0.2.50", "method": "publickey", "key_comment": "joey-pc"}),
+	})
+	if d["ssh_failed_24h"] != 55 || d["ssh_failed_ips"] != 2 {
+		t.Fatalf("failed logins: %v from %v addresses", d["ssh_failed_24h"], d["ssh_failed_ips"])
+	}
+	top := d["top_attackers"].([]countItem)
+	if top[0].Key != "203.0.113.9" || top[0].Count != 50 || top[0].Extra != "admin, root" {
+		t.Fatalf("top attacker: %+v", top[0])
+	}
+	perDay := d["alerts_per_day"].([]map[string]int)
+	if perDay[6]["high"] != 1 || perDay[5]["high"] != 1 {
+		t.Fatalf("alerts per day: %v", perDay)
+	}
+	var persistence int
+	for _, it := range d["tactics"].([]countItem) {
+		if it.Key == "persistence" {
+			persistence = it.Count
+		}
+	}
+	if persistence != 2 {
+		t.Fatalf("persistence: %d, old alerts must not count", persistence)
+	}
+	if d["mtta_seconds"] != 1800 {
+		t.Fatalf("mtta: %v", d["mtta_seconds"])
+	}
+	logins := d["logins"].([]loginView)
+	if len(logins) != 1 || logins[0].Host != "web" || logins[0].Key != "joey-pc" {
+		t.Fatalf("logins: %+v", logins)
+	}
+}
+
+func TestTacticsCoverEveryTechnique(t *testing.T) {
+	known := map[string]bool{}
+	for _, tc := range TacticOrder {
+		known[tc] = true
+	}
+	for id, r := range rules {
+		if r.Technique == "" {
+			continue
+		}
+		if !known[tactics[r.Technique]] {
+			t.Errorf("rule %s: technique %s has no tactic", id, r.Technique)
+		}
+	}
+}

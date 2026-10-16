@@ -30,7 +30,10 @@ const T = {
     maintenance: "Maintenance", maintenanceUntil: "Maintenance until", start: "Start", end: "End", minutes: "min",
     acceptProcess: "Allow process", welcome: "Welcome", placed: "placed", noneOpened: "none opened",
     alertsTile: "Open alerts", language: "Language", sectionOverview: "Overview", sectionDetect: "Detection", sectionSystem: "System",
-    admin: "Administrator",
+    admin: "Administrator", failedTile: "Failed logins", addresses: "addresses", mtta: "Time to acknowledge",
+    mttaSub: "median, 30 days", noneYet: "nothing acknowledged yet", hoursShort: "h", daysShort: "d",
+    alertsWeek: "Alerts, last 7 days", openBySev: "Open by severity", tactics: "ATT&CK tactics", topRules: "Top rules",
+    attackers: "Attacking addresses", days7: "7 days", theme: "Appearance", light: "Light", dark: "Dark", system: "System",
   },
   de: {
     overview: "Lage", alerts: "Alarme", events: "Ereignisse", canaries: "Köder", settings: "Einstellungen",
@@ -58,7 +61,10 @@ const T = {
     maintenance: "Wartung", maintenanceUntil: "Wartung bis", start: "Starten", end: "Beenden", minutes: "Min.",
     acceptProcess: "Prozess erlauben", welcome: "Willkommen", placed: "ausgelegt", noneOpened: "keiner geöffnet",
     alertsTile: "Offene Alarme", language: "Sprache", sectionOverview: "Übersicht", sectionDetect: "Erkennung", sectionSystem: "System",
-    admin: "Administrator",
+    admin: "Administrator", failedTile: "Fehlversuche", addresses: "Adressen", mtta: "Reaktionszeit",
+    mttaSub: "Median, 30 Tage", noneYet: "noch nichts gesehen", hoursShort: "Std.", daysShort: "Tg.",
+    alertsWeek: "Alarme, letzte 7 Tage", openBySev: "Offen nach Schwere", tactics: "ATT&CK-Taktiken", topRules: "Häufigste Regeln",
+    attackers: "Angreifende Adressen", days7: "7 Tage", theme: "Darstellung", light: "Hell", dark: "Dunkel", system: "System",
   },
 };
 
@@ -128,7 +134,7 @@ function summary(data) {
 }
 
 // Tabler Icons (MIT, https://tabler.io/icons), outline paths.
-const ICONS = {"plus": ["M12 5l0 14", "M5 12l14 0"], "alert-triangle": ["M12 9v4", "M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z", "M12 16h.01"], "fish-hook": ["M16 9v6a5 5 0 0 1 -10 0v-4l3 3", "M16 7m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0", "M16 5v-2"], "layout-dashboard": ["M5 4h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1", "M5 16h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1", "M15 12h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1", "M15 4h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1"], "list-details": ["M13 5h8", "M13 9h5", "M13 15h8", "M13 19h5", "M3 4m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z", "M3 14m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z"], "logout": ["M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2", "M9 12h12l-3 -3", "M18 15l3 -3"], "server": ["M3 4m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z", "M3 12m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z", "M7 8l0 .01", "M7 16l0 .01"], "settings": ["M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z", "M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"], "shield-check": ["M11.46 20.846a12 12 0 0 1 -7.96 -14.846a12 12 0 0 0 8.5 -3a12 12 0 0 0 8.5 3a12 12 0 0 1 -.09 7.06", "M15 19l2 2l4 -4"]};
+const ICONS = {"clock": ["M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0", "M12 7v5l3 3"], "user-x": ["M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0", "M6 21v-2a4 4 0 0 1 4 -4h3.5", "M22 22l-5 -5", "M17 22l5 -5"], "plus": ["M12 5l0 14", "M5 12l14 0"], "alert-triangle": ["M12 9v4", "M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z", "M12 16h.01"], "fish-hook": ["M16 9v6a5 5 0 0 1 -10 0v-4l3 3", "M16 7m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0", "M16 5v-2"], "layout-dashboard": ["M5 4h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1", "M5 16h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1", "M15 12h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1", "M15 4h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1"], "list-details": ["M13 5h8", "M13 9h5", "M13 15h8", "M13 19h5", "M3 4m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z", "M3 14m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z"], "logout": ["M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2", "M9 12h12l-3 -3", "M18 15l3 -3"], "server": ["M3 4m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z", "M3 12m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z", "M7 8l0 .01", "M7 16l0 .01"], "settings": ["M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z", "M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"], "shield-check": ["M11.46 20.846a12 12 0 0 1 -7.96 -14.846a12 12 0 0 0 8.5 -3a12 12 0 0 0 8.5 3a12 12 0 0 1 -.09 7.06", "M15 19l2 2l4 -4"]};
 
 const SVG = "http://www.w3.org/2000/svg";
 function icon(name, viewBox = "0 0 24 24", paths = ICONS[name]) {
@@ -151,7 +157,13 @@ function logoMark() {
   svg.append(eye);
   return svg;
 }
-const logo = () => h("a", { class: "sidebar-logo", href: "#/" }, logoMark(), h("span", { class: "logo-text" }, "VIGIL"));
+// A brand set in the server config replaces the vigil mark and name.
+const brandTpl = document.getElementById("brand-logo");
+const brandName = (document.querySelector('meta[name="vigil-brand"]') || {}).content || "vigil";
+function logo() {
+  if (brandTpl) return h("a", { class: "sidebar-logo branded", href: "#/", "aria-label": brandName }, brandTpl.content.cloneNode(true));
+  return h("a", { class: "sidebar-logo", href: "#/" }, logoMark(), h("span", { class: "logo-text" }, "VIGIL"));
+}
 
 // ---------- shell ----------
 
@@ -164,6 +176,13 @@ let openAlerts = 0;
 
 const logout = async () => { await post("/api/ui/logout").catch(() => {}); me = null; render(); };
 const setLang = (l) => { lang = l; store("vigil.lang", lang); render(); };
+const theme = () => store("vigil.theme") || "system";
+function setTheme(v) {
+  store("vigil.theme", v);
+  if (v === "system") delete document.documentElement.dataset.theme;
+  else document.documentElement.dataset.theme = v;
+  render();
+}
 
 // shell lays out a page like the Akquisio app: sidebar, topbar, content.
 // The page's h1 becomes the topbar title, .crumbs the line below it and
@@ -195,7 +214,7 @@ function shell(active, ...content) {
     h("div", { class: "page-head" }, h("div", { class: "page-title" }, title ? title.textContent : ""), crumbs),
     actions);
 
-  if (title) document.title = title.textContent + " | vigil";
+  if (title) document.title = title.textContent + " | " + brandName;
   return h("div", { class: "app" }, sidebar, h("div", { class: "main" }, topbar, h("main", { class: "content" }, body)));
 }
 
@@ -221,7 +240,7 @@ function loginView() {
     h("label", null, t("code"), h("input", { name: "code", inputmode: "numeric", autocomplete: "one-time-code", pattern: "[0-9]{6}", maxlength: 6, required: true, placeholder: "000000" })),
     err,
     h("button", { class: "btn", type: "submit" }, t("login")));
-  document.title = "vigil";
+  document.title = brandName;
   mount(h("div", { class: "login-wrap" }, h("div", { class: "login" },
     logo(), h("div", { class: "login-title" }, t("login")), h("div", { class: "login-sub" }, t("loginSub")), form)));
 }
@@ -269,44 +288,146 @@ function alertRow(a) {
     h("div", { class: "meta" }, timeEl(a.updated)));
 }
 
+const TACTICS = {
+  "initial-access": "Initial Access", persistence: "Persistence", "privilege-escalation": "Privilege Escalation",
+  "defense-evasion": "Defense Evasion", "credential-access": "Credential Access", impact: "Impact",
+};
+
+function duration(sec) {
+  if (sec === null || sec === undefined) return "·";
+  if (sec < 60) return sec + " s";
+  if (sec < 3600) return Math.round(sec / 60) + " " + t("minutes");
+  if (sec < 86400) return (sec / 3600).toLocaleString(lang, { maximumFractionDigits: 1 }) + " " + t("hoursShort");
+  return (sec / 86400).toLocaleString(lang, { maximumFractionDigits: 1 }) + " " + t("daysShort");
+}
+
+// metric cards like the Akquisio dashboard: icon and label, value, one line of context
+const metric = (href, ic, label, value, tone, sub) => h(href ? "a" : "div", { class: "card metric", href },
+  h("div", { class: "metric-label" }, icon(ic), label),
+  h("div", { class: "metric-value" + (tone ? " " + tone : "") }, value),
+  sub ? h("div", { class: "metric-sub" }, sub) : null);
+
+const panel = (title, extra, ...body) => h("div", { class: "card panel" },
+  h("div", { class: "panel-head" }, h("h3", null, title), extra ? h("span", { class: "panel-extra" }, extra) : null), body);
+
+// stacked columns, one per day, segments by severity
+function severityChart(days, start) {
+  const totals = days.map((d) => SEVS.reduce((a, s) => a + (d[s] || 0), 0));
+  const max = Math.max(1, ...totals);
+  const day = (i) => new Date(new Date(start).getTime() + i * 864e5);
+  const chart = h("div", { class: "chart stacked" });
+  days.forEach((d, i) => {
+    const col = h("div", { class: "stack" });
+    for (const s of [...SEVS].reverse()) {
+      if (!d[s]) continue;
+      const seg = h("div", { class: "seg " + s });
+      seg.style.height = (d[s] / max * 100) + "%";
+      col.append(seg);
+    }
+    const text = day(i).toLocaleDateString(lang, { weekday: "short", day: "numeric", month: "numeric" }) + "  ·  " +
+      (SEVS.filter((s) => d[s]).map((s) => d[s] + " " + t(s)).join(", ") || t("noAlerts"));
+    chart.append(h("div", { class: "slot", onmousemove: (e) => tip(e, text), onmouseleave: (e) => tip(e, null) }, col));
+  });
+  return h("div", null, chart,
+    h("div", { class: "axis days" }, days.map((_, i) => h("span", null, day(i).toLocaleDateString(lang, { weekday: "short" })))),
+    h("div", { class: "legend" }, SEVS.map((s) => h("span", null, h("span", { class: "dot " + s }), t(s)))));
+}
+
+// donut of open alerts by severity
+function severityDonut(bySev) {
+  const total = SEVS.reduce((a, s) => a + (bySev[s] || 0), 0);
+  const ring = h("div", { class: "donut" + (total ? "" : " empty-ring") });
+  if (total) {
+    let at = 0;
+    const stops = SEVS.filter((s) => bySev[s]).map((s) => {
+      const from = at; at += bySev[s] / total * 360;
+      return "var(--sev-" + s + ") " + from + "deg " + at + "deg";
+    });
+    ring.style.background = "conic-gradient(" + stops.join(", ") + ")";
+  }
+  ring.append(h("div", { class: "donut-hole" }, h("div", { class: "donut-num" }, total), h("div", { class: "donut-lbl" }, t("open"))));
+  return h("div", { class: "donut-wrap" }, ring,
+    h("div", { class: "donut-legend" }, SEVS.map((s) => h("a", { href: "#/alerts", class: "legend-row" },
+      h("span", { class: "dot " + s }), h("span", null, t(s)), h("span", { class: "right num-sm" }, bySev[s] || 0)))));
+}
+
+// horizontal bars for ranked lists
+function rankList(items, opts = {}) {
+  if (!items.length) return h("div", { class: "empty small" }, opts.empty || t("none"));
+  const max = Math.max(1, ...items.map((i) => i.count));
+  return h("div", { class: "rank" }, items.map((it) => {
+    const fill = h("div", { class: "rank-fill" + (opts.tone ? " " + opts.tone : "") });
+    fill.style.width = (it.count / max * 100) + "%";
+    return h(opts.href ? "a" : "div", { class: "rank-row" + (it.count ? "" : " zero"), href: opts.href ? opts.href(it) : null },
+      h("div", { class: "rank-top" },
+        h("span", { class: "rank-key" + (opts.mono ? " mono" : "") }, opts.label ? opts.label(it) : it.key),
+        h("span", { class: "rank-count" }, it.count.toLocaleString(lang))),
+      h("div", { class: "rank-bar" }, fill),
+      it.extra ? h("div", { class: "rank-extra" }, it.extra) : null);
+  }));
+}
+
+const sevCounts = (m) => h("span", { class: "sevcounts" }, SEVS.filter((s) => m && m[s]).map((s) => h("span", { class: "sev " + s }, m[s])));
+
 async function overview() {
   const o = await api("/api/ui/overview");
   openAlerts = Object.values(o.open_by_severity).reduce((a, b) => a + b, 0);
   const online = o.agents.filter((a) => a.status === "online").length;
   const bySev = SEVS.filter((s) => o.open_by_severity[s]).map((s) => o.open_by_severity[s] + " " + t(s));
   const urgent = (o.open_by_severity.critical || 0) + (o.open_by_severity.high || 0);
-  // metric cards like the Akquisio dashboard: icon and label, value, one line of context
-  const metric = (href, ic, label, value, tone, sub) => h(href ? "a" : "div", { class: "card metric", href },
-    h("div", { class: "metric-label" }, icon(ic), label),
-    h("div", { class: "metric-value" + (tone ? " " + tone : "") }, value),
-    sub ? h("div", { class: "metric-sub" }, sub) : null);
-  const tiles = h("div", { class: "grid metrics" },
+
+  const tiles = h("div", { class: "grid metrics six" },
     metric(null, "server", t("hosts"), online + " / " + o.agents.length, online === o.agents.length ? null : "bad", t("online")),
     metric("#/alerts", "alert-triangle", t("alertsTile"), openAlerts, urgent ? "bad" : null, bySev.join(", ") || t("noAlerts")),
+    metric("#/events?type=ssh.failed", "user-x", t("failedTile"), o.ssh_failed_24h.toLocaleString(lang), null,
+      o.ssh_failed_ips + " " + t("addresses")),
+    metric(null, "clock", t("mtta"), duration(o.mtta_seconds), null, o.acked_30d ? t("mttaSub") : t("noneYet")),
     metric("#/canaries", "fish-hook", t("canaries"), o.canaries, o.canaries_triggered ? "bad" : null,
       o.canaries_triggered ? o.canaries_triggered + " " + t("canariesOpened") : o.canaries ? t("noneOpened") : t("none")),
     metric("#/settings", "shield-check", t("chain"), t(o.chain.ok ? "chainOK" : "chainBroken"), o.chain.ok ? "good" : "bad",
       o.chain.seq.toLocaleString(lang) + " " + t("records")));
 
-  const hosts = o.agents.length ? h("div", { class: "grid cards" }, o.agents.map((a) =>
-    h("a", { class: "card", href: "#/hosts/" + a.id },
-      h("div", { class: "flex" }, h("div", { class: "host-name" }, a.name), h("span", { class: "right" }, statusChip(a.status))),
-      h("dl", { class: "kv" },
-        h("dt", null, t("lastSeen")), h("dd", null, timeEl(a.last_seen)),
-        h("dt", null, t("alertsOpen")), h("dd", null, a.open_alerts),
-        h("dt", null, t("ports")), h("dd", null, a.ports),
-        h("dt", null, t("canaries")), h("dd", null, a.canaries))))) : h("div", { class: "card empty" }, t("noHosts"));
+  const hostTable = o.agents.length ? h("div", { class: "tablewrap" }, h("table", { class: "hosts" },
+    h("thead", null, h("tr", null, [t("host"), t("status"), t("lastSeen"), t("alertsOpen"), t("ports"), t("canaries"), t("configSync"), t("version")]
+      .map((x) => h("th", null, x)))),
+    h("tbody", null, o.agents.map((a) => h("tr", { class: "click", onclick: () => { location.hash = "#/hosts/" + a.id; } },
+      h("td", null, h("a", { href: "#/hosts/" + a.id, class: "strong" }, a.name)),
+      h("td", null, statusChip(a.status)),
+      h("td", { class: "nowrap" }, timeEl(a.last_seen)),
+      h("td", null, a.open_alerts ? sevCounts(a.open_by_severity) : h("span", { class: "muted" }, "0")),
+      h("td", null, a.ports),
+      h("td", null, a.canaries),
+      h("td", null, h("span", { class: "chip" }, h("span", { class: "dot " + (a.config_sync ? "ok" : "pending") }), t(a.config_sync ? "synced" : "waiting"))),
+      h("td", { class: "muted nowrap" }, a.version || "·")))))) : h("div", { class: "card empty" }, t("noHosts"));
+
+  const loginRows = o.logins.length ? h("div", { class: "feed" }, o.logins.map((l) => h("div", { class: "feed-row" },
+    h("div", null, h("span", { class: "strong" }, l.user), " ", h("span", { class: "muted" }, "@ " + l.host)),
+    h("div", { class: "feed-sub mono" }, [l.ip, l.method, l.key].filter(Boolean).join("  ·  ")),
+    h("div", { class: "feed-time" }, timeEl(l.ts))))) : h("div", { class: "empty small" }, t("noEvents"));
 
   mount(shell("overview",
     h("h1", null, t("overview")),
     h("div", { class: "crumbs" }, t("welcome") + ", " + me.user),
     tiles,
-    h("h2", null, t("hosts")), hosts,
+    h("div", { class: "grid dash-a" },
+      panel(t("alertsWeek"), null, severityChart(o.alerts_per_day, o.day_start)),
+      panel(t("openBySev"), null, severityDonut(o.open_by_severity))),
+    h("div", { class: "grid dash-b" },
+      panel(t("tactics"), t("days7"), rankList(o.tactics, { label: (i) => TACTICS[i.key] || i.key, href: () => "#/alerts" })),
+      panel(t("topRules"), t("days7"), rankList(o.top_rules, { mono: true, empty: t("noAlerts"), href: () => "#/alerts" })),
+      panel(t("attackers"), "24 h", rankList(o.top_attackers, { mono: true, tone: "red", empty: t("noEvents"),
+        href: (i) => "#/events?type=ssh.failed" }))),
+    h("h2", null, t("hosts")), hostTable,
+    h("div", { class: "grid two mt" },
+      panel(t("alerts"), h("a", { href: "#/alerts" }, t("all")),
+        h("div", { class: "feed" }, o.recent_alerts.length ? o.recent_alerts.slice(0, 6).map((a) => h("a", { class: "feed-row", href: "#/alerts/" + a.id },
+          h("div", { class: "flex nowrap-flex" }, sevChip(a.severity), h("span", { class: "feed-title" }, a.title)),
+          h("div", { class: "feed-sub" }, [a.host, a.technique].filter(Boolean).join("  ·  ")),
+          h("div", { class: "feed-time" }, timeEl(a.updated)))) : h("div", { class: "empty small" }, t("noAlerts")))),
+      panel(t("logins"), o.logins_24h + " · 24 h", loginRows)),
     h("div", { class: "grid two mt" },
       barChart(t("eventsHour"), o.events_per_hour, o.hour_start),
-      barChart(t("failedHour"), o.ssh_failed_per_hour, o.hour_start, true)),
-    h("h2", null, t("alerts")),
-    h("div", { class: "list" }, o.recent_alerts.length ? o.recent_alerts.map(alertRow) : h("div", { class: "empty" }, t("noAlerts")))));
+      barChart(t("failedHour"), o.ssh_failed_per_hour, o.hour_start, true))));
 }
 
 let alertTab = "open";
@@ -520,6 +641,8 @@ async function settingsView() {
     h("div", { class: "card mt" }, h("div", { class: "flex" },
       h("button", { class: "btn ghost", onclick: async () => { const r = await post("/api/ui/notify/test"); notifyOut.textContent = t("sent") + " (" + r.notifiers + ")"; } }, t("notifyTest")),
       notifyOut)),
+    h("div", { class: "card mt" }, h("h3", null, t("theme")), h("div", { class: "tabs" }, ["light", "dark", "system"].map((k) =>
+      h("button", { class: k === theme() ? "on" : null, onclick: () => setTheme(k) }, t(k))))),
     h("div", { class: "card mt" }, h("h3", null, t("language")), h("div", { class: "flex" }, langTabs,
       h("button", { class: "btn ghost right", onclick: logout }, icon("logout"), t("logout"))))));
 }

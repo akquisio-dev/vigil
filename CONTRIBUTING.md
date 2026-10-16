@@ -11,6 +11,16 @@ go test ./...
 go run ./tools/gendocs     # after changing rules or their documentation
 ```
 
+## Demo data
+
+For screenshots and dashboard work, fill an empty data directory with a week
+of activity on three hosts (addresses from the documentation ranges):
+
+```sh
+VIGIL_DEMO_DIR=/tmp/vigil-demo go test ./internal/server -run TestWriteDemoData
+vigil-server user add -config demo.json you    # demo.json: {"data_dir": "/tmp/vigil-demo", ...}
+```
+
 ## Adding a detection rule
 
 1. Add the rule to `rules` in `internal/server/rules.go` (severity, ATT&CK
