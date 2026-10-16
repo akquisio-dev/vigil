@@ -28,7 +28,9 @@ const T = {
     synced: "applied", waiting: "pending", alertsOpen: "open alerts", canariesOpened: "opened",
     active: "active", tampered: "tampered", error: "error", loginSub: "Access to your security operations center",
     maintenance: "Maintenance", maintenanceUntil: "Maintenance until", start: "Start", end: "End", minutes: "min",
-    acceptProcess: "Allow process",
+    acceptProcess: "Allow process", welcome: "Welcome", placed: "placed", noneOpened: "none opened",
+    alertsTile: "Open alerts", language: "Language", sectionOverview: "Overview", sectionDetect: "Detection", sectionSystem: "System",
+    admin: "Administrator",
   },
   de: {
     overview: "Lage", alerts: "Alarme", events: "Ereignisse", canaries: "Köder", settings: "Einstellungen",
@@ -54,7 +56,9 @@ const T = {
     synced: "übernommen", waiting: "ausstehend", alertsOpen: "offene Alarme", canariesOpened: "geöffnet",
     active: "aktiv", tampered: "manipuliert", error: "Fehler", loginSub: "Zugang zu deiner Sicherheitszentrale",
     maintenance: "Wartung", maintenanceUntil: "Wartung bis", start: "Starten", end: "Beenden", minutes: "Min.",
-    acceptProcess: "Prozess erlauben",
+    acceptProcess: "Prozess erlauben", welcome: "Willkommen", placed: "ausgelegt", noneOpened: "keiner geöffnet",
+    alertsTile: "Offene Alarme", language: "Sprache", sectionOverview: "Übersicht", sectionDetect: "Erkennung", sectionSystem: "System",
+    admin: "Administrator",
   },
 };
 
@@ -73,7 +77,7 @@ function h(tag, attrs, ...kids) {
     else if (k === "class") el.className = v;
     else el.setAttribute(k, v === true ? "" : String(v));
   }
-  for (const kid of kids.flat()) {
+  for (const kid of kids.flat(Infinity)) {
     if (kid === null || kid === undefined || kid === false) continue;
     el.append(kid instanceof Node ? kid : document.createTextNode(String(kid)));
   }
@@ -124,7 +128,7 @@ function summary(data) {
 }
 
 // Tabler Icons (MIT, https://tabler.io/icons), outline paths.
-const ICONS = {"alert-triangle": ["M12 9v4", "M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z", "M12 16h.01"], "fish-hook": ["M16 9v6a5 5 0 0 1 -10 0v-4l3 3", "M16 7m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0", "M16 5v-2"], "language": ["M4 5h7", "M9 3v2c0 4.418 -2.239 8 -5 8", "M5 9c0 2.144 2.952 3.908 6.7 4", "M12 20l4 -9l4 9", "M19.1 18h-6.2"], "layout-dashboard": ["M5 4h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1", "M5 16h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1", "M15 12h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1", "M15 4h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1"], "list-details": ["M13 5h8", "M13 9h5", "M13 15h8", "M13 19h5", "M3 4m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z", "M3 14m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z"], "logout": ["M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2", "M9 12h12l-3 -3", "M18 15l3 -3"], "server": ["M3 4m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z", "M3 12m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z", "M7 8l0 .01", "M7 16l0 .01"], "settings": ["M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z", "M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"], "shield-check": ["M11.46 20.846a12 12 0 0 1 -7.96 -14.846a12 12 0 0 0 8.5 -3a12 12 0 0 0 8.5 3a12 12 0 0 1 -.09 7.06", "M15 19l2 2l4 -4"]};
+const ICONS = {"plus": ["M12 5l0 14", "M5 12l14 0"], "alert-triangle": ["M12 9v4", "M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z", "M12 16h.01"], "fish-hook": ["M16 9v6a5 5 0 0 1 -10 0v-4l3 3", "M16 7m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0", "M16 5v-2"], "layout-dashboard": ["M5 4h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1", "M5 16h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1", "M15 12h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1", "M15 4h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1"], "list-details": ["M13 5h8", "M13 9h5", "M13 15h8", "M13 19h5", "M3 4m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z", "M3 14m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z"], "logout": ["M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2", "M9 12h12l-3 -3", "M18 15l3 -3"], "server": ["M3 4m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z", "M3 12m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z", "M7 8l0 .01", "M7 16l0 .01"], "settings": ["M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z", "M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"], "shield-check": ["M11.46 20.846a12 12 0 0 1 -7.96 -14.846a12 12 0 0 0 8.5 -3a12 12 0 0 0 8.5 3a12 12 0 0 1 -.09 7.06", "M15 19l2 2l4 -4"]};
 
 const SVG = "http://www.w3.org/2000/svg";
 function icon(name, viewBox = "0 0 24 24", paths = ICONS[name]) {
@@ -139,47 +143,57 @@ function icon(name, viewBox = "0 0 24 24", paths = ICONS[name]) {
   }
   return svg;
 }
-const logoMark = () => h("span", { class: "logo-icon" }, icon(null, "0 0 32 32", ["M8 10c2.5 6 5 9.5 8 11 3-1.5 5.5-5 8-11"]));
-const logo = () => h("a", { class: "sidebar-logo", href: "#/" }, logoMark(),
-  h("div", { class: "logo-text" }, h("div", { class: "logo-name" }, "vigil"), h("div", { class: "logo-sub" }, "Security Operations")));
+function logoMark() {
+  const svg = icon(null, "0 0 32 32", ["M7 10c2.6 6.4 5.4 10.2 9 12 3.6-1.8 6.4-5.6 9-12"]);
+  svg.setAttribute("class", "ic logo-mark");
+  const eye = document.createElementNS(SVG, "circle");
+  eye.setAttribute("cx", "16"); eye.setAttribute("cy", "8.5"); eye.setAttribute("r", "2.4");
+  svg.append(eye);
+  return svg;
+}
+const logo = () => h("a", { class: "sidebar-logo", href: "#/" }, logoMark(), h("span", { class: "logo-text" }, "VIGIL"));
 
 // ---------- shell ----------
 
-const routes = [
-  ["overview", "#/", "layout-dashboard"], ["alerts", "#/alerts", "alert-triangle"], ["events", "#/events", "list-details"],
-  ["canaries", "#/canaries", "fish-hook"], ["settings", "#/settings", "settings"],
+const sections = [
+  ["sectionOverview", [["overview", "#/", "layout-dashboard"]]],
+  ["sectionDetect", [["alerts", "#/alerts", "alert-triangle"], ["events", "#/events", "list-details"], ["canaries", "#/canaries", "fish-hook"]]],
+  ["sectionSystem", [["settings", "#/settings", "settings"]]],
 ];
 let openAlerts = 0;
 
+const logout = async () => { await post("/api/ui/logout").catch(() => {}); me = null; render(); };
+const setLang = (l) => { lang = l; store("vigil.lang", lang); render(); };
+
 // shell lays out a page like the Akquisio app: sidebar, topbar, content.
-// The page's h1 and .crumbs become the topbar breadcrumb.
+// The page's h1 becomes the topbar title, .crumbs the line below it and
+// .page-actions the buttons on the right.
 function shell(active, ...content) {
   const flat = content.flat().filter(Boolean);
+  const has = (n, c) => n.classList && n.classList.contains(c);
   const title = flat.find((n) => n.tagName === "H1");
-  const crumbs = flat.find((n) => n.classList && n.classList.contains("crumbs"));
-  const body = flat.filter((n) => n !== title && n !== crumbs);
-  const trail = [];
-  if (crumbs) for (const a of crumbs.querySelectorAll("a")) trail.push(a, h("span", { class: "sep" }, "/"));
-  const initials = (me.user || "?").slice(0, 2);
+  const crumbs = flat.find((n) => has(n, "crumbs"));
+  const actions = flat.find((n) => has(n, "page-actions"));
+  const body = flat.filter((n) => n !== title && n !== crumbs && n !== actions);
+  const initials = (me.user || "?").slice(0, 1);
 
   const sidebar = h("aside", { class: "sidebar" },
     logo(),
-    h("nav", { class: "nav" },
-      h("div", { class: "nav-section" }, "SOC"),
-      routes.map(([k, href, ic]) => h("a", { href, class: "nav-item" + (k === active ? " active" : ""), title: t(k) },
-        icon(ic), h("span", { class: "nav-label" }, t(k)),
-        k === "alerts" && openAlerts > 0 ? h("span", { class: "nav-dot" }) : null))),
+    h("nav", { class: "nav" }, sections.map(([sec, items]) => [
+      h("div", { class: "nav-section" }, t(sec)),
+      items.map(([k, href, ic]) => h("a", { href, class: "nav-item" + (k === active ? " active" : ""), title: t(k) },
+        h("span", { class: "nav-icon" }, icon(ic), k === "alerts" && openAlerts > 0 ? h("span", { class: "nav-dot" }) : null),
+        h("span", { class: "nav-label" }, t(k)),
+        k === "alerts" && openAlerts > 0 ? h("span", { class: "nav-count" }, openAlerts) : null))])),
     h("div", { class: "sidebar-footer" },
       h("div", { class: "user-chip" }, h("span", { class: "avatar" }, initials),
-        h("div", { class: "user-info" }, h("div", { class: "user-name" }, me.user), h("div", { class: "user-role" }, "vigil " + me.version)))));
+        h("div", { class: "user-info" }, h("div", { class: "user-name" }, me.user), h("div", { class: "user-role" }, t("admin"))),
+        h("button", { class: "logout-btn", title: t("logout"), onclick: logout }, icon("logout")))));
 
+  if (crumbs) crumbs.className = "page-sub";
   const topbar = h("header", { class: "topbar" },
-    h("div", { class: "breadcrumb" }, trail, h("span", { class: "page-title" }, title ? title.textContent : "")),
-    h("div", { class: "topbar-right" },
-      h("button", { class: "icon-btn", title: "Language", onclick: () => { lang = lang === "de" ? "en" : "de"; store("vigil.lang", lang); render(); } },
-        icon("language"), lang === "de" ? "EN" : "DE"),
-      h("button", { class: "icon-btn", title: t("logout"), onclick: async () => { await post("/api/ui/logout").catch(() => {}); me = null; render(); } },
-        icon("logout"))));
+    h("div", { class: "page-head" }, h("div", { class: "page-title" }, title ? title.textContent : ""), crumbs),
+    actions);
 
   if (title) document.title = title.textContent + " | vigil";
   return h("div", { class: "app" }, sidebar, h("div", { class: "main" }, topbar, h("main", { class: "content" }, body)));
@@ -259,16 +273,20 @@ async function overview() {
   const o = await api("/api/ui/overview");
   openAlerts = Object.values(o.open_by_severity).reduce((a, b) => a + b, 0);
   const online = o.agents.filter((a) => a.status === "online").length;
-  const tiles = h("div", { class: "grid tiles" },
-    h("div", { class: "card tile" }, h("div", { class: "num" }, online + " / " + o.agents.length),
-      h("div", { class: "lbl" }, h("span", { class: "dot " + (online === o.agents.length ? "online" : "silent") }), t("hosts"))),
-    SEVS.map((s) => h("a", { class: "card tile", href: "#/alerts" }, h("div", { class: "num" }, o.open_by_severity[s] || 0),
-      h("div", { class: "lbl" }, h("span", { class: "dot " + s }), t(s)))),
-    h("a", { class: "card tile", href: "#/canaries" }, h("div", { class: "num" }, o.canaries),
-      h("div", { class: "lbl" }, h("span", { class: "dot " + (o.canaries_triggered ? "critical" : "online") }), t("canaries"),
-        o.canaries_triggered ? " · " + o.canaries_triggered + " " + t("canariesOpened") : null)),
-    h("a", { class: "card tile", href: "#/settings" }, h("div", { class: "num" }, o.chain.seq.toLocaleString(lang)),
-      h("div", { class: "lbl" }, h("span", { class: "dot " + (o.chain.ok ? "ok" : "broken") }), t("chain") + " " + t(o.chain.ok ? "chainOK" : "chainBroken"))));
+  const bySev = SEVS.filter((s) => o.open_by_severity[s]).map((s) => o.open_by_severity[s] + " " + t(s));
+  const urgent = (o.open_by_severity.critical || 0) + (o.open_by_severity.high || 0);
+  // metric cards like the Akquisio dashboard: icon and label, value, one line of context
+  const metric = (href, ic, label, value, tone, sub) => h(href ? "a" : "div", { class: "card metric", href },
+    h("div", { class: "metric-label" }, icon(ic), label),
+    h("div", { class: "metric-value" + (tone ? " " + tone : "") }, value),
+    sub ? h("div", { class: "metric-sub" }, sub) : null);
+  const tiles = h("div", { class: "grid metrics" },
+    metric(null, "server", t("hosts"), online + " / " + o.agents.length, online === o.agents.length ? null : "bad", t("online")),
+    metric("#/alerts", "alert-triangle", t("alertsTile"), openAlerts, urgent ? "bad" : null, bySev.join(", ") || t("noAlerts")),
+    metric("#/canaries", "fish-hook", t("canaries"), o.canaries, o.canaries_triggered ? "bad" : null,
+      o.canaries_triggered ? o.canaries_triggered + " " + t("canariesOpened") : o.canaries ? t("noneOpened") : t("none")),
+    metric("#/settings", "shield-check", t("chain"), t(o.chain.ok ? "chainOK" : "chainBroken"), o.chain.ok ? "good" : "bad",
+      o.chain.seq.toLocaleString(lang) + " " + t("records")));
 
   const hosts = o.agents.length ? h("div", { class: "grid cards" }, o.agents.map((a) =>
     h("a", { class: "card", href: "#/hosts/" + a.id },
@@ -281,6 +299,7 @@ async function overview() {
 
   mount(shell("overview",
     h("h1", null, t("overview")),
+    h("div", { class: "crumbs" }, t("welcome") + ", " + me.user),
     tiles,
     h("h2", null, t("hosts")), hosts,
     h("div", { class: "grid two mt" },
@@ -295,7 +314,8 @@ async function alertsView() {
   const list = await api("/api/ui/alerts?status=" + (alertTab === "all" ? "" : alertTab));
   const tabs = h("div", { class: "tabs" }, ["open", "acked", "resolved", "all"].map((k) =>
     h("button", { class: k === alertTab ? "on" : null, onclick: () => { alertTab = k; render(); } }, t(k))));
-  mount(shell("alerts", h("h1", null, t("alerts")), tabs,
+  const n = list.length + " " + (alertTab === "all" ? t("alerts") : t(alertTab).toLowerCase());
+  mount(shell("alerts", h("h1", null, t("alerts")), h("div", { class: "crumbs" }, n), tabs,
     h("div", { class: "list" }, list.length ? list.map(alertRow) : h("div", { class: "empty" }, t("noAlerts")))));
 }
 
@@ -413,7 +433,8 @@ async function eventsView(params) {
     e.preventDefault();
     location.hash = "#/events?" + new URLSearchParams({ agent: hostSel.value, type: typeIn.value.trim() });
   } }, h("label", null, t("host"), hostSel), h("label", null, t("filterType"), typeIn), h("button", { class: "btn", type: "submit" }, "OK"));
-  mount(shell("events", h("h1", null, t("events")), h("div", { class: "card" }, form), h("div", { class: "tablewrap mt" },
+  const scopeLine = [(agents.find((a) => a.id === agent) || {}).name || t("allHosts"), type].filter(Boolean).join(", ");
+  mount(shell("events", h("h1", null, t("events")), h("div", { class: "crumbs" }, scopeLine), h("div", { class: "card" }, form), h("div", { class: "tablewrap mt" },
     h("table", null, h("thead", null, h("tr", null, [t("time"), t("host"), t("type"), t("details")].map((x) => h("th", null, x)))), tbody)), more));
   await load();
 }
@@ -462,7 +483,9 @@ async function canariesView() {
         await post("/api/ui/canaries/" + c.id + "/delete"); render();
       } }, t("remove")))));
 
-  mount(shell("canaries", h("h1", null, t("canaries")), h("div", { class: "card" }, form),
+  mount(shell("canaries", h("h1", null, t("canaries")), h("div", { class: "crumbs" }, canaries.length + " " + t("placed")),
+    h("div", { class: "page-actions" }, h("button", { class: "btn", onclick: () => pathIn.focus() }, icon("plus"), t("place"))),
+    h("div", { class: "card" }, form),
     h("h2", null, t("canaries")),
     h("div", { class: "list" }, rows.length ? rows : h("div", { class: "empty" }, t("noCanaries")))));
 }
@@ -480,7 +503,9 @@ async function settingsView() {
     h("dt", null, t("verify")), h("dd", null, abs(c.verified_at))));
   drawChain(chain);
 
-  mount(shell("settings", h("h1", null, t("settings")),
+  const langTabs = h("div", { class: "tabs" }, [["de", "Deutsch"], ["en", "English"]].map(([k, name]) =>
+    h("button", { class: k === lang ? "on" : null, onclick: () => setLang(k) }, name)));
+  mount(shell("settings", h("h1", null, t("settings")), h("div", { class: "crumbs" }, "vigil " + me.version),
     h("div", { class: "grid two" },
       h("div", { class: "card" }, h("h3", null, t("enroll")),
         h("button", { class: "btn", onclick: async () => {
@@ -494,7 +519,9 @@ async function settingsView() {
           h("button", { class: "btn ghost", onclick: async () => drawChain(await post("/api/ui/chain/verify")) }, t("verify"))))),
     h("div", { class: "card mt" }, h("div", { class: "flex" },
       h("button", { class: "btn ghost", onclick: async () => { const r = await post("/api/ui/notify/test"); notifyOut.textContent = t("sent") + " (" + r.notifiers + ")"; } }, t("notifyTest")),
-      notifyOut, h("span", { class: "right muted" }, me.user + " · vigil " + me.version)))));
+      notifyOut)),
+    h("div", { class: "card mt" }, h("h3", null, t("language")), h("div", { class: "flex" }, langTabs,
+      h("button", { class: "btn ghost right", onclick: logout }, icon("logout"), t("logout"))))));
 }
 
 // ---------- router ----------
