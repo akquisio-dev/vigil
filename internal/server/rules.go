@@ -22,6 +22,8 @@ var rules = map[string]ruleDef{
 	"process.service_shell":    {"high", "T1505.003", "{parent} started {exe} (uid {uid})", "{parent} hat {exe} gestartet (uid {uid})"},
 	"process.download_exec":    {"high", "T1105", "Download and run: {cmdline}", "Herunterladen und ausführen: {cmdline}"},
 	"process.deleted_exe":      {"high", "T1070.004", "Program running from a deleted file: {exe}", "Programm läuft aus gelöschter Datei: {exe}"},
+	"process.memfd_exec":       {"high", "T1620", "Program running from memory only: {exe} (uid {uid}, started by {parent})", "Programm läuft nur aus dem Speicher: {exe} (uid {uid}, gestartet von {parent})"},
+	"process.preload":          {"high", "T1574.006", "{exe} started with LD_PRELOAD={lib} (uid {uid})", "{exe} mit LD_PRELOAD={lib} gestartet (uid {uid})"},
 	"process.tmp_exec":         {"medium", "T1204.002", "Program started from a temporary directory: {exe} (uid {uid})", "Programm aus temporärem Verzeichnis gestartet: {exe} (uid {uid})"},
 	"process.decode_exec":      {"medium", "T1140", "Decoded command run in a shell: {cmdline}", "Dekodierter Befehl in einer Shell ausgeführt: {cmdline}"},
 	"updates.security_pending": {"medium", "", "{count} security updates pending for {days} days: {packages}", "{count} Sicherheitsupdates seit {days} Tagen offen: {packages}"},
@@ -305,16 +307,22 @@ func (s *Server) evaluate(a *AgentRec, r *Record) []finding {
 		add("agent.config_rejected", str(d, "reason"), map[string]string{"reason": str(d, "reason")})
 	case "process.exec":
 		p := map[string]string{"exe": str(d, "exe"), "cmdline": str(d, "cmdline"), "uid": str(d, "uid"),
-			"parent": str(d, "parent_comm"), "parent_exe": str(d, "parent_exe"), "cwd": str(d, "cwd"), "pid": str(d, "pid")}
+			"parent": str(d, "parent_comm"), "parent_exe": str(d, "parent_exe"), "cwd": str(d, "cwd"), "pid": str(d, "pid"),
+			"lib": str(d, "ld_preload")}
 		key := str(d, "exe") + "|" + str(d, "parent_exe")
 		seen := map[string]bool{}
 		for _, sig := range strSlice(d["signals"]) {
 			rule := map[string]string{"shell_socket": "process.reverse_shell", "cmd_reverse_shell": "process.reverse_shell",
 				"cmd_miner": "process.miner", "service_shell": "process.service_shell", "cmd_download_exec": "process.download_exec",
-				"deleted_exe": "process.deleted_exe", "tmp_exe": "process.tmp_exec", "cmd_decode_exec": "process.decode_exec"}[sig]
+				"deleted_exe": "process.deleted_exe", "tmp_exe": "process.tmp_exec", "cmd_decode_exec": "process.decode_exec",
+				"memfd_exe": "process.memfd_exec", "ld_preload": "process.preload"}[sig]
 			if rule != "" && !seen[rule] {
 				seen[rule] = true
-				add(rule, key, p)
+				k := key
+				if rule == "process.preload" {
+					k = str(d, "exe") + "|" + p["lib"]
+				}
+				add(rule, k, p)
 			}
 		}
 	case "system.updates":

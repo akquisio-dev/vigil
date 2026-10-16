@@ -15,6 +15,7 @@ type ExecInfo struct {
 	UID         int
 	Exe         string // " (deleted)" stripped, see Deleted
 	Deleted     bool
+	Preload     string // LD_PRELOAD from the environment
 	Comm        string
 	Cmdline     string
 	Cwd         string
@@ -69,8 +70,19 @@ func (e *ExecInfo) signals() []string {
 			break
 		}
 	}
-	if e.Deleted {
+	switch {
+	case strings.HasPrefix(e.Exe, "/memfd:"):
+		// A program run from an anonymous memory file never touched the
+		// disk. runc (up to 1.1) re-executes itself this way on every
+		// container start; that one name is expected.
+		if !(strings.HasPrefix(e.Exe, "/memfd:runc_cloned:") && strings.HasPrefix(e.Comm, "runc")) {
+			out = append(out, "memfd_exe")
+		}
+	case e.Deleted:
 		out = append(out, "deleted_exe")
+	}
+	if e.Preload != "" {
+		out = append(out, "ld_preload")
 	}
 	isShell := shells[base] || shells[e.Comm]
 	if isShell && e.StdioSocket {
@@ -130,8 +142,28 @@ func (a *Agent) reportExec(e *ExecInfo) {
 	if !ok {
 		return
 	}
+	if e.Preload != "" {
+		// Children inherit LD_PRELOAD; one report per program and library
+		// is enough until the agent restarts.
+		k := e.Exe + "|" + e.Preload
+		a.mu.Lock()
+		if a.preloadSeen == nil {
+			a.preloadSeen = map[string]bool{}
+		}
+		dup := a.preloadSeen[k]
+		if !dup && len(a.preloadSeen) < 1000 {
+			a.preloadSeen[k] = true
+		}
+		a.mu.Unlock()
+		if dup && len(sig) == 1 {
+			return
+		}
+	}
 	d := map[string]any{"pid": e.PID, "ppid": e.PPID, "uid": e.UID, "exe": e.Exe, "comm": e.Comm, "cmdline": clipCmd(e.Cmdline),
 		"cwd": e.Cwd, "parent_exe": e.ParentExe, "parent_comm": e.ParentComm, "signals": sig}
+	if e.Preload != "" {
+		d["ld_preload"] = clipCmd(e.Preload)
+	}
 	a.emit(proto.NewEvent("process.exec", d))
 	a.flushSoon()
 }

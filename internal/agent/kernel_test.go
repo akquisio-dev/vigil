@@ -69,3 +69,37 @@ func (a *Agent) scanKernelWith(ks *KernelState) {
 	a.kernel = ks
 	a.saveKernel()
 }
+
+func TestMemfdAndPreloadSignals(t *testing.T) {
+	has := func(e ExecInfo, s string) bool {
+		for _, x := range e.signals() {
+			if x == s {
+				return true
+			}
+		}
+		return false
+	}
+	mem := ExecInfo{Exe: "/memfd:payload", Deleted: true, Comm: "payload"}
+	if !has(mem, "memfd_exe") || has(mem, "deleted_exe") {
+		t.Fatalf("memfd: %v", mem.signals())
+	}
+	runc := ExecInfo{Exe: "/memfd:runc_cloned:/proc/self/exe", Deleted: true, Comm: "runc:[2:INIT]"}
+	if len(runc.signals()) != 0 {
+		t.Fatalf("runc re-exec must stay quiet: %v", runc.signals())
+	}
+	fake := ExecInfo{Exe: "/memfd:runc_cloned:/proc/self/exe", Deleted: true, Comm: "kworker"}
+	if !has(fake, "memfd_exe") {
+		t.Fatal("runc memfd name without runc comm must be reported")
+	}
+	pre := ExecInfo{Exe: "/usr/bin/ssh", Comm: "ssh", Preload: "/dev/shm/.x.so"}
+	if !has(pre, "ld_preload") {
+		t.Fatal("LD_PRELOAD not reported")
+	}
+
+	a := &Agent{cfg: &Config{MaxQueue: 100}, flushNow: make(chan struct{}, 1)}
+	a.reportExec(&pre)
+	a.reportExec(&pre)
+	if n := len(eventTypes(a)["process.exec"]); n != 1 {
+		t.Fatalf("same program and library reported %d times", n)
+	}
+}

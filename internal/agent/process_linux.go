@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
+	"io"
 	"os"
 	"strconv"
 	"strings"
@@ -112,6 +113,7 @@ func readExec(pid int) *ExecInfo {
 		e.Cmdline = strings.TrimSpace(string(bytes.ReplaceAll(b, []byte{0}, []byte{' '})))
 	}
 	e.Cwd, _ = os.Readlink(dir + "/cwd")
+	e.Preload = readPreload(dir + "/environ")
 	if b, err := os.ReadFile(dir + "/status"); err == nil {
 		for _, line := range strings.Split(string(b), "\n") {
 			k, v, _ := strings.Cut(line, ":")
@@ -142,6 +144,23 @@ func readExec(pid int) *ExecInfo {
 		}
 	}
 	return e
+}
+
+// readPreload returns LD_PRELOAD from a process environment, if set.
+func readPreload(path string) string {
+	f, err := os.Open(path)
+	if err != nil {
+		return ""
+	}
+	defer f.Close()
+	buf := make([]byte, 64<<10)
+	n, _ := io.ReadFull(f, buf)
+	for _, kv := range bytes.Split(buf[:n], []byte{0}) {
+		if v, ok := bytes.CutPrefix(kv, []byte("LD_PRELOAD=")); ok {
+			return strings.TrimSpace(string(v))
+		}
+	}
+	return ""
 }
 
 // isNetSocket tells TCP and UDP sockets from Unix sockets, which shells get

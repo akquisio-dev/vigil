@@ -46,6 +46,7 @@ type Agent struct {
 	outSeen     map[string]bool   // remote network:port combinations already reported
 	broken      map[string]string // collector -> why it stopped, for the self test
 	kernel      *KernelState      // main loop only
+	preloadSeen map[string]bool   // exe|LD_PRELOAD pairs already reported
 }
 
 func New(cfg *Config) (*Agent, error) {

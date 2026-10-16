@@ -52,6 +52,16 @@ var ruleDocs = map[string]ruleDoc{
 		"Rare. A package upgrade that replaces a binary while a service restarts at the same moment.",
 		"Copy the binary from `/proc/<pid>/exe` before killing the process, then investigate it.",
 	},
+	"process.memfd_exec": {
+		"A program was started from an anonymous memory file (`memfd_create`), so it never existed on disk. Fileless malware and in-memory loaders work this way.",
+		"runc up to 1.1 re-executes itself from a memfd named `runc_cloned` on every container start; that case is excluded. Some packers and sandboxes do the same.",
+		"Dump the program from `/proc/<pid>/exe` before killing it, then find the parent that loaded it.",
+	},
+	"process.preload": {
+		"A program started with `LD_PRELOAD` set, which loads a library into it before anything else. Userland rootkits and credential stealers hook functions this way. Reported once per program and library until the agent restarts.",
+		"Memory allocators (jemalloc, tcmalloc), libfaketime, libeatmydata, some profilers and sandboxes. Suppress them per library with a reason.",
+		"Check the library: who owns it (`dpkg -S`), when it appeared, what it exports. A library in `/tmp`, `/dev/shm` or a home directory is a strong sign of compromise.",
+	},
 	"process.tmp_exec": {
 		"A program started from `/tmp`, `/dev/shm` or `/var/tmp`. Attackers drop tools there because every user can write to them.",
 		"Build tools that run test binaries from `/tmp` (for example `go test`), installers. Suppress them per host with a reason.",

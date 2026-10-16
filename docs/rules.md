@@ -2,7 +2,7 @@
 
 # Detection rules
 
-vigil ships 59 rules. Every alert carries the rule id, so an alert can be looked up here.
+vigil ships 61 rules. Every alert carries the rule id, so an alert can be looked up here.
 
 Severity decides who is woken up: each notifier has a `min_severity`, `high` by default.
 
@@ -34,6 +34,8 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 | [`port.docker`](#port-docker) | high |  |
 | [`process.deleted_exe`](#process-deleted_exe) | high | [T1070.004](https://attack.mitre.org/techniques/T1070/004/) |
 | [`process.download_exec`](#process-download_exec) | high | [T1105](https://attack.mitre.org/techniques/T1105/) |
+| [`process.memfd_exec`](#process-memfd_exec) | high | [T1620](https://attack.mitre.org/techniques/T1620/) |
+| [`process.preload`](#process-preload) | high | [T1574.006](https://attack.mitre.org/techniques/T1574/006/) |
 | [`process.service_shell`](#process-service_shell) | high | [T1505.003](https://attack.mitre.org/techniques/T1505/003/) |
 | [`selftest.failed`](#selftest-failed) | high | [T1562.001](https://attack.mitre.org/techniques/T1562/001/) |
 | [`ssh.key_added`](#ssh-key_added) | high | [T1098.004](https://attack.mitre.org/techniques/T1098/004/) |
@@ -595,6 +597,30 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 **Known false positives:** Installers that are run this way on purpose, for example during a deploy.
 
 **What to do:** Check who ran it (`uid`, parent) and what was downloaded. If nobody did, treat as an intrusion.
+
+### `process.memfd_exec` {#process-memfd_exec}
+
+**Severity:** high · **ATT&CK:** [T1620](https://attack.mitre.org/techniques/T1620/)
+
+**Alert:** `Program running from memory only: {exe} (uid {uid}, started by {parent})`
+
+**Fires when:** A program was started from an anonymous memory file (`memfd_create`), so it never existed on disk. Fileless malware and in-memory loaders work this way.
+
+**Known false positives:** runc up to 1.1 re-executes itself from a memfd named `runc_cloned` on every container start; that case is excluded. Some packers and sandboxes do the same.
+
+**What to do:** Dump the program from `/proc/<pid>/exe` before killing it, then find the parent that loaded it.
+
+### `process.preload` {#process-preload}
+
+**Severity:** high · **ATT&CK:** [T1574.006](https://attack.mitre.org/techniques/T1574/006/)
+
+**Alert:** `{exe} started with LD_PRELOAD={lib} (uid {uid})`
+
+**Fires when:** A program started with `LD_PRELOAD` set, which loads a library into it before anything else. Userland rootkits and credential stealers hook functions this way. Reported once per program and library until the agent restarts.
+
+**Known false positives:** Memory allocators (jemalloc, tcmalloc), libfaketime, libeatmydata, some profilers and sandboxes. Suppress them per library with a reason.
+
+**What to do:** Check the library: who owns it (`dpkg -S`), when it appeared, what it exports. A library in `/tmp`, `/dev/shm` or a home directory is a strong sign of compromise.
 
 ### `process.service_shell` {#process-service_shell}
 
