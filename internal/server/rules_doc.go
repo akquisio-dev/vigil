@@ -272,6 +272,26 @@ var ruleDocs = map[string]ruleDoc{
 		"A host whose clock jumped backwards by more than the batch interval: sequence numbers are derived from the clock.",
 		"Someone is trying to inject events. Check the source address.",
 	},
+	"kernel.module": {
+		"A kernel module from the kernel's own tree was loaded after the agent's baseline.",
+		"The kernel loads modules on demand all the time: nf_tables for firewall rules, wireguard, bridge and overlay modules for Docker, filesystem drivers. That is why this rule is low.",
+		"Check that the module fits something that happened on the host at that time. A module nobody can explain is worth a closer look at the host.",
+	},
+	"kernel.module_unsigned": {
+		"A kernel module that is out of tree (`O`), unsigned (`E`) or proprietary (`P`) was loaded, or was already loaded when the agent first ran. Kernel rootkits are out-of-tree modules.",
+		"DKMS modules: ZFS, VirtualBox, NVIDIA, some VPN and backup drivers. They raise this once per host; suppress them by name with a reason.",
+		"Find the module file (`modinfo <name>`) and the package that owns it (`dpkg -S`). An out-of-tree module nobody installed means the kernel is compromised: rebuild the host.",
+	},
+	"kernel.module_hidden": {
+		"A module is live in `/sys/module` but missing from `/proc/modules` on two scans in a row. Rootkits unlink themselves from the module list to hide.",
+		"None known. A module that is still loading is in state `coming`, not `live`, and is ignored.",
+		"Treat the kernel as compromised. Nothing the host reports can be trusted from here on: take it offline and rebuild it.",
+	},
+	"kernel.tainted": {
+		"New flags appeared in `/proc/sys/kernel/tainted`, for example `O` (out-of-tree module), `E` (unsigned module), `W` (kernel warning) or `D` (kernel oops).",
+		"Out-of-tree drivers, kernel warnings from buggy hardware or drivers, live patching (`K`).",
+		"Look at `dmesg` for the cause. Taint from a module goes together with a `kernel.module_unsigned` alert.",
+	},
 	"chain.broken": {
 		"Verification of the hash-chained event log failed.",
 		"Disk corruption.",

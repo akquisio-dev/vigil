@@ -31,6 +31,7 @@ the defaults below.
 | `docker` | true | read Docker NAT publications with `iptables-save` |
 | `processes` | true | watch program starts and report suspicious ones |
 | `outbound` | true | report new outbound TCP destinations with their process |
+| `kernel` | true | watch kernel modules (new, out of tree, hidden from `/proc/modules`) and kernel taint flags |
 | `updates` | true | report pending (security) updates and pending reboots, Debian and Ubuntu |
 | `web_logs` | none | access logs to watch, see below |
 | `response` | off | allow response actions from the dashboard, see below |

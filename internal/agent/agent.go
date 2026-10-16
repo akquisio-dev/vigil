@@ -45,6 +45,7 @@ type Agent struct {
 	procLimit   procLimiter
 	outSeen     map[string]bool   // remote network:port combinations already reported
 	broken      map[string]string // collector -> why it stopped, for the self test
+	kernel      *KernelState      // main loop only
 }
 
 func New(cfg *Config) (*Agent, error) {
@@ -187,6 +188,7 @@ func (a *Agent) scan() {
 	a.scanFiles()
 	a.scanPorts()
 	a.checkCanaries()
+	a.scanKernel()
 }
 
 func (a *Agent) saveState() {

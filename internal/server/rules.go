@@ -67,16 +67,20 @@ var rules = map[string]ruleDef{
 	"canary.remove_failed": {"medium", "", "Canary {path} could not be removed: {error}", "Köder {path} ließ sich nicht entfernen: {error}"},
 	"canary.overflow":      {"medium", "", "Canary event queue overflowed on {host}", "Köder-Warteschlange auf {host} übergelaufen"},
 
-	"agent.silent":          {"high", "T1562.001", "Agent {host} silent", "Agent {host} meldet sich nicht"},
-	"agent.stopped":         {"high", "T1562.001", "Agent {host} was stopped", "Agent {host} wurde beendet"},
-	"agent.restarted":       {"high", "T1562.001", "Agent {host} restarted after {gap} without monitoring", "Agent {host} neu gestartet nach {gap} ohne Überwachung"},
-	"agent.config_rejected": {"high", "T1557", "Agent {host} rejected a configuration ({reason})", "Agent {host} hat eine Konfiguration abgelehnt ({reason})"},
-	"log.spoofed":           {"high", "T1070", "Fake {identifier} log entry written by {comm} (uid {uid})", "Gefälschter {identifier}-Logeintrag von {comm} (uid {uid})"},
-	"agent.dropped":         {"low", "", "Agent {host} dropped {count} events", "Agent {host} hat {count} Ereignisse verworfen"},
-	"agent.forged":          {"high", "T1557", "Request with invalid signature for agent {agent} from {ip}", "Anfrage mit ungültiger Signatur für Agent {agent} von {ip}"},
-	"chain.broken":          {"critical", "T1565.001", "Event chain broken: {error}", "Ereigniskette gebrochen: {error}"},
-	"selftest.failed":       {"high", "T1562.001", "Self test on {host} failed: {missing}", "Selbsttest auf {host} fehlgeschlagen: {missing}"},
-	"notify.failed":         {"high", "", "Notifier {notifier} ({type}) failed: {error}", "Benachrichtigung {notifier} ({type}) fehlgeschlagen: {error}"},
+	"agent.silent":           {"high", "T1562.001", "Agent {host} silent", "Agent {host} meldet sich nicht"},
+	"agent.stopped":          {"high", "T1562.001", "Agent {host} was stopped", "Agent {host} wurde beendet"},
+	"agent.restarted":        {"high", "T1562.001", "Agent {host} restarted after {gap} without monitoring", "Agent {host} neu gestartet nach {gap} ohne Überwachung"},
+	"agent.config_rejected":  {"high", "T1557", "Agent {host} rejected a configuration ({reason})", "Agent {host} hat eine Konfiguration abgelehnt ({reason})"},
+	"log.spoofed":            {"high", "T1070", "Fake {identifier} log entry written by {comm} (uid {uid})", "Gefälschter {identifier}-Logeintrag von {comm} (uid {uid})"},
+	"agent.dropped":          {"low", "", "Agent {host} dropped {count} events", "Agent {host} hat {count} Ereignisse verworfen"},
+	"agent.forged":           {"high", "T1557", "Request with invalid signature for agent {agent} from {ip}", "Anfrage mit ungültiger Signatur für Agent {agent} von {ip}"},
+	"kernel.module":          {"low", "T1547.006", "Kernel module {name} loaded", "Kernelmodul {name} geladen"},
+	"kernel.module_unsigned": {"high", "T1547.006", "Out-of-tree or unsigned kernel module {name} ({taint})", "Fremdes oder unsigniertes Kernelmodul {name} ({taint})"},
+	"kernel.module_hidden":   {"critical", "T1014", "Kernel module {name} is hidden from /proc/modules", "Kernelmodul {name} ist vor /proc/modules versteckt"},
+	"kernel.tainted":         {"medium", "T1014", "Kernel tainted: {added} (now {tainted})", "Kernel markiert: {added} (jetzt {tainted})"},
+	"chain.broken":           {"critical", "T1565.001", "Event chain broken: {error}", "Ereigniskette gebrochen: {error}"},
+	"selftest.failed":        {"high", "T1562.001", "Self test on {host} failed: {missing}", "Selbsttest auf {host} fehlgeschlagen: {missing}"},
+	"notify.failed":          {"high", "", "Notifier {notifier} ({type}) failed: {error}", "Benachrichtigung {notifier} ({type}) fehlgeschlagen: {error}"},
 }
 
 var words = map[string]map[string]string{
@@ -378,6 +382,22 @@ func (s *Server) evaluate(a *AgentRec, r *Record) []finding {
 		if num(d, "logins") >= 20 {
 			add("web.login_bruteforce", str(d, "ip"), p)
 		}
+	case "kernel.baseline":
+		for _, m := range strSlice(d["out_of_tree"]) {
+			name, taint, _ := strings.Cut(m, " (")
+			add("kernel.module_unsigned", name, map[string]string{"name": name, "taint": strings.TrimSuffix(taint, ")")})
+		}
+	case "kernel.module_loaded":
+		p := map[string]string{"name": str(d, "name"), "taint": str(d, "taint")}
+		if strings.ContainsAny(p["taint"], "OEP") {
+			add("kernel.module_unsigned", p["name"], p)
+		} else {
+			add("kernel.module", p["name"], p)
+		}
+	case "kernel.module_hidden":
+		add("kernel.module_hidden", str(d, "name"), map[string]string{"name": str(d, "name")})
+	case "kernel.tainted":
+		add("kernel.tainted", str(d, "added"), map[string]string{"added": str(d, "added"), "tainted": str(d, "tainted")})
 	case "response.result":
 		s.actionResult(a.ID, d)
 	case "selftest.started", "selftest.step", "selftest.done":

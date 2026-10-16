@@ -2,7 +2,7 @@
 
 # Detection rules
 
-vigil ships 55 rules. Every alert carries the rule id, so an alert can be looked up here.
+vigil ships 59 rules. Every alert carries the rule id, so an alert can be looked up here.
 
 Severity decides who is woken up: each notifier has a `min_severity`, `high` by default.
 
@@ -11,6 +11,7 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 | [`canary.opened`](#canary-opened) | critical | [T1552.001](https://attack.mitre.org/techniques/T1552/001/) |
 | [`chain.broken`](#chain-broken) | critical | [T1565.001](https://attack.mitre.org/techniques/T1565/001/) |
 | [`file.preload`](#file-preload) | critical | [T1574.006](https://attack.mitre.org/techniques/T1574/006/) |
+| [`kernel.module_hidden`](#kernel-module_hidden) | critical | [T1014](https://attack.mitre.org/techniques/T1014/) |
 | [`net.c2`](#net-c2) | critical | [T1071](https://attack.mitre.org/techniques/T1071/) |
 | [`process.miner`](#process-miner) | critical | [T1496](https://attack.mitre.org/techniques/T1496/) |
 | [`process.reverse_shell`](#process-reverse_shell) | critical | [T1059.004](https://attack.mitre.org/techniques/T1059/004/) |
@@ -24,6 +25,7 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 | [`file.cron`](#file-cron) | high | [T1053.003](https://attack.mitre.org/techniques/T1053/003/) |
 | [`file.pam`](#file-pam) | high | [T1556.003](https://attack.mitre.org/techniques/T1556/003/) |
 | [`file.sudo`](#file-sudo) | high | [T1548.003](https://attack.mitre.org/techniques/T1548/003/) |
+| [`kernel.module_unsigned`](#kernel-module_unsigned) | high | [T1547.006](https://attack.mitre.org/techniques/T1547/006/) |
 | [`log.spoofed`](#log-spoofed) | high | [T1070](https://attack.mitre.org/techniques/T1070/) |
 | [`net.blocklisted`](#net-blocklisted) | high | [T1071](https://attack.mitre.org/techniques/T1071/) |
 | [`net.miner_pool`](#net-miner_pool) | high | [T1496](https://attack.mitre.org/techniques/T1496/) |
@@ -46,6 +48,7 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 | [`file.shell_init`](#file-shell_init) | medium | [T1546.004](https://attack.mitre.org/techniques/T1546/004/) |
 | [`file.sshd`](#file-sshd) | medium | [T1098](https://attack.mitre.org/techniques/T1098/) |
 | [`file.systemd`](#file-systemd) | medium | [T1543.002](https://attack.mitre.org/techniques/T1543/002/) |
+| [`kernel.tainted`](#kernel-tainted) | medium | [T1014](https://attack.mitre.org/techniques/T1014/) |
 | [`net.tor`](#net-tor) | medium | [T1090.003](https://attack.mitre.org/techniques/T1090/003/) |
 | [`port.public`](#port-public) | medium |  |
 | [`process.decode_exec`](#process-decode_exec) | medium | [T1140](https://attack.mitre.org/techniques/T1140/) |
@@ -55,6 +58,7 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 | [`web.login_bruteforce`](#web-login_bruteforce) | medium | [T1110](https://attack.mitre.org/techniques/T1110/) |
 | [`agent.dropped`](#agent-dropped) | low |  |
 | [`file.other`](#file-other) | low |  |
+| [`kernel.module`](#kernel-module) | low | [T1547.006](https://attack.mitre.org/techniques/T1547/006/) |
 | [`port.local`](#port-local) | low |  |
 | [`process.rate_limited`](#process-rate_limited) | low |  |
 | [`ssh.bruteforce`](#ssh-bruteforce) | low | [T1110](https://attack.mitre.org/techniques/T1110/) |
@@ -388,6 +392,18 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 
 **What to do:** Assume someone edited the log on the server. Compare with the daily chain anchors sent to your notifiers.
 
+### `kernel.module_hidden` {#kernel-module_hidden}
+
+**Severity:** critical · **ATT&CK:** [T1014](https://attack.mitre.org/techniques/T1014/)
+
+**Alert:** `Kernel module {name} is hidden from /proc/modules`
+
+**Fires when:** A module is live in `/sys/module` but missing from `/proc/modules` on two scans in a row. Rootkits unlink themselves from the module list to hide.
+
+**Known false positives:** None known. A module that is still loading is in state `coming`, not `live`, and is ignored.
+
+**What to do:** Treat the kernel as compromised. Nothing the host reports can be trusted from here on: take it offline and rebuild it.
+
 ### `net.c2` {#net-c2}
 
 **Severity:** critical · **ATT&CK:** [T1071](https://attack.mitre.org/techniques/T1071/)
@@ -483,6 +499,18 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 **Known false positives:** Planned restarts and updates. Announce them with a maintenance window in the dashboard.
 
 **What to do:** Check who stopped it if no maintenance was planned.
+
+### `kernel.module_unsigned` {#kernel-module_unsigned}
+
+**Severity:** high · **ATT&CK:** [T1547.006](https://attack.mitre.org/techniques/T1547/006/)
+
+**Alert:** `Out-of-tree or unsigned kernel module {name} ({taint})`
+
+**Fires when:** A kernel module that is out of tree (`O`), unsigned (`E`) or proprietary (`P`) was loaded, or was already loaded when the agent first ran. Kernel rootkits are out-of-tree modules.
+
+**Known false positives:** DKMS modules: ZFS, VirtualBox, NVIDIA, some VPN and backup drivers. They raise this once per host; suppress them by name with a reason.
+
+**What to do:** Find the module file (`modinfo <name>`) and the package that owns it (`dpkg -S`). An out-of-tree module nobody installed means the kernel is compromised: rebuild the host.
 
 ### `log.spoofed` {#log-spoofed}
 
@@ -616,6 +644,18 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 
 **What to do:** Look at the file on disk, its owner and change time, and search the web root for other recently changed files. Treat as an intrusion until proven otherwise.
 
+### `kernel.tainted` {#kernel-tainted}
+
+**Severity:** medium · **ATT&CK:** [T1014](https://attack.mitre.org/techniques/T1014/)
+
+**Alert:** `Kernel tainted: {added} (now {tainted})`
+
+**Fires when:** New flags appeared in `/proc/sys/kernel/tainted`, for example `O` (out-of-tree module), `E` (unsigned module), `W` (kernel warning) or `D` (kernel oops).
+
+**Known false positives:** Out-of-tree drivers, kernel warnings from buggy hardware or drivers, live patching (`K`).
+
+**What to do:** Look at `dmesg` for the cause. Taint from a module goes together with a `kernel.module_unsigned` alert.
+
 ### `net.tor` {#net-tor}
 
 **Severity:** medium · **ATT&CK:** [T1090.003](https://attack.mitre.org/techniques/T1090/003/)
@@ -687,6 +727,18 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 **Known false positives:** Long server outages.
 
 **What to do:** Restore the connection; consider raising `max_queue`.
+
+### `kernel.module` {#kernel-module}
+
+**Severity:** low · **ATT&CK:** [T1547.006](https://attack.mitre.org/techniques/T1547/006/)
+
+**Alert:** `Kernel module {name} loaded`
+
+**Fires when:** A kernel module from the kernel's own tree was loaded after the agent's baseline.
+
+**Known false positives:** The kernel loads modules on demand all the time: nf_tables for firewall rules, wireguard, bridge and overlay modules for Docker, filesystem drivers. That is why this rule is low.
+
+**What to do:** Check that the module fits something that happened on the host at that time. A module nobody can explain is worth a closer look at the host.
 
 ### `process.rate_limited` {#process-rate_limited}
 

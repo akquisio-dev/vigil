@@ -37,6 +37,9 @@ type Config struct {
 	// Processes watches program starts through the kernel's process events
 	// connector and reports the suspicious ones.
 	Processes *bool `json:"processes,omitempty"`
+	// Kernel watches loaded kernel modules, modules hidden from
+	// /proc/modules and new kernel taint flags.
+	Kernel *bool `json:"kernel,omitempty"`
 	// Updates reports pending (security) updates and pending reboots.
 	Updates *bool `json:"updates,omitempty"`
 	// Outbound reports new outbound TCP destinations with their process.
