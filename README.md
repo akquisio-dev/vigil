@@ -174,5 +174,9 @@ terms of the GNU Affero General Public License as published by the Free
 Software Foundation, either version 3 of the License, or (at your option) any
 later version. See [LICENSE](LICENSE).
 
+The dashboard bundles DM Sans and DM Mono (SIL Open Font License 1.1, see
+`internal/server/web/fonts/`) and paths from Tabler Icons (MIT, see
+`LICENSES/tabler-icons-MIT.txt`).
+
 If you run a modified vigil as a service for others, the AGPL requires you to
 offer them the source of your modified version.

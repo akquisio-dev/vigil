@@ -1,7 +1,10 @@
 package server
 
 import (
+	"bytes"
+	"crypto/sha256"
 	"embed"
+	"encoding/hex"
 	"encoding/json"
 	"io/fs"
 	"net/http"
@@ -54,7 +57,24 @@ func (s *Server) auth(h authed) http.HandlerFunc {
 func (s *Server) uiHandler() http.Handler {
 	mux := http.NewServeMux()
 	static, _ := fs.Sub(webFS, "web")
-	mux.Handle("GET /", http.FileServerFS(static))
+	index, version := versionedIndex(static)
+	files := http.FileServerFS(static)
+	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/" || r.URL.Path == "/index.html" {
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.Header().Set("Cache-Control", "no-cache")
+			w.Write(index)
+			return
+		}
+		// Assets are addressed with ?v=<content hash>, so caches (a CDN in
+		// front of the dashboard included) never mix old and new files.
+		if r.URL.Query().Get("v") == version || strings.HasPrefix(r.URL.Path, "/fonts/") {
+			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		} else {
+			w.Header().Set("Cache-Control", "no-cache")
+		}
+		files.ServeHTTP(w, r)
+	})
 
 	mux.HandleFunc("POST /api/ui/login", s.handleLogin)
 	mux.HandleFunc("POST /api/ui/logout", s.auth(func(w http.ResponseWriter, r *http.Request, sess *session) {
@@ -84,6 +104,22 @@ func (s *Server) uiHandler() http.Handler {
 		writeJSON(w, map[string]int{"notifiers": len(s.cfg.Notifiers)})
 	}))
 	return secure(mux)
+}
+
+// versionedIndex rewrites the asset links in index.html to carry a hash of
+// the embedded assets.
+func versionedIndex(static fs.FS) ([]byte, string) {
+	h := sha256.New()
+	for _, name := range []string{"app.js", "style.css", "favicon.svg"} {
+		b, _ := fs.ReadFile(static, name)
+		h.Write(b)
+	}
+	version := hex.EncodeToString(h.Sum(nil))[:12]
+	index, _ := fs.ReadFile(static, "index.html")
+	for _, name := range []string{"app.js", "style.css", "favicon.svg"} {
+		index = bytes.ReplaceAll(index, []byte(`"`+name+`"`), []byte(`"`+name+"?v="+version+`"`))
+	}
+	return index, version
 }
 
 func decode(r *http.Request, w http.ResponseWriter, v any) bool {

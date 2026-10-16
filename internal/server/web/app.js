@@ -26,7 +26,7 @@ const T = {
     sent: "sent", loadMore: "Load more", filterType: "Type prefix", allHosts: "All hosts", time: "Time", details: "Details",
     params: "Parameters", logins: "SSH logins", ip: "IP", key: "Key", method: "Method", configSync: "Config",
     synced: "applied", waiting: "pending", alertsOpen: "open alerts", canariesOpened: "opened",
-    active: "active", tampered: "tampered", error: "error",
+    active: "active", tampered: "tampered", error: "error", loginSub: "Access to your security operations center",
     maintenance: "Maintenance", maintenanceUntil: "Maintenance until", start: "Start", end: "End", minutes: "min",
     acceptProcess: "Allow process",
   },
@@ -52,7 +52,7 @@ const T = {
     sent: "gesendet", loadMore: "Mehr laden", filterType: "Typ-Präfix", allHosts: "Alle Hosts", time: "Zeit", details: "Details",
     params: "Parameter", logins: "SSH-Anmeldungen", ip: "IP", key: "Schlüssel", method: "Methode", configSync: "Konfiguration",
     synced: "übernommen", waiting: "ausstehend", alertsOpen: "offene Alarme", canariesOpened: "geöffnet",
-    active: "aktiv", tampered: "manipuliert", error: "Fehler",
+    active: "aktiv", tampered: "manipuliert", error: "Fehler", loginSub: "Zugang zu deiner Sicherheitszentrale",
     maintenance: "Wartung", maintenanceUntil: "Wartung bis", start: "Starten", end: "Beenden", minutes: "Min.",
     acceptProcess: "Prozess erlauben",
   },
@@ -112,7 +112,7 @@ function ago(ts) {
 const abs = (ts) => (ts && !ts.startsWith("0001") ? new Date(ts).toLocaleString(lang) : "");
 const timeEl = (ts) => h("time", { datetime: ts, title: abs(ts) }, ago(ts));
 
-const sevChip = (sev) => h("span", { class: "chip" }, h("span", { class: "dot " + sev }), t(sev));
+const sevChip = (sev) => h("span", { class: "sev " + sev }, t(sev));
 const statusChip = (st) => h("span", { class: "chip" }, h("span", { class: "dot " + st }), t(st) || st);
 
 function summary(data) {
@@ -123,22 +123,66 @@ function summary(data) {
     .join("  ");
 }
 
+// Tabler Icons (MIT, https://tabler.io/icons), outline paths.
+const ICONS = {"alert-triangle": ["M12 9v4", "M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z", "M12 16h.01"], "fish-hook": ["M16 9v6a5 5 0 0 1 -10 0v-4l3 3", "M16 7m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0", "M16 5v-2"], "language": ["M4 5h7", "M9 3v2c0 4.418 -2.239 8 -5 8", "M5 9c0 2.144 2.952 3.908 6.7 4", "M12 20l4 -9l4 9", "M19.1 18h-6.2"], "layout-dashboard": ["M5 4h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1", "M5 16h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1", "M15 12h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1", "M15 4h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1"], "list-details": ["M13 5h8", "M13 9h5", "M13 15h8", "M13 19h5", "M3 4m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z", "M3 14m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z"], "logout": ["M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2", "M9 12h12l-3 -3", "M18 15l3 -3"], "server": ["M3 4m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z", "M3 12m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z", "M7 8l0 .01", "M7 16l0 .01"], "settings": ["M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z", "M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"], "shield-check": ["M11.46 20.846a12 12 0 0 1 -7.96 -14.846a12 12 0 0 0 8.5 -3a12 12 0 0 0 8.5 3a12 12 0 0 1 -.09 7.06", "M15 19l2 2l4 -4"]};
+
+const SVG = "http://www.w3.org/2000/svg";
+function icon(name, viewBox = "0 0 24 24", paths = ICONS[name]) {
+  const svg = document.createElementNS(SVG, "svg");
+  svg.setAttribute("viewBox", viewBox);
+  svg.setAttribute("class", "ic");
+  svg.setAttribute("aria-hidden", "true");
+  for (const d of paths || []) {
+    const p = document.createElementNS(SVG, "path");
+    p.setAttribute("d", d);
+    svg.append(p);
+  }
+  return svg;
+}
+const logoMark = () => h("span", { class: "logo-icon" }, icon(null, "0 0 32 32", ["M8 10c2.5 6 5 9.5 8 11 3-1.5 5.5-5 8-11"]));
+const logo = () => h("a", { class: "sidebar-logo", href: "#/" }, logoMark(),
+  h("div", { class: "logo-text" }, h("div", { class: "logo-name" }, "vigil"), h("div", { class: "logo-sub" }, "Security Operations")));
+
 // ---------- shell ----------
 
 const routes = [
-  ["overview", "#/"], ["alerts", "#/alerts"], ["events", "#/events"], ["canaries", "#/canaries"], ["settings", "#/settings"],
+  ["overview", "#/", "layout-dashboard"], ["alerts", "#/alerts", "alert-triangle"], ["events", "#/events", "list-details"],
+  ["canaries", "#/canaries", "fish-hook"], ["settings", "#/settings", "settings"],
 ];
+let openAlerts = 0;
 
+// shell lays out a page like the Akquisio app: sidebar, topbar, content.
+// The page's h1 and .crumbs become the topbar breadcrumb.
 function shell(active, ...content) {
-  const nav = h("nav", { class: "main" },
-    routes.map(([k, href]) => h("a", { href, class: k === active ? "on" : null }, t(k))),
-    h("button", { class: "linkbtn", onclick: () => { lang = lang === "de" ? "en" : "de"; store("vigil.lang", lang); render(); } }, lang === "de" ? "EN" : "DE"),
-    h("button", { class: "linkbtn", onclick: async () => { await post("/api/ui/logout").catch(() => {}); me = null; render(); } }, t("logout")));
-  return [
-    h("header", { class: "top" }, h("div", { class: "wrap" },
-      h("a", { class: "brand", href: "#/" }, h("img", { src: "favicon.svg", alt: "" }), "vigil"), nav)),
-    h("main", null, h("div", { class: "wrap" }, ...content)),
-  ];
+  const flat = content.flat().filter(Boolean);
+  const title = flat.find((n) => n.tagName === "H1");
+  const crumbs = flat.find((n) => n.classList && n.classList.contains("crumbs"));
+  const body = flat.filter((n) => n !== title && n !== crumbs);
+  const trail = [];
+  if (crumbs) for (const a of crumbs.querySelectorAll("a")) trail.push(a, h("span", { class: "sep" }, "/"));
+  const initials = (me.user || "?").slice(0, 2);
+
+  const sidebar = h("aside", { class: "sidebar" },
+    logo(),
+    h("nav", { class: "nav" },
+      h("div", { class: "nav-section" }, "SOC"),
+      routes.map(([k, href, ic]) => h("a", { href, class: "nav-item" + (k === active ? " active" : ""), title: t(k) },
+        icon(ic), h("span", { class: "nav-label" }, t(k)),
+        k === "alerts" && openAlerts > 0 ? h("span", { class: "nav-dot" }) : null))),
+    h("div", { class: "sidebar-footer" },
+      h("div", { class: "user-chip" }, h("span", { class: "avatar" }, initials),
+        h("div", { class: "user-info" }, h("div", { class: "user-name" }, me.user), h("div", { class: "user-role" }, "vigil " + me.version)))));
+
+  const topbar = h("header", { class: "topbar" },
+    h("div", { class: "breadcrumb" }, trail, h("span", { class: "page-title" }, title ? title.textContent : "")),
+    h("div", { class: "topbar-right" },
+      h("button", { class: "icon-btn", title: "Language", onclick: () => { lang = lang === "de" ? "en" : "de"; store("vigil.lang", lang); render(); } },
+        icon("language"), lang === "de" ? "EN" : "DE"),
+      h("button", { class: "icon-btn", title: t("logout"), onclick: async () => { await post("/api/ui/logout").catch(() => {}); me = null; render(); } },
+        icon("logout"))));
+
+  if (title) document.title = title.textContent + " | vigil";
+  return h("div", { class: "app" }, sidebar, h("div", { class: "main" }, topbar, h("main", { class: "content" }, body)));
 }
 
 function mount(nodes) {
@@ -160,10 +204,12 @@ function loginView() {
   } },
     h("label", null, t("user"), h("input", { name: "user", autocomplete: "username", required: true })),
     h("label", null, t("password"), h("input", { name: "password", type: "password", autocomplete: "current-password", required: true })),
-    h("label", null, t("code"), h("input", { name: "code", inputmode: "numeric", autocomplete: "one-time-code", pattern: "[0-9]{6}", maxlength: 6, required: true })),
+    h("label", null, t("code"), h("input", { name: "code", inputmode: "numeric", autocomplete: "one-time-code", pattern: "[0-9]{6}", maxlength: 6, required: true, placeholder: "000000" })),
     err,
     h("button", { class: "btn", type: "submit" }, t("login")));
-  mount(h("div", { class: "login" }, h("h1", null, "vigil"), form));
+  document.title = "vigil";
+  mount(h("div", { class: "login-wrap" }, h("div", { class: "login" },
+    logo(), h("div", { class: "login-title" }, t("login")), h("div", { class: "login-sub" }, t("loginSub")), form)));
 }
 
 // ---------- charts ----------
@@ -211,6 +257,7 @@ function alertRow(a) {
 
 async function overview() {
   const o = await api("/api/ui/overview");
+  openAlerts = Object.values(o.open_by_severity).reduce((a, b) => a + b, 0);
   const online = o.agents.filter((a) => a.status === "online").length;
   const tiles = h("div", { class: "grid tiles" },
     h("div", { class: "card tile" }, h("div", { class: "num" }, online + " / " + o.agents.length),
