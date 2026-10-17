@@ -68,6 +68,9 @@ type Config struct {
 	// YaraDir holds YARA rules (*.yar, *.yara) the agents scan suspicious
 	// programs with. A subset of the language is supported, see the docs.
 	YaraDir string `json:"yara_dir,omitempty"`
+	// SigmaDir holds Sigma rules (*.yml, also in subdirectories) for Linux
+	// process, network and file events.
+	SigmaDir string `json:"sigma_dir,omitempty"`
 	// RulesDir holds custom rules (*.json), loaded at start.
 	RulesDir string `json:"rules_dir,omitempty"`
 

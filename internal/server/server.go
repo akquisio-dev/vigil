@@ -136,6 +136,7 @@ func (s *Server) Run(ctx context.Context) error {
 	go s.refreshVulns()
 	s.loadYara()
 	go s.refreshHashes()
+	LoadSigma(s.cfg.SigmaDir)
 	if s.cfg.RulesDir != "" {
 		n, errs := LoadCustomRules(s.cfg.RulesDir)
 		log.Printf("custom rules: %d loaded from %s", n, s.cfg.RulesDir)
@@ -221,6 +222,7 @@ func (s *Server) loop(ctx context.Context) {
 			go s.refreshVulns()
 			go s.refreshHashes()
 			s.loadYara()
+			LoadSigma(s.cfg.SigmaDir)
 		}
 	}
 }
@@ -479,7 +481,7 @@ func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 		if rec.Source != "agent" {
 			continue
 		}
-		fs := s.selfTestFindings(a, rec, append(s.evaluate(a, rec), s.evaluateCustom(a, rec)...))
+		fs := s.selfTestFindings(a, rec, append(append(s.evaluate(a, rec), s.evaluateCustom(a, rec)...), s.evaluateSigma(a, rec)...))
 		for _, f := range s.malwareFindings(rec.Event) {
 			f.Key = "malware.known|" + a.ID + "|" + f.Params["sha256"]
 			f.Params["host"] = a.Name

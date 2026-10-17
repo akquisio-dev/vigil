@@ -177,7 +177,7 @@ func lookupRule(id string) (ruleDef, bool) {
 		}
 		return ruleDef{Severity: c.Severity, Technique: c.Technique, En: c.Title["en"], De: de}, true
 	}
-	return ruleDef{}, false
+	return sigmaLookup(id)
 }
 
 func fieldValue(r *Record, host, field string) (any, bool) {
@@ -343,7 +343,7 @@ func CustomInfo() ([]RuleInfo, []string) {
 		out = append(out, RuleInfo{ID: c.ID, Severity: c.Severity, Technique: c.Technique, Title: c.Title["en"],
 			Trigger: c.Description, Custom: true, File: c.File})
 	}
-	return out, append([]string(nil), customErrs...)
+	return append(out, sigmaInfo()...), append([]string(nil), customErrs...)
 }
 
 // TryCustomRules runs the rules in one file against recorded events (lines

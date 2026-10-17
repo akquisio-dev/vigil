@@ -160,3 +160,7 @@ func TestSnapshotRequests(t *testing.T) {
 		t.Fatalf("snapshot hash is pivotable: %+v", es)
 	}
 }
+
+func protoEvent(typ string, d map[string]any) proto.Event {
+	return proto.Event{Type: typ, TS: time.Now(), Data: d}
+}
