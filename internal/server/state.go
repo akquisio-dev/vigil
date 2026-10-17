@@ -48,6 +48,9 @@ type AgentRec struct {
 	// Volume holds sent bytes per hour (newest last, two weeks).
 	Volume []VolumeHour `json:"volume,omitempty"`
 
+	// Contain is what the agent reports in force: isolation, locked accounts.
+	Contain map[string]any `json:"contain,omitempty"`
+
 	// Posture is the host's latest hardening, certificate and backup report.
 	Posture map[string]any `json:"posture,omitempty"`
 	// Conditions are the lasting findings active now, per group, by alert

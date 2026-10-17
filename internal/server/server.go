@@ -47,9 +47,11 @@ type Server struct {
 	vdb        vulnDB
 	hashes     hashSet
 	fwd        []*forwarder
-	yara       yaraSet
-	pkgs       map[string]*agentPackages // latest package list per agent, guarded by mu
-	nh         notifierHealth
+
+	playbookRuns map[string][]time.Time // guarded by mu
+	yara         yaraSet
+	pkgs         map[string]*agentPackages // latest package list per agent, guarded by mu
+	nh           notifierHealth
 
 	beatWarned string // last reason the heartbeat was withheld, loop goroutine only
 }
@@ -139,6 +141,13 @@ func (s *Server) Run(ctx context.Context) error {
 	go s.refreshHashes()
 	LoadSigma(s.cfg.SigmaDir)
 	s.startForwarders()
+	for _, pb := range s.cfg.Playbooks {
+		if err := validatePlaybook(pb); err != nil {
+			log.Printf("playbook: %v (not used)", err)
+		} else {
+			log.Printf("playbook %s: %v on %v", pb.Name, pb.Actions, pb.Rules)
+		}
+	}
 	if s.cfg.RulesDir != "" {
 		n, errs := LoadCustomRules(s.cfg.RulesDir)
 		log.Printf("custom rules: %d loaded from %s", n, s.cfg.RulesDir)
@@ -494,12 +503,16 @@ func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 	}
 	s.correlate(fresh)
 	s.autoSnapshots(fresh)
+	runs := s.runPlaybooks(fresh)
 	resp := proto.BatchResponse{ConfigVersion: a.ConfigVersion}
 	if a.ConfigVersion > b.ConfigVersion {
 		resp.Config, resp.ConfigSig = s.agentConfig(a)
 	}
 	s.saveLocked()
 	s.notifyAlerts(fresh)
+	for _, r := range runs {
+		s.notify(message{Severity: "high", Text: "vigil playbook: " + r}, true)
+	}
 	s.mu.Unlock()
 	writeJSON(w, resp)
 }

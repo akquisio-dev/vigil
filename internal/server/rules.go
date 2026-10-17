@@ -520,6 +520,11 @@ func (s *Server) evaluate(a *AgentRec, r *Record) []finding {
 		out = append(out, s.packagesReceived(a, d)...)
 	case "response.result":
 		s.actionResult(a.ID, d)
+	case "response.state":
+		a.Contain = map[string]any{}
+		for k, v := range d {
+			a.Contain[k] = v
+		}
 	case "selftest.started", "selftest.step", "selftest.done":
 		s.selfTestEvent(a, r.Event.Type, d)
 	case "process.rate_limited":

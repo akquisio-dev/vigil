@@ -29,6 +29,8 @@ type State struct {
 	// ActionsDone remembers response actions already run, so a replayed
 	// configuration never runs one twice.
 	ActionsDone map[string]time.Time `json:"actions_done,omitempty"`
+	// Contain holds isolation and account locks with their end times.
+	Contain ContainState `json:"contain,omitempty"`
 }
 
 type LogOffset struct {

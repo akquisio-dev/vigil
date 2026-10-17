@@ -199,3 +199,12 @@ them runs arbitrary commands. Hosts where this risk is not acceptable leave
   included; the receiving system must be protected like the server.
 - Rarity learns what runs during the first seven days. Anything an attacker
   already ran then counts as normal; the other rules still apply to it.
+- Response actions are only as safe as the server: with response enabled, a
+  taken over server can isolate hosts, lock accounts and stop processes
+  (never run commands). Four-eyes needs a second admin's TOTP code, which a
+  server compromise alone does not give, but an attacker with root on the
+  server can change server.json. Agents limit the damage on their side:
+  only the types in `allow`, never root or `never_lock`, never without a
+  reachable `isolate_allow`, and everything ends by itself.
+- Playbooks act on alerts, and alerts can be provoked. A playbook that
+  isolates hosts is a way to take them offline for its duration.

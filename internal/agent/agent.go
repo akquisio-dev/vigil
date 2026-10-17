@@ -145,6 +145,7 @@ func (a *Agent) Run(ctx context.Context) error {
 	}
 	a.emit(proto.NewEvent("agent.started", map[string]any{"version": Version, "hostname": host, "canary_roots": a.cfg.CanaryRoots, "response": allowed, "selftest": on(a.cfg.SelfTest), "forensics": on(a.cfg.Forensics)}))
 	cleanSelfTests()
+	a.reportContainment()
 
 	a.scan()
 	if !a.state.Initialized {
@@ -227,6 +228,7 @@ func (a *Agent) Run(ctx context.Context) error {
 }
 
 func (a *Agent) scan() {
+	a.checkContainment()
 	a.scanFiles()
 	a.scanPorts()
 	a.checkCanaries()

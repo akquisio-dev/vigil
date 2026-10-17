@@ -1,7 +1,11 @@
 # Changelog
 
-## Unreleased
+## v0.17.0
 
+- Response: isolate a host (everything blocked except the vigil server and `isolate_allow`), end isolation, lock and unlock accounts (`usermod -L -e 1`, SSH sessions ended). Isolation and locks end by themselves after their time, also without the server and across reboots, and isolation removed by hand before its end is put back. Agent options `isolate_allow`, `never_lock`.
+- Four-eyes (`four_eyes`): listed action types wait for a second admin's approval with a fresh code; the overview lists what waits.
+- Playbooks (`playbooks`): actions started by alerts of chosen rules, with an hourly cap, the host's own allow list and four-eyes applying.
+- The host page shows isolation and locked accounts and ends them early; alerts suggest isolating and locking.
 - Fix: an agent upgraded right after the server got no YARA rules until they changed (the old agent had taken the configuration). Agents without stored rules now ask for the configuration again at start.
 
 ## v0.16.0

@@ -99,7 +99,10 @@ check alerts once and the alert closes itself when the check passes again.
 }
 ```
 
-Off unless `enabled` is true. `allow` limits the types (empty: all four).
+Off unless `enabled` is true. `allow` limits the types (empty: all).
+`isolate_allow` lists addresses or networks that stay reachable while the
+host is isolated (put the admins' VPN there); `never_lock` lists accounts
+that are never locked.
 `block_ip` refuses loopback and local addresses, the vigil server and
 everything in `never_block`; put your admins' addresses and VPN there.
 See [Operations](operations.md#response-actions) for what each action does.
@@ -173,6 +176,8 @@ it came from the proxy.
 | `hash_intel` | false | match the SHA-256 of suspicious and new programs against abuse.ch MalwareBazaar and ThreatFox (full list weekly, about 45 MB, newest every six hours; about 10 MB in memory). Only downloads |
 | `yara_dir` | none | directory with YARA rules (`*.yar`, `*.yara`, at most 256 KB together) the agents scan programs with; starter rules in `deploy/examples/yara` |
 | `sigma_dir` | none | directory with Sigma rules (`*.yml`, also in subdirectories) for Linux process, network and file events |
+| `four_eyes` | none | response action types a second admin must approve, `"*"` for all, see [Operations](operations.md#four-eyes) |
+| `playbooks` | none | response actions started on their own by alerts, see [Operations](operations.md#playbooks) |
 | `forward` | none | send events and alerts to syslog, HTTP or a file, see below |
 | `threat_intel` | false | download public block lists (abuse.ch Feodo Tracker and ThreatFox, Spamhaus DROP, Tor exits) twice a day and match outbound connections against them. Only plain downloads, nothing about this installation is sent |
 

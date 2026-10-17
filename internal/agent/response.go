@@ -29,6 +29,12 @@ type ResponseConfig struct {
 	// NeverBlock lists addresses or networks block_ip refuses, for example
 	// the admins' VPN. Loopback and the vigil server are always refused.
 	NeverBlock []string `json:"never_block,omitempty"`
+	// IsolateAllow lists addresses or networks that stay reachable while
+	// the host is isolated (with never_block and the vigil server).
+	// isolate_host is refused when both lists are empty.
+	IsolateAllow []string `json:"isolate_allow,omitempty"`
+	// NeverLock lists accounts lock_user refuses; uid 0 is always refused.
+	NeverLock []string `json:"never_lock,omitempty"`
 }
 
 func (r *ResponseConfig) allows(t string) bool {
@@ -76,6 +82,10 @@ func (a *Agent) runActions(actions []proto.Action) {
 			d["error"] = err.Error()
 		}
 		a.emit(proto.NewEvent("response.result", d))
+		switch act.Type {
+		case "isolate_host", "release_host", "lock_user", "unlock_user":
+			a.reportContainment()
+		}
 	}
 }
 
@@ -93,6 +103,14 @@ func (a *Agent) doAction(act proto.Action) (string, error) {
 		return killProcess(pid, p["exe"])
 	case "remove_key":
 		return removeAuthorizedKey(p["file"], p["fingerprint"], a.cfg.StateDir)
+	case "isolate_host":
+		return a.isolate(act)
+	case "release_host":
+		return a.release("released by " + act.ID)
+	case "lock_user":
+		return a.lockUser(act)
+	case "unlock_user":
+		return a.unlockUser(p["user"], "unlocked by "+act.ID)
 	}
 	return "", fmt.Errorf("unknown action %q", act.Type)
 }

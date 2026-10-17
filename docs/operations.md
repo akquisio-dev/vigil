@@ -125,6 +125,17 @@ On an alert, admins can contain an attack on the host directly, if the host's
 | End SSH session | stops the sshd process of the login (`SIGTERM`, then `SIGKILL`) | anything that is not an sshd session, the SSH daemon itself |
 | Stop process | stops the process | a pid that now runs another program, pid 1, the agent |
 | Remove key | removes the key from `authorized_keys`, after a backup in the agent's state directory | the last key of a file, files that are not `authorized_keys` |
+| Isolate host | drops all traffic in, out and through the host (nftables table `inet vigil_isolate`, before the host's own firewall) except loopback, the vigil server and `isolate_allow`/`never_block`; ends by itself after 1 hour (at most 24) | hosts without an address in `isolate_allow` or `never_block` (nobody could reach them), an unresolvable server |
+| End isolation | removes the table | |
+| Lock account | locks the password and expires the account (`usermod -L -e 1`, which also stops key logins through PAM), ends the user's SSH sessions; unlocks itself after 24 hours (at most 30 days) and restores the previous expiry | uid 0, `never_lock` |
+| Unlock account | `usermod -U` and the previous expiry | accounts vigil did not lock |
+
+Isolation and locks are kept in the agent's state with their end time. The
+agent undoes them when the time is up, without the server, and puts an
+isolation back after a reboot or when someone removes the table by hand
+before the end. The host page shows what is in force and ends it early.
+The agent's sandbox keeps `/etc` read only; for `usermod` it asks systemd
+to run that one command outside the sandbox (`systemd-run`).
 
 Every action needs a fresh code from the authenticator app, reaches the
 agent in the next signed configuration, is valid for ten minutes and runs at
@@ -132,7 +143,43 @@ most once. The request and the agent's result are in the event chain, and
 the host page lists them. There is no way to run arbitrary commands.
 
 To lift a block early: `nft delete element inet vigil blocked4 { 203.0.113.9 }`,
-or remove the whole table with `nft delete table inet vigil`.
+or remove the whole table with `nft delete table inet vigil`. To end an
+isolation by hand on the console: `nft delete table inet vigil_isolate`
+(the agent puts it back while its end time has not passed; stop the agent
+first, or end it from the dashboard).
+
+### Four-eyes
+
+With `four_eyes` in server.json, the listed action types (or `"*"` for all)
+wait for a second admin, who approves with a fresh code of their own. The
+requester cannot approve, only withdraw. Unapproved requests expire after
+30 minutes. Requests waiting for approval are listed on the overview.
+
+### Playbooks
+
+Playbooks start actions on their own when an alert of their rules is
+raised:
+
+```json
+"playbooks": [
+  {"name": "stop-miners", "rules": ["process.miner", "malware.yara"], "actions": ["kill_process"], "max_per_hour": 5},
+  {"name": "contain-reverse-shell", "rules": ["process.reverse_shell"], "actions": ["kill_process", "isolate_host"], "minutes": 30, "hosts": ["web"]}
+]
+```
+
+| Key | Meaning |
+|---|---|
+| `rules` | rule ids; `process.*` matches a prefix |
+| `min_severity` | lowest alert severity (default `high`) |
+| `hosts` | host names it applies to (default all) |
+| `actions` | `kill_process`, `kill_session`, `block_ip`, `isolate_host`, `lock_user`, `remove_key`; parameters come from the alert |
+| `minutes` | duration for blocks, isolation and locks (default 60, at most 1440) |
+| `max_per_hour` | runs per hour (default 3); alerts beyond that are left to people |
+
+Each action must still be allowed in the host's `agent.json`, four-eyes
+applies to playbooks as well, every run is in the event chain and goes to
+all notifiers. An attacker who can raise alerts can trigger playbooks:
+keep the hourly cap low, and prefer measures that end by themselves.
 
 ## Accounts and roles
 

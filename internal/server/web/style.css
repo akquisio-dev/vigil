@@ -489,3 +489,4 @@ textarea.mono { width: 100%; font-size: 12px; }
   table.evtable td:nth-child(3) { grid-column: 1 / -1; font-weight: 500; }
   table.evtable td:nth-child(4) { grid-column: 1 / -1; }
 }
+.danger-card { border-color: var(--red); box-shadow: 0 0 0 1px var(--red) inset; }

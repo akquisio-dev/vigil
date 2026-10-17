@@ -110,7 +110,7 @@ type Action struct {
 	Expires time.Time         `json:"expires"`
 }
 
-var ActionTypes = []string{"block_ip", "kill_session", "kill_process", "remove_key"}
+var ActionTypes = []string{"block_ip", "kill_session", "kill_process", "remove_key", "isolate_host", "release_host", "lock_user", "unlock_user"}
 
 type Canary struct {
 	ID     string            `json:"id"`

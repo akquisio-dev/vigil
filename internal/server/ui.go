@@ -162,6 +162,7 @@ func (s *Server) uiHandler() http.Handler {
 	mux.HandleFunc("GET /api/ui/alerts/{id}/actions", s.auth(s.handleAlertActions))
 	mux.HandleFunc("POST /api/ui/agents/{id}/respond", s.adminOnly(s.handleRespond))
 	mux.HandleFunc("GET /api/ui/actions", s.auth(s.handleActions))
+	mux.HandleFunc("POST /api/ui/actions/{id}/{decision}", s.adminOnly(s.handleActionDecision))
 	mux.HandleFunc("GET /api/ui/intel", s.auth(func(w http.ResponseWriter, r *http.Request, sess *session) {
 		writeJSON(w, map[string]any{"enabled": s.cfg.ThreatIntel, "lists": s.intel.status(), "vulns": s.vulnStatus(), "malware": s.malwareStatus()})
 	}))
@@ -260,25 +261,27 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 type agentView struct {
-	ID          string         `json:"id"`
-	Name        string         `json:"name"`
-	Hostname    string         `json:"hostname"`
-	Version     string         `json:"version"`
-	Status      string         `json:"status"`
-	LastSeen    time.Time      `json:"last_seen"`
-	LastIP      string         `json:"last_ip"`
-	Enrolled    time.Time      `json:"enrolled"`
-	OpenAlerts  int            `json:"open_alerts"`
-	OpenBySev   map[string]int `json:"open_by_severity"`
-	Ports       int            `json:"ports"`
-	Canaries    int            `json:"canaries"`
-	CanaryRoots []string       `json:"canary_roots"`
-	ConfigSync  bool           `json:"config_sync"`
-	Maintenance *time.Time     `json:"maintenance_until,omitempty"`
-	Updates     map[string]any `json:"updates,omitempty"`
-	Posture     map[string]any `json:"posture,omitempty"`
-	Vulns       *VulnSummary   `json:"vulns,omitempty"`
-	SelfTest    bool           `json:"selftest"`
+	ID            string         `json:"id"`
+	Name          string         `json:"name"`
+	Hostname      string         `json:"hostname"`
+	Version       string         `json:"version"`
+	Status        string         `json:"status"`
+	LastSeen      time.Time      `json:"last_seen"`
+	LastIP        string         `json:"last_ip"`
+	Enrolled      time.Time      `json:"enrolled"`
+	OpenAlerts    int            `json:"open_alerts"`
+	OpenBySev     map[string]int `json:"open_by_severity"`
+	Ports         int            `json:"ports"`
+	Canaries      int            `json:"canaries"`
+	CanaryRoots   []string       `json:"canary_roots"`
+	ConfigSync    bool           `json:"config_sync"`
+	Maintenance   *time.Time     `json:"maintenance_until,omitempty"`
+	Updates       map[string]any `json:"updates,omitempty"`
+	Posture       map[string]any `json:"posture,omitempty"`
+	Contain       map[string]any `json:"contain,omitempty"`
+	ResponseTypes []string       `json:"response_types"`
+	Vulns         *VulnSummary   `json:"vulns,omitempty"`
+	SelfTest      bool           `json:"selftest"`
 }
 
 func (s *Server) viewAgent(a *AgentRec) agentView {
@@ -293,7 +296,7 @@ func (s *Server) viewAgent(a *AgentRec) agentView {
 	}
 	v := agentView{ID: a.ID, Name: a.Name, Hostname: a.Hostname, Version: a.Version, Status: status,
 		LastSeen: a.LastSeen, LastIP: a.LastIP, Enrolled: a.Enrolled, Ports: len(a.Ports),
-		CanaryRoots: a.CanaryRoots, ConfigSync: a.AckedVersion >= a.ConfigVersion, OpenBySev: map[string]int{}, Updates: a.Updates, Posture: a.Posture, Vulns: a.Vulns, SelfTest: a.SelfTest}
+		CanaryRoots: a.CanaryRoots, ConfigSync: a.AckedVersion >= a.ConfigVersion, OpenBySev: map[string]int{}, Updates: a.Updates, Posture: a.Posture, Contain: a.Contain, ResponseTypes: append([]string{}, a.ResponseTypes...), Vulns: a.Vulns, SelfTest: a.SelfTest}
 	if time.Now().Before(a.MaintenanceUntil) {
 		until := a.MaintenanceUntil
 		v.Maintenance = &until

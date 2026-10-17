@@ -73,6 +73,12 @@ type Config struct {
 	SigmaDir string `json:"sigma_dir,omitempty"`
 	// Forward sends events and alerts to syslog, HTTP or a file.
 	Forward []ForwardConfig `json:"forward,omitempty"`
+	// FourEyes lists response action types that a second admin must approve
+	// (with a fresh TOTP code) before they reach the agent; "*" means all.
+	FourEyes []string `json:"four_eyes,omitempty"`
+	// Playbooks start response actions on their own when an alert of one
+	// of their rules is raised. See the docs before enabling any.
+	Playbooks []Playbook `json:"playbooks,omitempty"`
 	// RulesDir holds custom rules (*.json), loaded at start.
 	RulesDir string `json:"rules_dir,omitempty"`
 

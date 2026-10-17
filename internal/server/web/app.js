@@ -63,6 +63,11 @@ const T = {
     actSession: "End SSH session of {user}", actProcess: "Stop process {pid}", actKey: "Remove key {fingerprint}",
     requested: "requested, waiting for the agent", done: "done", failed: "failed", expiredAct: "expired", pendingAct: "pending",
     confirmAction: "Run this on the host?",
+    actIsolate: "Isolate the host for {dur}", actRelease: "End isolation", actLock: "Lock account {user} for {dur}", actUnlock: "Unlock account {user}",
+    awaitingApproval: "needs approval", rejectedAct: "rejected", approvedBy: "approved by", approve: "Approve", reject: "Reject",
+    withdraw: "Withdraw", needsSecond: "a second admin has to approve", confirmApprove: "Approve and run this on the host?", confirmReject: "Reject this action?",
+    containment: "Containment", isolatedUntil: "Isolated until", lockedUntil: "locked until", unlock: "Unlock", lockAccount: "Lock an account",
+    pendingApprovals: "Actions waiting for approval",
     posture: "Hardening", checksOk: "{n} of {m} checks passed", checked: "checked",
     chk_ssh_root_login: "SSH root login with password", chk_ssh_password: "SSH password login", chk_ssh_empty_password: "SSH empty passwords",
     chk_empty_password: "Accounts without password", chk_aslr: "Address space randomization", chk_sysctl: "Kernel setting",
@@ -154,6 +159,11 @@ const T = {
     actSession: "SSH-Sitzung von {user} beenden", actProcess: "Prozess {pid} beenden", actKey: "Schlüssel {fingerprint} entfernen",
     requested: "angefordert, wartet auf den Agent", done: "erledigt", failed: "fehlgeschlagen", expiredAct: "abgelaufen", pendingAct: "wartet",
     confirmAction: "Das auf dem Host ausführen?",
+    actIsolate: "Host für {dur} isolieren", actRelease: "Isolation beenden", actLock: "Konto {user} für {dur} sperren", actUnlock: "Konto {user} entsperren",
+    awaitingApproval: "Freigabe offen", rejectedAct: "abgelehnt", approvedBy: "freigegeben von", approve: "Freigeben", reject: "Ablehnen",
+    withdraw: "Zurückziehen", needsSecond: "ein zweiter Admin muss freigeben", confirmApprove: "Freigeben und auf dem Host ausführen?", confirmReject: "Diese Maßnahme ablehnen?",
+    containment: "Eindämmung", isolatedUntil: "Isoliert bis", lockedUntil: "gesperrt bis", unlock: "Entsperren", lockAccount: "Konto sperren",
+    pendingApprovals: "Maßnahmen warten auf Freigabe",
     posture: "Härtung", checksOk: "{n} von {m} Prüfungen bestanden", checked: "geprüft",
     chk_ssh_root_login: "SSH-Root-Login mit Passwort", chk_ssh_password: "SSH-Passwort-Login", chk_ssh_empty_password: "SSH mit leeren Passwörtern",
     chk_empty_password: "Konten ohne Passwort", chk_aslr: "Adressraum-Randomisierung", chk_sysctl: "Kernel-Einstellung",
@@ -593,7 +603,8 @@ function postureSection(a) {
 const sevCounts = (m) => h("span", { class: "sevcounts" }, SEVS.filter((s) => m && m[s]).map((s) => h("span", { class: "sev " + s }, m[s])));
 
 async function overview() {
-  const [o, inc] = await Promise.all([api("/api/ui/overview"), api("/api/ui/incidents?status=active")]);
+  const [o, inc, acts] = await Promise.all([api("/api/ui/overview"), api("/api/ui/incidents?status=active"), api("/api/ui/actions").catch(() => [])]);
+  const waiting = acts.filter((x) => x.status === "approval");
   openAlerts = Object.values(o.open_by_severity).reduce((a, b) => a + b, 0);
   const online = o.agents.filter((a) => a.status === "online").length;
   const bySev = SEVS.filter((s) => o.open_by_severity[s]).map((s) => o.open_by_severity[s] + " " + t(s));
@@ -632,6 +643,7 @@ async function overview() {
   mount(shell("overview",
     h("h1", null, t("overview")),
     h("div", { class: "crumbs" }, t("welcome") + ", " + me.user),
+    waiting.length ? [h("h2", null, t("pendingApprovals")), actionRows(waiting)] : null,
     tiles,
     h("div", { class: "grid dash-a" },
       panel(t("alertsWeek"), null, severityChart(o.alerts_per_day, o.day_start)),
@@ -669,10 +681,57 @@ async function alertsView() {
     h("div", { class: "list" }, list.length ? list.map(alertRow) : h("div", { class: "empty" }, t("noAlerts")))));
 }
 
-const actLabel = (a) => t({ block_ip: "actBlock", kill_session: "actSession", kill_process: "actProcess", remove_key: "actKey" }[a.type])
-  .replace(/\{(\w+)\}/g, (_, k) => (a.params[k] || "").slice(0, 24));
-const actStatus = (st) => h("span", { class: "chip" }, h("span", { class: "dot " + ({ done: "ok", failed: "critical", expired: "low", pending: "medium" }[st] || "") }),
-  t({ done: "done", failed: "failed", expired: "expiredAct", pending: "pendingAct" }[st] || st));
+const actLabel = (a) => t({ block_ip: "actBlock", kill_session: "actSession", kill_process: "actProcess", remove_key: "actKey",
+  isolate_host: "actIsolate", release_host: "actRelease", lock_user: "actLock", unlock_user: "actUnlock" }[a.type])
+  .replace(/\{(\w+)\}/g, (_, k) => k === "dur" ? fmtMinutes(a.params.minutes) : (a.params[k] || "").slice(0, 24));
+const fmtMinutes = (m) => { m = Number(m) || 0; return !m ? "" : m % 1440 === 0 ? m / 1440 + " d" : m % 60 === 0 ? m / 60 + " h" : m + " min"; };
+const actStatus = (st) => h("span", { class: "chip" }, h("span", { class: "dot " + ({ done: "ok", failed: "critical", expired: "low", pending: "medium", approval: "high", rejected: "low" }[st] || "") }),
+  t({ done: "done", failed: "failed", expired: "expiredAct", pending: "pendingAct", approval: "awaitingApproval", rejected: "rejectedAct" }[st] || st));
+
+// actionRows lists actions with approve and reject for those waiting.
+function actionRows(list) {
+  return h("div", { class: "list" }, list.map((x) => h("div", { class: "row" },
+    actStatus(x.status),
+    h("div", null, h("div", { class: "title" }, actLabel(x)),
+      h("div", { class: "sub" }, [x.by, x.approved_by ? t("approvedBy") + " " + x.approved_by : "", x.result].filter(Boolean).join("  ·  ")),
+      x.status === "approval" && can("admin") ? h("div", { class: "actions" },
+        x.by !== me.user ? h("button", { class: "btn small", onclick: decide(x, "approve") }, t("approve")) : h("span", { class: "muted" }, t("needsSecond")),
+        h("button", { class: "btn small ghost", onclick: decide(x, "reject") }, x.by === me.user ? t("withdraw") : t("reject"))) : null),
+    h("div", { class: "meta" }, timeEl(x.created)))));
+}
+
+const decide = (x, d) => async () => {
+  if (!confirm(actLabel(x) + "\n\n" + t(d === "approve" ? "confirmApprove" : "confirmReject"))) return;
+  const code = prompt(t("codePrompt")); if (!code) return;
+  try { await post("/api/ui/actions/" + x.id + "/" + d, { code: code.trim() }); render(); } catch (e) { alert(e.message); }
+};
+
+// respondNow starts an action from a host page (release, unlock, isolate, lock).
+const respondNow = (agent, type, params) => async () => {
+  const label = actLabel({ type, params });
+  if (!confirm(label + "\n\n" + t("confirmAction"))) return;
+  const code = prompt(t("codePrompt")); if (!code) return;
+  try { await post("/api/ui/agents/" + agent + "/respond", { type, params, code: code.trim() }); render(); } catch (e) { alert(e.message); }
+};
+
+function containCard(a) {
+  const c = a.contain || {};
+  const allowed = new Set(a.response_types || []);
+  const locked = Object.entries(c.locked || {});
+  const isolated = c.isolated_until && new Date(c.isolated_until) > new Date();
+  if (!isolated && !locked.length && !(can("admin") && (allowed.has("isolate_host") || allowed.has("lock_user")))) return null;
+  const userIn = h("input", { placeholder: t("user"), maxlength: 32, class: "mono" });
+  return h("div", { class: "card mt" + (isolated ? " danger-card" : "") },
+    h("h3", null, t("containment")),
+    isolated ? h("div", { class: "flex" }, h("span", { class: "chip" }, h("span", { class: "dot critical" }), t("isolatedUntil") + " " + abs(c.isolated_until)),
+      can("admin") && allowed.has("release_host") ? h("button", { class: "btn small right", onclick: respondNow(a.id, "release_host", {}) }, t("actRelease")) : null) : null,
+    locked.map(([u, until]) => h("div", { class: "flex mt" }, h("span", { class: "chip" }, h("span", { class: "dot high" }), u + ": " + t("lockedUntil") + " " + abs(until)),
+      can("admin") && allowed.has("unlock_user") ? h("button", { class: "btn small right", onclick: respondNow(a.id, "unlock_user", { user: u }) }, t("unlock")) : null)),
+    can("admin") && !isolated && allowed.has("isolate_host") ? h("div", { class: "actions" },
+      h("button", { class: "btn danger", onclick: respondNow(a.id, "isolate_host", { minutes: "60" }) }, t("actIsolate").replace("{dur}", "1 h"))) : null,
+    can("admin") && allowed.has("lock_user") ? h("form", { class: "inline mt", onsubmit: (e) => { e.preventDefault(); if (userIn.value.trim()) respondNow(a.id, "lock_user", { user: userIn.value.trim(), minutes: "1440" })(); } },
+      h("label", null, t("lockAccount"), userIn), h("button", { class: "btn ghost", type: "submit" }, t("actLock").replace("{user}", "").replace("{dur}", "24 h").trim())) : null);
+}
 
 async function responseCard(a) {
   if (!can("admin") || !a.agent) return null;
@@ -686,8 +745,8 @@ async function responseCard(a) {
         if (!confirm(actLabel(s) + "\n\n" + t("confirmAction"))) return;
         const code = prompt(t("codePrompt")); if (!code) return;
         try {
-          await post("/api/ui/agents/" + a.agent + "/respond", { type: s.type, params: s.params, alert: a.id, code: code.trim() });
-          out.textContent = actLabel(s) + ": " + t("requested");
+          const act = await post("/api/ui/agents/" + a.agent + "/respond", { type: s.type, params: s.params, alert: a.id, code: code.trim() });
+          out.textContent = actLabel(s) + ": " + t(act.status === "approval" ? "awaitingApproval" : "requested");
         } catch (x) { out.textContent = x.message; }
       } }, actLabel(s));
     })),
@@ -831,10 +890,8 @@ async function hostView(id) {
     h("div", { class: "tablewrap" }, h("table", { class: "nowrap" },
       h("thead", null, h("tr", null, ["Port", "Addr", t("scope"), t("via"), t("process"), ""].map((x) => h("th", null, x)))),
       h("tbody", null, portRows))),
-    actions.length ? [h("h2", null, t("response")), h("div", { class: "list" }, actions.map((x) => h("div", { class: "row" },
-      actStatus(x.status),
-      h("div", null, h("div", { class: "title" }, actLabel(x)), h("div", { class: "sub" }, [x.by, x.result].filter(Boolean).join("  ·  "))),
-      h("div", { class: "meta" }, timeEl(x.created)))))] : null,
+    containCard(a),
+    actions.length ? [h("h2", null, t("response")), actionRows(actions)] : null,
     await snapshotsCard(a.id),
     selftestCard,
     h("h2", null, t("logins")),
