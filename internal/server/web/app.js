@@ -90,6 +90,7 @@ const T = {
     huntRun: "Search", notFound: "not seen", invalidValues: "Not an address, user or hash",
     started: "Start", ended: "End", duration: "Duration", commands: "Commands", sudoShort: "sudo", filesShort: "Files", stillOpen: "open",
     noSessions: "No SSH sessions in this period", sessionOf: "Session of {user}", dropped: "{n} more commands not recorded (limit per hour)",
+    reportMD: "Report (Markdown)", reportPrint: "Report to print / PDF",
     filesDuring: "changed while the session was open", partialScan: "stopped after 20 s, shorten the period",
   },
   de: {
@@ -178,6 +179,7 @@ const T = {
     huntRun: "Suchen", notFound: "nicht gesehen", invalidValues: "Keine Adresse, kein Benutzer, kein Hash",
     started: "Beginn", ended: "Ende", duration: "Dauer", commands: "Befehle", sudoShort: "sudo", filesShort: "Dateien", stillOpen: "offen",
     noSessions: "Keine SSH-Sitzungen in diesem Zeitraum", sessionOf: "Sitzung von {user}", dropped: "{n} weitere Befehle nicht aufgezeichnet (Grenze pro Stunde)",
+    reportMD: "Bericht (Markdown)", reportPrint: "Bericht drucken / PDF",
     filesDuring: "geändert, während die Sitzung offen war", partialScan: "nach 20 s abgebrochen, Zeitraum verkürzen",
   },
 };
@@ -1085,7 +1087,9 @@ async function incidentDetail(id) {
   mount(shell("incidents",
     h("div", { class: "crumbs" }, h("a", { href: "#/incidents" }, t("incidents")), " / " + c.id),
     h("h1", null, c.title || c.id),
-    h("div", { class: "page-actions" }, c.owner !== me.user && can("analyst") ? h("button", { class: "btn", onclick: act("assign") }, t("assignMe")) : null),
+    h("div", { class: "page-actions" }, c.owner !== me.user && can("analyst") ? h("button", { class: "btn", onclick: act("assign") }, t("assignMe")) : null,
+      can("analyst") ? h("a", { class: "btn ghost", href: "/api/ui/incidents/" + c.id + "/report?format=md" }, t("reportMD")) : null,
+      can("analyst") ? h("a", { class: "btn ghost", href: "/api/ui/incidents/" + c.id + "/report?format=html", target: "_blank", rel: "noopener" }, t("reportPrint")) : null),
     h("div", { class: "grid two" },
       h("div", { class: "card" }, h("dl", { class: "kv" },
         h("dt", null, t("status")), h("dd", null, incChip(c.status)),
