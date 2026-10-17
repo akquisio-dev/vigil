@@ -84,6 +84,13 @@ const T = {
     quarantined: "Quarantined copy", programHash: "Program SHA-256", gone: "Process had already exited",
     snapshotHash: "Snapshot SHA-256", requestStatus: "Request", changeLines: "Changed lines", prevUnknown: "Previous content unknown (first change since the upgrade)",
     causingEvents: "Events behind this alert", truncatedDiff: "shortened",
+    sessions: "Sessions", hunt: "Hunt", search: "Search", query: "Query", searchHint: "type:process.* uid:0 exe:/tmp/*  -user:root  count:>10  \"two words\"",
+    saveSearch: "Save", savedSearches: "Saved searches", searchName: "Name", exportCSV: "CSV", exportJSONL: "JSON lines", found: "{n} found, {ms} ms",
+    huntHint: "Addresses, user names or SHA-256 hashes, one per line or separated by spaces. Searches the stored events of all hosts.",
+    huntRun: "Search", notFound: "not seen", invalidValues: "Not an address, user or hash",
+    started: "Start", ended: "End", duration: "Duration", commands: "Commands", sudoShort: "sudo", filesShort: "Files", stillOpen: "open",
+    noSessions: "No SSH sessions in this period", sessionOf: "Session of {user}", dropped: "{n} more commands not recorded (limit per hour)",
+    filesDuring: "changed while the session was open",
   },
   de: {
     overview: "Lage", alerts: "Alarme", events: "Ereignisse", canaries: "Köder", settings: "Einstellungen",
@@ -165,6 +172,13 @@ const T = {
     quarantined: "Kopie in Quarantäne", programHash: "Programm-SHA-256", gone: "Prozess war schon beendet",
     snapshotHash: "SHA-256 der Sicherung", requestStatus: "Anforderung", changeLines: "Geänderte Zeilen", prevUnknown: "Vorheriger Inhalt unbekannt (erste Änderung seit dem Update)",
     causingEvents: "Ereignisse hinter diesem Alarm", truncatedDiff: "gekürzt",
+    sessions: "Sitzungen", hunt: "Fahndung", search: "Suche", query: "Abfrage", searchHint: "type:process.* uid:0 exe:/tmp/*  -user:root  count:>10  \"zwei Wörter\"",
+    saveSearch: "Speichern", savedSearches: "Gespeicherte Suchen", searchName: "Name", exportCSV: "CSV", exportJSONL: "JSON-Zeilen", found: "{n} gefunden, {ms} ms",
+    huntHint: "Adressen, Benutzernamen oder SHA-256-Hashes, je Zeile oder mit Leerzeichen getrennt. Durchsucht die gespeicherten Ereignisse aller Hosts.",
+    huntRun: "Suchen", notFound: "nicht gesehen", invalidValues: "Keine Adresse, kein Benutzer, kein Hash",
+    started: "Beginn", ended: "Ende", duration: "Dauer", commands: "Befehle", sudoShort: "sudo", filesShort: "Dateien", stillOpen: "offen",
+    noSessions: "Keine SSH-Sitzungen in diesem Zeitraum", sessionOf: "Sitzung von {user}", dropped: "{n} weitere Befehle nicht aufgezeichnet (Grenze pro Stunde)",
+    filesDuring: "geändert, während die Sitzung offen war",
   },
 };
 
@@ -256,7 +270,7 @@ function summary(data) {
 }
 
 // Tabler Icons (MIT, https://tabler.io/icons), outline paths.
-const ICONS = {"key": ["M16.555 3.843l3.602 3.602a2.877 2.877 0 0 1 0 4.069l-2.643 2.643a2.877 2.877 0 0 1 -4.069 0l-.301 -.301l-6.558 6.558a2 2 0 0 1 -1.239 .578l-.175 .008h-1.172a1 1 0 0 1 -.993 -.883l-.007 -.117v-1.172a2 2 0 0 1 .467 -1.284l.119 -.13l.414 -.414h2v-2h2v-2l2.144 -2.144l-.301 -.301a2.877 2.877 0 0 1 0 -4.069l2.643 -2.643a2.877 2.877 0 0 1 4.069 0z", "M15 9h.01"], "book": ["M3 19a9 9 0 0 1 9 0a9 9 0 0 1 9 0", "M3 6a9 9 0 0 1 9 0a9 9 0 0 1 9 0", "M3 6l0 13", "M12 6l0 13", "M21 6l0 13"], "stack-2": ["M12 4l-8 4l8 4l8 -4l-8 -4", "M4 12l8 4l8 -4", "M4 16l8 4l8 -4"], "bell-off": ["M9.346 5.353c.21 -.129 .428 -.246 .654 -.353a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3m-1 3h-13a4 4 0 0 0 2 -3v-3a6.996 6.996 0 0 1 1.273 -3.707", "M9 17v1a3 3 0 0 0 6 0v-1", "M3 3l18 18"], "clock": ["M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0", "M12 7v5l3 3"], "user-x": ["M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0", "M6 21v-2a4 4 0 0 1 4 -4h3.5", "M22 22l-5 -5", "M17 22l5 -5"], "plus": ["M12 5l0 14", "M5 12l14 0"], "alert-triangle": ["M12 9v4", "M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z", "M12 16h.01"], "fish-hook": ["M16 9v6a5 5 0 0 1 -10 0v-4l3 3", "M16 7m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0", "M16 5v-2"], "layout-dashboard": ["M5 4h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1", "M5 16h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1", "M15 12h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1", "M15 4h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1"], "list-details": ["M13 5h8", "M13 9h5", "M13 15h8", "M13 19h5", "M3 4m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z", "M3 14m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z"], "logout": ["M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2", "M9 12h12l-3 -3", "M18 15l3 -3"], "server": ["M3 4m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z", "M3 12m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z", "M7 8l0 .01", "M7 16l0 .01"], "settings": ["M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z", "M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"], "shield-check": ["M11.46 20.846a12 12 0 0 1 -7.96 -14.846a12 12 0 0 0 8.5 -3a12 12 0 0 0 8.5 3a12 12 0 0 1 -.09 7.06", "M15 19l2 2l4 -4"]};
+const ICONS = {"terminal-2": ["M8 9l3 3l-3 3", "M13 15l3 0", "M3 4m0 2a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2z"], "radar": ["M21 12h-8a1 1 0 1 0 -1 1v8a9 9 0 0 0 9 -9", "M16 9a5 5 0 1 0 -7 7", "M20.486 9a9 9 0 1 0 -11.482 11.495"], "key": ["M16.555 3.843l3.602 3.602a2.877 2.877 0 0 1 0 4.069l-2.643 2.643a2.877 2.877 0 0 1 -4.069 0l-.301 -.301l-6.558 6.558a2 2 0 0 1 -1.239 .578l-.175 .008h-1.172a1 1 0 0 1 -.993 -.883l-.007 -.117v-1.172a2 2 0 0 1 .467 -1.284l.119 -.13l.414 -.414h2v-2h2v-2l2.144 -2.144l-.301 -.301a2.877 2.877 0 0 1 0 -4.069l2.643 -2.643a2.877 2.877 0 0 1 4.069 0z", "M15 9h.01"], "book": ["M3 19a9 9 0 0 1 9 0a9 9 0 0 1 9 0", "M3 6a9 9 0 0 1 9 0a9 9 0 0 1 9 0", "M3 6l0 13", "M12 6l0 13", "M21 6l0 13"], "stack-2": ["M12 4l-8 4l8 4l8 -4l-8 -4", "M4 12l8 4l8 -4", "M4 16l8 4l8 -4"], "bell-off": ["M9.346 5.353c.21 -.129 .428 -.246 .654 -.353a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3m-1 3h-13a4 4 0 0 0 2 -3v-3a6.996 6.996 0 0 1 1.273 -3.707", "M9 17v1a3 3 0 0 0 6 0v-1", "M3 3l18 18"], "clock": ["M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0", "M12 7v5l3 3"], "user-x": ["M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0", "M6 21v-2a4 4 0 0 1 4 -4h3.5", "M22 22l-5 -5", "M17 22l5 -5"], "plus": ["M12 5l0 14", "M5 12l14 0"], "alert-triangle": ["M12 9v4", "M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z", "M12 16h.01"], "fish-hook": ["M16 9v6a5 5 0 0 1 -10 0v-4l3 3", "M16 7m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0", "M16 5v-2"], "layout-dashboard": ["M5 4h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1", "M5 16h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1", "M15 12h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1", "M15 4h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1"], "list-details": ["M13 5h8", "M13 9h5", "M13 15h8", "M13 19h5", "M3 4m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z", "M3 14m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z"], "logout": ["M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2", "M9 12h12l-3 -3", "M18 15l3 -3"], "server": ["M3 4m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z", "M3 12m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z", "M7 8l0 .01", "M7 16l0 .01"], "settings": ["M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z", "M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"], "shield-check": ["M11.46 20.846a12 12 0 0 1 -7.96 -14.846a12 12 0 0 0 8.5 -3a12 12 0 0 0 8.5 3a12 12 0 0 1 -.09 7.06", "M15 19l2 2l4 -4"]};
 
 const SVG = "http://www.w3.org/2000/svg";
 function icon(name, viewBox = "0 0 24 24", paths = ICONS[name]) {
@@ -291,7 +305,7 @@ function logo() {
 
 const sections = [
   ["sectionOverview", [["overview", "#/", "layout-dashboard"]]],
-  ["sectionDetect", [["incidents", "#/incidents", "stack-2"], ["alerts", "#/alerts", "alert-triangle"], ["events", "#/events", "list-details"], ["canaries", "#/canaries", "fish-hook"],
+  ["sectionDetect", [["incidents", "#/incidents", "stack-2"], ["alerts", "#/alerts", "alert-triangle"], ["events", "#/events", "list-details"], ["sessions", "#/sessions", "terminal-2"], ["hunt", "#/hunt", "radar"], ["canaries", "#/canaries", "fish-hook"],
     ["suppressions", "#/suppressions", "bell-off"]]],
   ["sectionSystem", [["rules", "#/rules", "book"], ["settings", "#/settings", "settings"]]],
 ];
@@ -796,6 +810,7 @@ async function hostView(id) {
         h("div", { class: "actions" },
           h("a", { class: "btn ghost", href: "#/events?agent=" + a.id }, t("events")),
           h("a", { class: "btn ghost", href: tlHref(a.id, new Date().toISOString(), { minutes: 60 }) }, t("timeline")),
+          h("a", { class: "btn ghost", href: "#/sessions?agent=" + a.id }, t("sessions")),
           h("a", { class: "btn ghost", href: "#/alerts" }, t("alerts")),
           h("button", { class: "btn danger", onclick: async () => { if (confirm(t("confirmDelete"))) { await post("/api/ui/agents/" + a.id + "/delete"); location.hash = "#/"; } } }, t("deleteHost"))))),
     a.updates ? h("div", { class: "card mt" }, h("h3", null, t("updates")), h("dl", { class: "kv" },
@@ -823,6 +838,8 @@ async function hostView(id) {
 }
 
 async function eventsView(params) {
+  const q = params.get("q") || "";
+  if (q) return searchView(params);
   const agents = (await api("/api/ui/overview")).agents;
   const agent = params.get("agent") || "";
   const type = params.get("type") || "";
@@ -830,16 +847,11 @@ async function eventsView(params) {
   let before = 0;
   const more = h("button", { class: "btn ghost mt" }, t("loadMore"));
   async function load() {
-    const q = new URLSearchParams({ agent, type, limit: "200" });
-    if (before) q.set("before", before);
-    const rows = await api("/api/ui/events?" + q);
+    const qs = new URLSearchParams({ agent, type, limit: "200" });
+    if (before) qs.set("before", before);
+    const rows = await api("/api/ui/events?" + qs);
     for (const r of rows) {
-      tbody.append(h("tr", null,
-        h("td", { class: "nowrap" }, r.agent ? h("a", { href: tlHref(r.agent, r.event.ts), title: t("timeline") }, new Date(r.event.ts).toLocaleString(lang))
-          : h("span", { title: abs(r.event.ts) }, new Date(r.event.ts).toLocaleString(lang))),
-        h("td", null, r.host || r.source + (r.actor ? ":" + r.actor : "")),
-        h("td", { class: "mono" }, r.event.type),
-        h("td", { class: "mono" }, dataLine(r.event.data), diffBlock(r.event.data))));
+      tbody.append(eventRow(r));
       before = r.seq;
     }
     more.hidden = rows.length < 200;
@@ -853,9 +865,133 @@ async function eventsView(params) {
     location.hash = "#/events?" + new URLSearchParams({ agent: hostSel.value, type: typeIn.value.trim() });
   } }, h("label", null, t("host"), hostSel), h("label", null, t("filterType"), typeIn), h("button", { class: "btn", type: "submit" }, "OK"));
   const scopeLine = [(agents.find((a) => a.id === agent) || {}).name || t("allHosts"), type].filter(Boolean).join(", ");
-  mount(shell("events", h("h1", null, t("events")), h("div", { class: "crumbs" }, scopeLine), h("div", { class: "card" }, form), h("div", { class: "tablewrap mt" },
-    h("table", null, h("thead", null, h("tr", null, [t("time"), t("host"), t("type"), t("details")].map((x) => h("th", null, x)))), tbody)), more));
+  mount(shell("events", h("h1", null, t("events")), h("div", { class: "crumbs" }, scopeLine),
+    await searchCard(""),
+    h("div", { class: "card mt" }, form), h("div", { class: "tablewrap mt" },
+    h("table", { class: "evtable" }, h("thead", null, h("tr", null, [t("time"), t("host"), t("type"), t("details")].map((x) => h("th", null, x)))), tbody)), more));
   await load();
+}
+
+function eventRow(r) {
+  return h("tr", null,
+    h("td", { class: "nowrap" }, r.agent ? h("a", { href: tlHref(r.agent, r.event.ts || r.time), title: t("timeline") }, new Date(r.event.ts || r.time).toLocaleString(lang))
+      : h("span", { title: abs(r.event.ts) }, new Date(r.event.ts || r.time).toLocaleString(lang))),
+    h("td", null, r.host || r.source + (r.actor ? ":" + r.actor : "")),
+    h("td", { class: "mono" }, r.event.type),
+    h("td", { class: "mono" }, dataLine(r.event.data), diffBlock(r.event.data)));
+}
+
+// searchCard: the query box with saved searches, used on the events page.
+async function searchCard(q, days = "7") {
+  const saved = await api("/api/ui/searches").catch(() => []);
+  const qIn = h("input", { value: q, placeholder: t("searchHint"), class: "mono grow", spellcheck: false });
+  const daysSel = h("select", null, [1, 7, 30, 90].map((n) => h("option", { value: n, selected: String(n) === String(days) }, t("days30").replace("{n}", n))));
+  const nameIn = h("input", { placeholder: t("searchName"), maxlength: 100 });
+  const err = h("div", { class: "err" });
+  const go = (e) => { e.preventDefault(); if (qIn.value.trim()) location.hash = "#/events?" + new URLSearchParams({ q: qIn.value.trim(), days: daysSel.value }); };
+  return h("div", { class: "card" },
+    h("form", { class: "inline", onsubmit: go },
+      h("label", { class: "grow" }, t("query"), qIn), h("label", null, t("window"), daysSel), h("button", { class: "btn", type: "submit" }, t("search"))),
+    saved.length ? h("div", { class: "flex mt" }, h("span", { class: "muted" }, t("savedSearches") + ":"),
+      saved.map((x) => h("span", { class: "chip" },
+        h("a", { href: "#/events?" + new URLSearchParams({ q: x.query, days }), title: x.query }, x.name),
+        can("analyst") ? h("button", { class: "linkbtn", title: "×", onclick: async () => { await post("/api/ui/searches/" + x.id + "/delete"); render(); } }, "×") : null))) : null,
+    q && can("analyst") ? h("form", { class: "inline mt", onsubmit: async (e) => {
+      e.preventDefault();
+      try { await post("/api/ui/searches", { name: nameIn.value, query: q }); render(); } catch (x) { err.textContent = x.message; }
+    } }, h("label", null, t("saveSearch"), nameIn), h("button", { class: "btn ghost", type: "submit" }, t("saveSearch"))) : null,
+    err);
+}
+
+async function searchView(params) {
+  const q = params.get("q"), days = params.get("days") || "7";
+  const res = await api("/api/ui/search?" + new URLSearchParams({ q, days, limit: "500" }));
+  const exp = (fmt) => "/api/ui/search?" + new URLSearchParams({ q, days, limit: "5000", format: fmt });
+  mount(shell("events", h("h1", null, t("search")), h("div", { class: "crumbs mono" }, q),
+    await searchCard(q, days),
+    h("div", { class: "flex mt" }, h("span", { class: "muted" }, t("found").replace("{n}", res.total).replace("{ms}", res.ms)),
+      h("span", { class: "right flex" }, h("a", { class: "btn small ghost", href: exp("csv") }, t("exportCSV")), h("a", { class: "btn small ghost", href: exp("jsonl") }, t("exportJSONL")))),
+    res.records.length ? h("div", { class: "tablewrap mt" }, h("table", { class: "evtable" },
+      h("thead", null, h("tr", null, [t("time"), t("host"), t("type"), t("details")].map((x) => h("th", null, x)))),
+      h("tbody", null, res.records.map(eventRow)))) : h("div", { class: "card empty mt" }, t("noEvents"))));
+}
+
+async function huntView() {
+  const ta = h("textarea", { rows: 6, class: "mono", placeholder: "203.0.113.7\nroot\n" + "e3b0c442…" });
+  const daysSel = h("select", null, [7, 30, 90, 365].map((n) => h("option", { value: n, selected: n === 30 }, t("days30").replace("{n}", n))));
+  const out = h("div", { class: "mt" });
+  const err = h("div", { class: "err" });
+  const form = h("form", { class: "card stack", onsubmit: async (e) => {
+    e.preventDefault(); err.textContent = ""; out.replaceChildren(h("div", { class: "muted" }, "…"));
+    try {
+      const r = await post("/api/ui/hunt", { values: ta.value.split(/[\s,;]+/).filter(Boolean), days: Number(daysSel.value) });
+      out.replaceChildren(...[
+        r.invalid && r.invalid.length ? h("div", { class: "card muted" }, t("invalidValues") + ": ", h("span", { class: "mono" }, r.invalid.join("  "))) : null,
+        h("div", { class: "tablewrap mt" }, h("table", null,
+          h("thead", null, h("tr", null, ["", t("total"), t("seenOn"), t("firstSeen"), t("lastSeenShort")].map((x) => h("th", null, x)))),
+          h("tbody", null, r.results.map((x) => h("tr", null,
+            h("td", { class: "mono" }, h("a", { href: pivotHref(x.kind, x.value) }, x.value), x.intel ? [" ", h("span", { class: "pill warn" }, x.intel)] : null),
+            h("td", null, x.count ? h("strong", null, x.count) : h("span", { class: "muted" }, t("notFound"))),
+            h("td", null, h("div", { class: "flex" }, Object.entries(x.hosts).map(([k, n]) => h("span", { class: "chip" }, k + " " + n)))),
+            h("td", null, x.count ? abs(x.first) : ""), h("td", null, x.count ? abs(x.last) : ""))))))].filter(Boolean));
+    } catch (x) { out.replaceChildren(); err.textContent = x.message; }
+  } }, h("div", { class: "muted" }, t("huntHint")), ta, h("div", { class: "inline" }, h("label", null, t("window"), daysSel), h("button", { class: "btn", type: "submit" }, t("huntRun"))), err);
+  mount(shell("hunt", h("h1", null, t("hunt")), can("analyst") ? form : h("div", { class: "card muted" }, "analyst"), out));
+}
+
+const fmtDur = (a, b) => { const s = Math.max(0, Math.round((new Date(b) - new Date(a)) / 1000)); return s < 3600 ? Math.floor(s / 60) + " min" : Math.floor(s / 3600) + " h " + Math.floor((s % 3600) / 60) + " min"; };
+const sessionHref = (x) => "#/session?" + new URLSearchParams({ agent: x.agent, pid: x.sshd_pid, start: x.start });
+
+async function sessionsView(params) {
+  const days = params.get("days") || "7";
+  const agent = params.get("agent") || "";
+  const r = await api("/api/ui/sessions?" + new URLSearchParams({ days, agent }));
+  const daysSel = h("select", { onchange: () => { location.hash = "#/sessions?" + new URLSearchParams({ days: daysSel.value, agent }); } },
+    [1, 7, 30, 90].map((n) => h("option", { value: n, selected: String(n) === days }, t("days30").replace("{n}", n))));
+  mount(shell("sessions", h("h1", null, t("sessions")),
+    h("div", { class: "card" }, h("div", { class: "inline" }, h("label", null, t("window"), daysSel))),
+    r.sessions.length ? h("div", { class: "tablewrap mt" }, h("table", null,
+      h("thead", null, h("tr", null, [t("started"), t("host"), t("user"), "IP", t("duration"), t("commands"), t("sudoShort"), t("filesShort"), t("alerts")].map((x) => h("th", null, x)))),
+      h("tbody", null, r.sessions.map((x) => h("tr", { class: "click", onclick: () => { location.hash = sessionHref(x); } },
+        h("td", { class: "nowrap" }, h("a", { href: sessionHref(x) }, abs(x.start))),
+        h("td", null, x.host),
+        h("td", null, h("a", { href: pivotHref("user", x.user) }, x.user), x.key ? h("div", { class: "muted small" }, x.key) : null),
+        h("td", { class: "mono" }, h("a", { href: pivotHref("ip", x.ip) }, x.ip)),
+        h("td", { class: "nowrap" }, x.end ? fmtDur(x.start, x.end) : h("span", { class: "chip" }, h("span", { class: "dot online" }), t("stillOpen"))),
+        h("td", null, x.commands + (x.dropped ? "+" : "")), h("td", null, x.sudo || ""), h("td", null, x.files || ""),
+        h("td", null, x.alerts ? h("span", { class: "sev high" }, x.alerts) : "")))))) : h("div", { class: "card empty mt" }, t("noSessions"))));
+}
+
+async function sessionView(params) {
+  const r = await api("/api/ui/session?" + new URLSearchParams({ agent: params.get("agent"), pid: params.get("pid"), start: params.get("start") }));
+  const x = r.session;
+  const items = [
+    ...r.events.map((e) => ({ ts: e.event.ts || e.time, e })),
+    ...r.alerts.map((a) => ({ ts: a.created, a })),
+  ].sort((a, b) => new Date(a.ts) - new Date(b.ts));
+  const line = (it) => {
+    if (it.a) return h("a", { class: "row tl-row", href: "#/alerts/" + it.a.id }, h("span", { class: "tl-time mono" }, hhmmss(it.ts)),
+      h("div", null, h("div", { class: "title" }, sevChip(it.a.severity), " ", it.a.title)), h("span", null));
+    const e = it.e.event, d = e.data || {};
+    let title, sub;
+    if (e.type === "session.exec") { title = h("span", { class: "mono cmd" }, (d.uid === 0 ? "# " : "$ ") + (d.cmdline || d.exe)); sub = d.cwd || ""; }
+    else if (e.type === "sudo.command") { title = h("span", { class: "mono cmd" }, "sudo " + (d.as && d.as !== "root" ? "-u " + d.as + " " : "") + d.command); sub = d.cwd || ""; }
+    else { title = h("span", { class: "mono" }, e.type + " " + (d.path || "")); sub = t("filesDuring"); }
+    return h("div", { class: "row tl-row" }, h("span", { class: "tl-time mono" }, hhmmss(it.ts)),
+      h("div", null, h("div", { class: "title" }, title), sub ? h("div", { class: "sub mono" }, sub) : null, diffBlock(d)), h("span", null));
+  };
+  mount(shell("sessions",
+    h("div", { class: "crumbs" }, h("a", { href: "#/sessions" }, t("sessions")), " / ", x.user),
+    h("h1", null, t("sessionOf").replace("{user}", x.user) + " · " + x.host),
+    h("div", { class: "card" }, h("dl", { class: "kv" },
+      h("dt", null, t("user")), h("dd", null, h("a", { href: pivotHref("user", x.user) }, x.user)),
+      h("dt", null, "IP"), h("dd", { class: "mono" }, h("a", { href: pivotHref("ip", x.ip) }, x.ip)),
+      h("dt", null, t("method")), h("dd", null, x.method + (x.key ? " · " + x.key : "")),
+      h("dt", null, t("started")), h("dd", null, abs(x.start)),
+      h("dt", null, t("ended")), h("dd", null, x.end ? abs(x.end) + " (" + fmtDur(x.start, x.end) + ")" : t("stillOpen")),
+      h("dt", null, t("timeline")), h("dd", null, h("a", { href: tlHref(x.agent, x.start, { minutes: 60 }) }, "± 60 min")))),
+    x.dropped ? h("div", { class: "card muted mt" }, t("dropped").replace("{n}", x.dropped)) : null,
+    h("div", { class: "list timeline mt" }, items.length ? items.map(line) : h("div", { class: "card empty" }, t("noEvents")))));
 }
 
 async function canariesView() {
@@ -1307,7 +1443,7 @@ async function pivotView(kind, value, params) {
         h("dt", null, t("eventTypes")), h("dd", { class: "flex" }, counts(d.types)))),
     d.alerts.length ? [h("h2", null, t("alerts")), h("div", { class: "list" }, d.alerts.map(alertRow))] : null,
     h("h2", null, t("events")),
-    d.records.length ? h("div", { class: "tablewrap" }, h("table", null,
+    d.records.length ? h("div", { class: "tablewrap" }, h("table", { class: "evtable" },
       h("thead", null, h("tr", null, [t("time"), t("host"), t("type"), t("details")].map((x) => h("th", null, x)))),
       h("tbody", null, d.records.map((r) => h("tr", null,
         h("td", { class: "nowrap" }, h("a", { href: tlHref(r.agent, r.event.ts || r.time), title: t("timeline") }, new Date(r.event.ts || r.time).toLocaleString(lang))),
@@ -1431,6 +1567,9 @@ async function render() {
     else if (parts[0] === "hosts" && parts[1]) await hostView(parts[1]);
     else if (parts[0] === "events") await eventsView(params);
     else if (parts[0] === "timeline") await timelineView(params);
+    else if (parts[0] === "sessions") await sessionsView(params);
+    else if (parts[0] === "session") await sessionView(params);
+    else if (parts[0] === "hunt") await huntView();
     else if (parts[0] === "pivot" && parts[2]) await pivotView(parts[1], decodeURIComponent(parts.slice(2).join("/")), params);
     else if (parts[0] === "snapshot" && parts[1]) await snapshotView(parts[1], params);
     else if (parts[0] === "canaries") await canariesView();

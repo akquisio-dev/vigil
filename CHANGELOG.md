@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.15.0
+
+- Search: a query language for the stored log (`type:process.* uid:0 exe:/tmp/* -user:root count:>10`), saved searches, export as CSV and JSON lines (audited).
+- Retro hunt: when a threat list gains entries, the last 30 days of connections, SSH logins and web requests are searched for them (`net.retro_hit`). Hunt page for pasted addresses, users and hashes.
+- SSH sessions: logins with duration, the commands typed (also in tmux and screen), sudo commands and files changed meanwhile. Agent option `sessions`.
+- Unusual behaviour: first runs of unpackaged programs (`process.rare`), new children of services (`process.rare_child`) after a learning period, logins at a user's unusual hour (`ssh.rare_time`), unusual outbound traffic per hour (`net.volume_spike`). Agent options `rarity`, `rare_learn_days`, `rare_parents`, `volume`.
+- Event tables stack on narrow screens.
+
 ## v0.14.0
 
 - Timeline per alert and host: everything the host reported around the event behind an alert, placed by the host's own time, with filters by kind and a movable window.

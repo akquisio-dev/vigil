@@ -260,8 +260,9 @@ func (a *Agent) rareExec(e *ExecInfo) {
 	if !on(a.cfg.Rarity) || a.rare == nil || e.Exe == "" || e.Deleted || strings.HasPrefix(e.Exe, "/memfd:") {
 		return
 	}
-	// Programs inside containers have paths of their own image.
-	if e.MntNS != "" && hostMntNS != "" && e.MntNS != hostMntNS {
+	// Programs inside containers have paths of their own image; runc
+	// starts each container from a path inside the new container.
+	if e.MntNS != "" && hostMntNS != "" && e.MntNS != hostMntNS || strings.HasPrefix(e.Comm, "runc") || strings.HasPrefix(e.ParentComm, "runc") {
 		return
 	}
 	for _, d := range tmpDirs {

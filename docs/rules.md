@@ -2,7 +2,7 @@
 
 # Detection rules
 
-vigil ships 86 rules. Every alert carries the rule id, so an alert can be looked up here.
+vigil ships 91 rules. Every alert carries the rule id, so an alert can be looked up here.
 
 Severity decides who is woken up: each notifier has a `min_severity`, `high` by default.
 
@@ -40,6 +40,7 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 | [`log.spoofed`](#log-spoofed) | high | [T1070](https://attack.mitre.org/techniques/T1070/) |
 | [`net.blocklisted`](#net-blocklisted) | high | [T1071](https://attack.mitre.org/techniques/T1071/) |
 | [`net.miner_pool`](#net-miner_pool) | high | [T1496](https://attack.mitre.org/techniques/T1496/) |
+| [`net.retro_hit`](#net-retro_hit) | high | [T1071](https://attack.mitre.org/techniques/T1071/) |
 | [`net.service_outbound`](#net-service_outbound) | high | [T1572](https://attack.mitre.org/techniques/T1572/) |
 | [`notify.failed`](#notify-failed) | high |  |
 | [`port.docker`](#port-docker) | high |  |
@@ -70,11 +71,13 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 | [`integrity.unowned`](#integrity-unowned) | medium | [T1554](https://attack.mitre.org/techniques/T1554/) |
 | [`kernel.tainted`](#kernel-tainted) | medium | [T1014](https://attack.mitre.org/techniques/T1014/) |
 | [`net.tor`](#net-tor) | medium | [T1090.003](https://attack.mitre.org/techniques/T1090/003/) |
+| [`net.volume_spike`](#net-volume_spike) | medium | [T1048](https://attack.mitre.org/techniques/T1048/) |
 | [`port.public`](#port-public) | medium |  |
 | [`posture.aslr`](#posture-aslr) | medium |  |
 | [`posture.firewall`](#posture-firewall) | medium |  |
 | [`posture.ssh_password`](#posture-ssh_password) | medium | [T1110](https://attack.mitre.org/techniques/T1110/) |
 | [`process.decode_exec`](#process-decode_exec) | medium | [T1140](https://attack.mitre.org/techniques/T1140/) |
+| [`process.rare_child`](#process-rare_child) | medium | [T1059](https://attack.mitre.org/techniques/T1059/) |
 | [`process.tmp_exec`](#process-tmp_exec) | medium | [T1204.002](https://attack.mitre.org/techniques/T1204/002/) |
 | [`ssh.new_source`](#ssh-new_source) | medium | [T1078](https://attack.mitre.org/techniques/T1078/) |
 | [`tls.expiring`](#tls-expiring) | medium |  |
@@ -87,9 +90,11 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 | [`port.local`](#port-local) | low |  |
 | [`posture.mac`](#posture-mac) | low |  |
 | [`posture.sysctl`](#posture-sysctl) | low |  |
+| [`process.rare`](#process-rare) | low | [T1204.002](https://attack.mitre.org/techniques/T1204/002/) |
 | [`process.rate_limited`](#process-rate_limited) | low |  |
 | [`ssh.bruteforce`](#ssh-bruteforce) | low | [T1110](https://attack.mitre.org/techniques/T1110/) |
 | [`ssh.key_removed`](#ssh-key_removed) | low |  |
+| [`ssh.rare_time`](#ssh-rare_time) | low | [T1078](https://attack.mitre.org/techniques/T1078/) |
 | [`updates.disabled`](#updates-disabled) | low |  |
 | [`updates.lists_stale`](#updates-lists_stale) | low |  |
 | [`updates.reboot_pending`](#updates-reboot_pending) | low |  |
@@ -168,6 +173,18 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 **Known false positives:** Offboarding, key rotation.
 
 **What to do:** None, unless nobody removed it; then someone may be cleaning up after themselves.
+
+### `ssh.rare_time` {#ssh-rare_time}
+
+**Severity:** low · **ATT&CK:** [T1078](https://attack.mitre.org/techniques/T1078/)
+
+**Alert:** `{user} logged in at {hour}:00 UTC, an hour without logins in {logins} before ({ip})`
+
+**Fires when:** A user logged in at an hour of the day (UTC) with no logins in the hour before, at, or after it among at least 20 earlier logins. Stolen keys are often used at the attacker's time of day.
+
+**Known false positives:** Night shifts, travel, an incident.
+
+**What to do:** Ask the person. Check the source address on its pivot page and the session's commands.
 
 ## Accounts
 
@@ -453,6 +470,18 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 
 **What to do:** Decode the payload from the command line and check what it does.
 
+### `process.rare_child` {#process-rare_child}
+
+**Severity:** medium · **ATT&CK:** [T1059](https://attack.mitre.org/techniques/T1059/)
+
+**Alert:** `{parent} started {exe} for the first time (uid {uid})`
+
+**Fires when:** After the learning period, a web server, database or application runtime (nginx, Apache, PHP-FPM, MySQL, PostgreSQL, Redis, node, java, python, srcds and those in `rare_parents`) started a program it never started before. A taken over web application shows up this way before it does anything else.
+
+**Known false positives:** A new feature of the application that runs a tool, a deployment.
+
+**What to do:** Look at the command line and the timeline: what did the service receive just before (web log), what did the child do after.
+
 ### `process.tmp_exec` {#process-tmp_exec}
 
 **Severity:** medium · **ATT&CK:** [T1204.002](https://attack.mitre.org/techniques/T1204/002/)
@@ -464,6 +493,18 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 **Known false positives:** Build tools that run test binaries from `/tmp` (for example `go test`), installers. Suppress them per host with a reason.
 
 **What to do:** Check the file (`sha256sum`, `strings`), its owner and how it got there.
+
+### `process.rare` {#process-rare}
+
+**Severity:** low · **ATT&CK:** [T1204.002](https://attack.mitre.org/techniques/T1204/002/)
+
+**Alert:** `First run of {exe} on this host, no package installed it (started by {parent})`
+
+**Fires when:** After the learning period (`rare_learn_days`, default 7), a program ran on this host for the first time, and no package installed it. Programs in containers, in temp directories (`process.tmp_exec`) and from memory (`process.memfd_exec`) are left to their own rules.
+
+**Known false positives:** Software installed by hand, programs built on the host, new releases of tools in `/opt` or a home directory.
+
+**What to do:** Check where the program came from (`ls -l`, `sha256sum`, the pivot page of its hash) and who started it (the timeline around the alert).
 
 ### `process.rate_limited` {#process-rate_limited}
 
@@ -627,6 +668,18 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 
 **What to do:** Check the process; look for `process.miner` alerts on the same host.
 
+### `net.retro_hit` {#net-retro_hit}
+
+**Severity:** high · **ATT&CK:** [T1071](https://attack.mitre.org/techniques/T1071/)
+
+**Alert:** `{process} talked to {ip} on {when}, now listed by {list}`
+
+**Fires when:** A threat list now names an address that a host talked to (or that logged in, or sent web requests) in the last 30 days, before it was listed. Each address and list is reported once. Needs `threat_intel`.
+
+**Known false positives:** Addresses of shared hosting or cloud providers that were listed for someone else later.
+
+**What to do:** Open the event behind the alert in the timeline: which process, what happened around it, and whether the host still talks to that address.
+
 ### `net.service_outbound` {#net-service_outbound}
 
 **Severity:** high · **ATT&CK:** [T1572](https://attack.mitre.org/techniques/T1572/)
@@ -674,6 +727,18 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 **Known false positives:** Hosts that run Tor or talk to services through it on purpose.
 
 **What to do:** Check the process. Suppress for hosts where this is expected.
+
+### `net.volume_spike` {#net-volume_spike}
+
+**Severity:** medium · **ATT&CK:** [T1048](https://attack.mitre.org/techniques/T1048/)
+
+**Alert:** `{sent} sent in one hour, usually at most {usual}`
+
+**Fires when:** A host sent more than 1 GB in one hour, three times more than in 95 % of the hours of the last two weeks and more than ever in them (needs three days of history). Data theft and a host used for attacks or as a file share look like this.
+
+**Known false positives:** Backups to another machine, large deployments, a popular download.
+
+**What to do:** Find who sent it: outbound connections in the timeline of that hour, the processes in an evidence snapshot.
 
 ### `web.login_bruteforce` {#web-login_bruteforce}
 

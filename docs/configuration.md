@@ -42,6 +42,11 @@ the defaults below.
 | `backups` | none | backup locations to watch, see below |
 | `secrets` | true | look for private keys, tokens and passwords in files every user can read (daily) |
 | `secret_roots` | `/etc`, `/home`, `/root`, `/srv`, `/opt`, `/var/www`, `/var/backups`, `/var/lib`, `/tmp`, `/var/tmp` | replaces the directories searched for exposed secrets |
+| `sessions` | true | record commands typed in SSH sessions, see [Operations](operations.md#ssh-sessions) |
+| `rarity` | true | report new programs and new children of services after the learning period |
+| `rare_learn_days` | 7 | learning period for `rarity` |
+| `rare_parents` | none | more process names whose children are learned |
+| `volume` | true | report bytes sent and received per hour |
 | `forensics` | true | take evidence snapshots (read only), see [Operations](operations.md#investigating) |
 | `quarantine` | false | also copy the suspect program into `state_dir/quarantine` (root only, 30 days, 512 MB at most) |
 | `packages` | true | send the installed package list to the server for `vuln_lookup` |

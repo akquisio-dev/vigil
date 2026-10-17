@@ -182,3 +182,10 @@ them runs arbitrary commands. Hosts where this risk is not acceptable leave
 - Change contents are only as old as the agent's copy of the file. Lines the
   redaction does not recognise as secrets are sent as they are; keep secrets
   out of the watched files or turn the file out of the watch list.
+- Session commands are what was started from the session's shell; what a
+  script started further down is not listed, and a session older than the
+  agent's start is not tied to its commands. Someone with root in the
+  session can detach a process from both the parent chain and the audit
+  session.
+- Rarity learns what runs during the first seven days. Anything an attacker
+  already ran then counts as normal; the other rules still apply to it.

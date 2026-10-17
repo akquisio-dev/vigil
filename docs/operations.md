@@ -55,6 +55,53 @@ sent. The snapshot's own SHA-256 is shown for reference in reports.
 Viewers see the timeline and pivot pages without change contents and
 snapshot details; those need the analyst role.
 
+### Searching the log
+
+The query box on the events page searches the stored log of all hosts (up
+to the retention). All conditions must hold:
+
+| Condition | Meaning |
+|---|---|
+| `type:process.*` | event type, `*` as wildcard |
+| `host:web`, `agent:<id>` | host name or agent id |
+| `uid:0`, `exe:/tmp/*`, `signals:cmd_miner` | a field of the event (lists match any element) |
+| `target.exe:/usr/*` | a nested field |
+| `count:>10`, `port:<1024` | numbers compared with `>`, `<`, `>=`, `<=` |
+| `-user:root` | must not hold |
+| `curl`, `"two words"` | text anywhere in the event, any case |
+
+Analysts can save queries for everyone. Results export as CSV (formulas
+neutralised) or JSON lines, up to 5000 records; every export is written to
+the audit log.
+
+### Hunting
+
+When a threat list (`threat_intel`) gains entries, the server looks through
+the last 30 days of outbound connections, SSH logins and web requests for
+them and raises `net.retro_hit` once per address and list. The hunt page
+does the same on demand for a pasted list of addresses, user names and
+SHA-256 hashes, over up to the whole retention.
+
+### SSH sessions
+
+The sessions page lists SSH logins with their source, key, duration, and
+what happened in them: the commands typed (programs started by a shell, sudo
+or su inside the session, also inside tmux or screen), `sudo` commands, and
+watched files changed while the session was open (changed while open, not
+necessarily by it). Up to 300 commands per session and hour are recorded;
+command lines lose passwords and tokens before they leave the host. Commands
+are tied to sessions from the moment the agent saw the login; sessions that
+were open before the agent started are not tracked.
+
+### Unusual behaviour
+
+After a learning period of seven days (`rare_learn_days`) the agent reports
+programs that never ran on the host before and no package installed
+(`process.rare`), and programs a web server, database or runtime never
+started before (`process.rare_child`). The server learns when each user
+logs in (`ssh.rare_time`) and how much each host sends per hour
+(`net.volume_spike`).
+
 ## Response actions
 
 On an alert, admins can contain an attack on the host directly, if the host's

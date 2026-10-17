@@ -161,10 +161,12 @@ func entities(ev proto.Event) []entity {
 	return out
 }
 
+// agentNames maps agent ids to host names; records of the server itself
+// (no agent) are named "server".
 func (s *Server) agentNames() map[string]string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	names := map[string]string{}
+	names := map[string]string{"": "server"}
 	for id, a := range s.state.Agents {
 		names[id] = a.Name
 	}
@@ -192,7 +194,11 @@ func (s *Server) view(rec Record, names map[string]string, role string) viewReco
 		}
 		rec.Event.Data = cp
 	}
-	return viewRecord{Record: rec, Host: names[rec.Agent], Entities: entities(rec.Event)}
+	v := viewRecord{Record: rec, Entities: entities(rec.Event)}
+	if rec.Agent != "" {
+		v.Host = names[rec.Agent] // records of the server show their source and actor instead
+	}
+	return v
 }
 
 func (s *Server) roleFor(sess *session) string {

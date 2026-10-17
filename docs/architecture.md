@@ -44,6 +44,9 @@ socket and runs only these external programs: `journalctl`, `iptables-save`,
 | Certificates | Let's Encrypt `live/*/fullchain.pem`, `ssl_certificate` in nginx and `SSLCertificateFile` in Apache configuration, `tls_certs` | 6 hours |
 | Backups | newest file of each `backups` location | 6 hours |
 | Exposed secrets | world-readable files below `secret_roots`, entering only directories every user can enter; files up to 512 KB, vendored code and package data skipped, own list in `secrets.json` | daily |
+| SSH sessions | programs whose parent is a shell, sudo or su and whose parent chain or audit session (`/proc/<pid>/sessionid`) leads to the sshd process of a login; 300 per session and hour | continuous |
+| Rarity | every program start (host mount namespace only), own lists in `rare.json`; package check against `/var/lib/dpkg/info/*.list` for new programs | continuous, after 7 days of learning |
+| Traffic volume | `/proc/net/dev`, physical and VPN interfaces | hourly |
 | Change contents | last copy of small text files from the watch list (not `shadow`, `gshadow`, SSH keys) in `content/`, at most 64 KB each and 8 MB in all; a change carries the changed lines with two lines of context, secrets replaced, at most 8 KB | with the file scan |
 | Evidence snapshots | `/proc` (processes, the suspect's program, parents, open files, mapped files, names of its environment variables), `/proc/net`, `/run/utmp`, `/proc/modules`, `journalctl -n 60`; on the agent's strongest signals at once, otherwise when the server asks; at most 12 per hour | on demand |
 | Packages | source packages and versions from `/var/lib/dpkg/status`, sent to the server for `vuln_lookup` | on change, at least daily |
@@ -157,6 +160,10 @@ can use. Fields in brackets are only present when known.
 | `sudo.command` | `user`, `tty`, `cwd`, `as`, `command` |
 | `ssh.key_added`, `ssh.key_removed` | `file`, `fingerprint`, `key_type`, `comment` |
 | `file.added`, `file.changed`, `file.removed` | `path`, `category`, (`hash`, `old_hash`, `mode`, `old_mode`, `uid`, `old_uid`, `size`, `diff`, `diff_truncated`, `diff_note`) |
+| `session.exec` | `sshd_pid`, `user`, `ip`, `pid`, `ppid`, `uid`, `exe`, `cmdline`, `cwd`, `parent_comm` |
+| `session.dropped` | `sshd_pid`, `user`, `count` |
+| `process.rare`, `process.rare_child` | `pid`, `uid`, `exe`, `comm`, `cmdline`, `parent_comm`, `parent_exe`, `cwd` |
+| `net.volume` | `rx_bytes`, `tx_bytes`, `seconds` |
 | `forensics.snapshot` | `trigger`, `pid`, `hostname`, `processes`, `connections`, `sessions`, `modules`, `journal`, `seconds`, `sha256`, (`target`, `request`, `alert`, `error`, `processes_truncated`, `connections_truncated`) |
 | `user.added`, `user.removed` | `user`, `uid` |
 | `user.uid_changed` | `user`, `uid`, `old_uid` |
