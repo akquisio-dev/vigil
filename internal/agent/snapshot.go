@@ -297,7 +297,7 @@ var envName = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]{0,63}$`)
 
 // targetDetail describes the suspect process. The environment is reduced
 // to variable names (values hold secrets), LD_PRELOAD excepted.
-func targetDetail(pid int) map[string]any {
+func targetDetail(pid int, qdir string) map[string]any {
 	dir := "/proc/" + strconv.Itoa(pid)
 	p, ok := readProc(pid)
 	if !ok {
@@ -311,14 +311,42 @@ func targetDetail(pid int) map[string]any {
 		t["started"] = st.ModTime().UTC()
 	}
 	// Hash the program through /proc, which works for deleted files and
-	// memfd programs too.
+	// memfd programs too; with quarantine on, copy it in the same pass,
+	// before anything else, while the process still runs.
 	if f, err := os.Open(dir + "/exe"); err == nil {
 		h := sha256.New()
-		if n, err := io.Copy(h, io.LimitReader(f, quarantineMax)); err == nil {
-			t["exe_sha256"] = hex.EncodeToString(h.Sum(nil))
-			t["exe_size"] = n
+		var w io.Writer = h
+		var tmp *os.File
+		if qdir != "" {
+			if os.MkdirAll(qdir, 0o700) == nil {
+				tmp, err = os.CreateTemp(qdir, ".copy-*")
+				if err == nil {
+					w = io.MultiWriter(h, tmp)
+				} else {
+					t["quarantine_error"] = err.Error()
+				}
+			}
 		}
+		n, err := io.Copy(w, io.LimitReader(f, quarantineMax+1))
 		f.Close()
+		if err == nil {
+			sha := hex.EncodeToString(h.Sum(nil))
+			t["exe_sha256"], t["exe_size"] = sha, n
+			if tmp != nil {
+				t["quarantined"], t["quarantine_error"] = keepQuarantine(qdir, tmp, sha, n)
+				if t["quarantined"] == "" {
+					delete(t, "quarantined")
+				}
+				if t["quarantine_error"] == "" {
+					delete(t, "quarantine_error")
+				}
+				tmp = nil
+			}
+		}
+		if tmp != nil {
+			tmp.Close()
+			os.Remove(tmp.Name())
+		}
 	}
 	var anc []map[string]any
 	for cur, i := p.PPID, 0; cur > 0 && i < 12; i++ {
@@ -373,61 +401,45 @@ func targetDetail(pid int) map[string]any {
 	return t
 }
 
-// quarantine copies the program of pid into the state directory, readable
-// by root only, named by its hash. Old copies expire; the total is capped.
-func (a *Agent) quarantine(pid int, sha string) (string, string) {
-	if a.cfg.Quarantine == nil || !*a.cfg.Quarantine || sha == "" {
-		return "", ""
+// keepQuarantine finishes a copy made while hashing: it becomes
+// quarantine/<sha256>, readable by root only. Copies older than 30 days go,
+// and the directory stays below its size cap.
+func keepQuarantine(dir string, tmp *os.File, sha string, size int64) (string, string) {
+	name := tmp.Name()
+	tmp.Close()
+	fail := func(why string) (string, string) {
+		os.Remove(name)
+		return "", why
 	}
-	dir := filepath.Join(a.cfg.StateDir, "quarantine")
-	if err := os.MkdirAll(dir, 0o700); err != nil {
-		return "", err.Error()
+	if size > quarantineMax {
+		return fail("program larger than 64 MB")
 	}
 	dst := filepath.Join(dir, sha)
 	if _, err := os.Stat(dst); err == nil {
+		os.Remove(name)
 		return dst, ""
 	}
 	entries, _ := os.ReadDir(dir)
 	var total int64
 	for _, e := range entries {
-		if fi, err := e.Info(); err == nil {
-			if time.Since(fi.ModTime()) > quarantineMaxAge {
-				os.Remove(filepath.Join(dir, e.Name()))
-				continue
-			}
-			total += fi.Size()
+		fi, err := e.Info()
+		if err != nil || strings.HasPrefix(e.Name(), ".copy-") {
+			continue
 		}
+		if time.Since(fi.ModTime()) > quarantineMaxAge {
+			os.Remove(filepath.Join(dir, e.Name()))
+			continue
+		}
+		total += fi.Size()
 	}
-	src, err := os.Open("/proc/" + strconv.Itoa(pid) + "/exe")
-	if err != nil {
-		return "", err.Error()
+	if total+size > quarantineTotal {
+		return fail("quarantine full (512 MB)")
 	}
-	defer src.Close()
-	fi, err := src.Stat()
-	if err != nil {
-		return "", err.Error()
+	if err := os.Chmod(name, 0o400); err != nil {
+		return fail(err.Error())
 	}
-	if fi.Size() > quarantineMax || total+fi.Size() > quarantineTotal {
-		return "", "quarantine full or program too large"
-	}
-	tmp := dst + ".tmp"
-	out, err := os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o400)
-	if err != nil {
-		return "", err.Error()
-	}
-	h := sha256.New()
-	_, err = io.Copy(io.MultiWriter(out, h), io.LimitReader(src, quarantineMax))
-	out.Close()
-	if err == nil && hex.EncodeToString(h.Sum(nil)) != sha {
-		err = errString("program changed while it was copied")
-	}
-	if err != nil {
-		os.Remove(tmp)
-		return "", err.Error()
-	}
-	if err := os.Rename(tmp, dst); err != nil {
-		os.Remove(tmp)
-		return "", err.Error()
+	if err := os.Rename(name, dst); err != nil {
+		return fail(err.Error())
 	}
 	return dst, ""
 }
@@ -455,7 +467,11 @@ func (a *Agent) snapshot(pid int, trigger, request, alert string) {
 	// The suspect first, while it still runs.
 	var target map[string]any
 	if pid > 0 {
-		target = targetDetail(pid)
+		qdir := ""
+		if a.cfg.Quarantine != nil && *a.cfg.Quarantine {
+			qdir = filepath.Join(a.cfg.StateDir, "quarantine")
+		}
+		target = targetDetail(pid, qdir)
 	}
 	owners := socketInodes()
 	conns := listConns(owners)
@@ -476,13 +492,6 @@ func (a *Agent) snapshot(pid int, trigger, request, alert string) {
 				}
 			}
 			target["children"] = children
-			if sha, _ := target["exe_sha256"].(string); sha != "" {
-				if path, qerr := a.quarantine(pid, sha); path != "" {
-					target["quarantined"] = path
-				} else if qerr != "" {
-					target["quarantine_error"] = qerr
-				}
-			}
 		}
 	}
 	host, _ := os.Hostname()

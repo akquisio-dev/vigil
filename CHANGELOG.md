@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.14.0
+
+- Timeline per alert and host: everything the host reported around the event behind an alert, placed by the host's own time, with filters by kind and a movable window.
+- Pivot pages for addresses, users and SHA-256 hashes: every event and alert naming them across hosts and the whole retention, with first and last sighting and threat list hits. Values in alerts and events link to them.
+- Changes to watched configuration files carry the changed lines (sudoers, sshd, cron, systemd, PAM, shell init, `passwd`); secrets are replaced, password hashes and SSH keys are never copied.
+- Evidence snapshots: process list, sockets, logged-in users, modules, journal tail and the suspect process in detail, taken by the agent at once for its strongest signals and on request for other high and critical alerts. Optional quarantine copy of the program. Agent options `forensics`, `quarantine`.
+- The alert page shows the events behind the alert with their changes, and the evidence taken for it.
+- Fix: the alert page failed for admins on alerts without suggested response actions.
+
 ## v0.13.1
 
 - Fix: when hosts on two releases sent their package lists at the same time, the second release got no vulnerability data until the next hourly refresh.

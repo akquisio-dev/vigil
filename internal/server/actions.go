@@ -101,7 +101,11 @@ func (s *Server) handleAlertActions(w http.ResponseWriter, r *http.Request, sess
 	if a := s.state.Agents[al.Agent]; a != nil {
 		allowed = a.ResponseTypes
 	}
-	writeJSON(w, map[string]any{"suggested": s.suggestActions(al), "allowed": allowed})
+	suggested := s.suggestActions(al)
+	if suggested == nil {
+		suggested = []proto.Action{}
+	}
+	writeJSON(w, map[string]any{"suggested": suggested, "allowed": allowed})
 }
 
 func (s *Server) handleRespond(w http.ResponseWriter, r *http.Request, sess *session) {

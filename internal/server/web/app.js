@@ -72,6 +72,18 @@ const T = {
     vulns: "Vulnerabilities", fixable: "fixable", unfixed: "no fix yet", exploitedNow: "Exploited in the wild", cve: "CVE",
     pkg: "Package", installed: "Installed", fixedIn: "Fixed in", noVulns: "No fixable vulnerability",
     vulnPending: "No data yet", proOnly: "Ubuntu Pro",
+    timeline: "Timeline", window: "Window", earlier: "Earlier", later: "Later", anchor: "moment of the alert",
+    allKinds: "All", kAuth: "Logins", kProc: "Processes", kFile: "Files", kNet: "Network", kKernel: "Kernel", kOther: "Other", kAlert: "Alerts",
+    receivedLate: "received", truncatedRows: "Only the first {n} events are shown.", noTimeline: "Nothing recorded in this window",
+    pivot: "Investigate", firstSeen: "First seen", lastSeenShort: "Last seen", seenOn: "Hosts", eventTypes: "Event types", total: "Events",
+    publicAddr: "public address", privateAddr: "private address", onList: "on list", days30: "last {n} days",
+    snapshots: "Evidence", takeSnapshot: "Secure evidence", snapshotAsked: "requested, the agent answers within a minute",
+    noSnapshots: "No snapshot yet", trigger: "Trigger", suspect: "Suspect process", parents: "Parents", children: "Children",
+    openFiles: "Open files", libraries: "Mapped files", envNames: "Environment (names only)", sockets: "Sockets",
+    sessions: "Logged in", connections: "Connections", processes: "Processes", modules: "Kernel modules", journal: "Last journal lines",
+    quarantined: "Quarantined copy", programHash: "Program SHA-256", gone: "Process had already exited",
+    snapshotHash: "Snapshot SHA-256", requestStatus: "Request", changeLines: "Changed lines", prevUnknown: "Previous content unknown (first change since the upgrade)",
+    causingEvents: "Events behind this alert", truncatedDiff: "shortened",
   },
   de: {
     overview: "Lage", alerts: "Alarme", events: "Ereignisse", canaries: "Köder", settings: "Einstellungen",
@@ -141,6 +153,18 @@ const T = {
     vulns: "Schwachstellen", fixable: "behebbar", unfixed: "noch ohne Fix", exploitedNow: "Aktiv ausgenutzt", cve: "CVE",
     pkg: "Paket", installed: "Installiert", fixedIn: "Behoben in", noVulns: "Keine behebbare Schwachstelle",
     vulnPending: "Noch keine Daten", proOnly: "Ubuntu Pro",
+    timeline: "Zeitachse", window: "Zeitraum", earlier: "Früher", later: "Später", anchor: "Zeitpunkt des Alarms",
+    allKinds: "Alle", kAuth: "Anmeldungen", kProc: "Prozesse", kFile: "Dateien", kNet: "Netzwerk", kKernel: "Kernel", kOther: "Sonstiges", kAlert: "Alarme",
+    receivedLate: "empfangen", truncatedRows: "Nur die ersten {n} Ereignisse werden gezeigt.", noTimeline: "In diesem Zeitraum wurde nichts aufgezeichnet",
+    pivot: "Untersuchen", firstSeen: "Zuerst gesehen", lastSeenShort: "Zuletzt gesehen", seenOn: "Hosts", eventTypes: "Ereignistypen", total: "Ereignisse",
+    publicAddr: "öffentliche Adresse", privateAddr: "private Adresse", onList: "auf Liste", days30: "letzte {n} Tage",
+    snapshots: "Spuren", takeSnapshot: "Spuren sichern", snapshotAsked: "angefordert, der Agent antwortet innerhalb einer Minute",
+    noSnapshots: "Noch keine Sicherung", trigger: "Auslöser", suspect: "Verdächtiger Prozess", parents: "Eltern", children: "Kinder",
+    openFiles: "Offene Dateien", libraries: "Eingeblendete Dateien", envNames: "Umgebung (nur Namen)", sockets: "Sockets",
+    sessions: "Angemeldet", connections: "Verbindungen", processes: "Prozesse", modules: "Kernelmodule", journal: "Letzte Journal-Zeilen",
+    quarantined: "Kopie in Quarantäne", programHash: "Programm-SHA-256", gone: "Prozess war schon beendet",
+    snapshotHash: "SHA-256 der Sicherung", requestStatus: "Anforderung", changeLines: "Geänderte Zeilen", prevUnknown: "Vorheriger Inhalt unbekannt (erste Änderung seit dem Update)",
+    causingEvents: "Ereignisse hinter diesem Alarm", truncatedDiff: "gekürzt",
   },
 };
 
@@ -633,7 +657,7 @@ const actStatus = (st) => h("span", { class: "chip" }, h("span", { class: "dot "
 async function responseCard(a) {
   if (!can("admin") || !a.agent) return null;
   const r = await api("/api/ui/alerts/" + a.id + "/actions");
-  if (!r.suggested.length) return null;
+  if (!(r.suggested || []).length) return null;
   const out = h("div", { class: "muted" });
   return h("div", { class: "card mt" }, h("h3", null, t("response")),
     h("div", { class: "actions" }, r.suggested.map((s) => {
@@ -689,10 +713,11 @@ async function alertDetail(id) {
         h("dt", null, t("severity")), h("dd", null, sevChip(a.severity)),
         h("dt", null, t("host")), h("dd", null, a.agent ? h("a", { href: "#/hosts/" + a.agent }, a.host || a.agent) : "·"),
         h("dt", null, t("technique")), h("dd", null, a.technique ? h("a", { href: "https://attack.mitre.org/techniques/" + a.technique.replace(".", "/") + "/", target: "_blank", rel: "noopener noreferrer" }, a.technique) : "·"),
+        a.agent ? [h("dt", null, t("timeline")), h("dd", null, h("a", { href: tlHref(a.agent, a.created, { alert: a.id }) }, "± 30 min"))] : null,
         h("dt", null, t("count")), h("dd", null, a.count),
         h("dt", null, t("created")), h("dd", null, abs(a.created)),
         h("dt", null, t("updated")), h("dd", null, abs(a.updated)),
-        params.map(([k, v]) => [h("dt", null, k), h("dd", { class: "mono" }, v || "·")])),
+        params.map(([k, v]) => [h("dt", null, k), h("dd", { class: "mono" }, entityLink(k, v) || v || "·")])),
       !can("analyst") ? null : h("div", { class: "actions" },
         a.status === "open" ? h("button", { class: "btn", onclick: act("ack") }, t("ack")) : null,
         a.status !== "resolved" ? h("button", { class: "btn ghost", onclick: act("resolve") }, t("resolve")) : null,
@@ -702,7 +727,7 @@ async function alertDetail(id) {
           : a.agent ? h("button", { class: "btn ghost", onclick: async () => {
             const r = await post("/api/ui/incidents/new/create", { alert: a.id }); location.hash = "#/incidents/" + r.id;
           } }, icon("stack-2"), t("newIncident")) : null)),
-    box, await responseCard(a)));
+    box, await causingEvents(a), a.agent ? await snapshotsCard(a.agent, a.id) : null, await responseCard(a)));
 }
 
 async function hostView(id) {
@@ -770,6 +795,7 @@ async function hostView(id) {
             h("label", null, t("maintenance"), minutesSel), h("button", { class: "btn ghost", type: "submit" }, t("start"))),
         h("div", { class: "actions" },
           h("a", { class: "btn ghost", href: "#/events?agent=" + a.id }, t("events")),
+          h("a", { class: "btn ghost", href: tlHref(a.id, new Date().toISOString(), { minutes: 60 }) }, t("timeline")),
           h("a", { class: "btn ghost", href: "#/alerts" }, t("alerts")),
           h("button", { class: "btn danger", onclick: async () => { if (confirm(t("confirmDelete"))) { await post("/api/ui/agents/" + a.id + "/delete"); location.hash = "#/"; } } }, t("deleteHost"))))),
     a.updates ? h("div", { class: "card mt" }, h("h3", null, t("updates")), h("dl", { class: "kv" },
@@ -788,6 +814,7 @@ async function hostView(id) {
       actStatus(x.status),
       h("div", null, h("div", { class: "title" }, actLabel(x)), h("div", { class: "sub" }, [x.by, x.result].filter(Boolean).join("  ·  "))),
       h("div", { class: "meta" }, timeEl(x.created)))))] : null,
+    await snapshotsCard(a.id),
     selftestCard,
     h("h2", null, t("logins")),
     d.logins.length ? h("div", { class: "tablewrap" }, h("table", null,
@@ -808,10 +835,11 @@ async function eventsView(params) {
     const rows = await api("/api/ui/events?" + q);
     for (const r of rows) {
       tbody.append(h("tr", null,
-        h("td", { class: "nowrap" }, h("span", { title: abs(r.event.ts) }, new Date(r.event.ts).toLocaleString(lang))),
+        h("td", { class: "nowrap" }, r.agent ? h("a", { href: tlHref(r.agent, r.event.ts), title: t("timeline") }, new Date(r.event.ts).toLocaleString(lang))
+          : h("span", { title: abs(r.event.ts) }, new Date(r.event.ts).toLocaleString(lang))),
         h("td", null, r.host || r.source + (r.actor ? ":" + r.actor : "")),
         h("td", { class: "mono" }, r.event.type),
-        h("td", { class: "mono" }, summary(r.event.data))));
+        h("td", { class: "mono" }, dataLine(r.event.data), diffBlock(r.event.data))));
       before = r.seq;
     }
     more.hidden = rows.length < 200;
@@ -1135,6 +1163,255 @@ async function settingsView() {
       h("button", { class: "btn ghost right", onclick: logout }, icon("logout"), t("logout"))))));
 }
 
+// ---------- investigation ----------
+
+const pivotHref = (kind, value) => "#/pivot/" + kind + "/" + encodeURIComponent(value);
+const tlHref = (agent, at, extra = {}) => "#/timeline?" + new URLSearchParams({ agent, at, ...extra });
+const IP_RE = /^(\d{1,3}\.){3}\d{1,3}$|^[0-9a-f:]*:[0-9a-f:.]+$/i;
+
+// entityLink makes a parameter value clickable when it is something to pivot on.
+function entityLink(k, v) {
+  if (!v) return null;
+  if (["ip", "remote_ip", "addr", "source_ip"].includes(k) && IP_RE.test(v)) return h("a", { href: pivotHref("ip", v) }, v);
+  if (["sha256", "old_sha256", "exe_sha256", "hash"].includes(k) && /^[0-9a-f]{64}$/.test(v)) return h("a", { href: pivotHref("hash", v) }, v);
+  if (k === "user" && /^[A-Za-z0-9._@$-]{1,64}$/.test(v)) return h("a", { href: pivotHref("user", v) }, v);
+  return null;
+}
+
+// dataLine renders an event's data with pivotable values as links. Bulky
+// fields (diffs, snapshots) are left to their own views.
+function dataLine(data) {
+  if (!data) return "";
+  const skip = new Set(["ports", "diff", "processes", "connections", "journal", "target", "sessions", "modules", "checks", "certs", "backups", "packages"]);
+  const out = [];
+  for (const [k, v] of Object.entries(data)) {
+    if (skip.has(k)) continue;
+    const text = typeof v === "object" ? JSON.stringify(v) : String(v);
+    out.push(h("span", { class: "kvp" }, k + "=", entityLink(k, text) || text));
+  }
+  return out;
+}
+
+function diffBlock(data) {
+  if (!data) return null;
+  if (data.diff_note) return h("div", { class: "muted mt" }, t("prevUnknown"));
+  if (typeof data.diff !== "string") return null;
+  return h("details", { class: "diff", open: true }, h("summary", null, t("changeLines") + (data.diff_truncated ? " (" + t("truncatedDiff") + ")" : "")),
+    h("pre", null, data.diff.split("\n").filter((l) => l !== "").map((l) =>
+      h("span", { class: l[0] === "+" ? "add" : l[0] === "-" ? "del" : l.startsWith("@@") ? "hunk" : "" }, l + "\n"))));
+}
+
+function kindOf(type) {
+  const p = type.split(".")[0];
+  if (["ssh", "sudo", "user"].includes(p)) return "kAuth";
+  if (["process", "canary", "forensics"].includes(p)) return "kProc";
+  if (["file", "integrity", "secret"].includes(p)) return "kFile";
+  if (["net", "port", "web"].includes(p)) return "kNet";
+  if (p === "kernel") return "kKernel";
+  return "kOther";
+}
+
+const hhmmss = (ts) => new Date(ts).toLocaleTimeString(lang, { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+
+async function timelineView(params) {
+  const q = new URLSearchParams();
+  for (const k of ["agent", "at", "minutes", "alert"]) if (params.get(k)) q.set(k, params.get(k));
+  const d = await api("/api/ui/timeline?" + q);
+  const kinds = ["kAuth", "kProc", "kFile", "kNet", "kKernel", "kOther", "kAlert"];
+  const anchor = new Date(d.at).getTime();
+  const anchorSeqs = new Set(d.anchor_seqs || []);
+  const items = [
+    ...d.records.map((r) => ({ ts: r.event.ts || r.time, kind: kindOf(r.event.type), rec: r })),
+    ...d.alerts.map((a) => ({ ts: a.created, kind: "kAlert", alert: a })),
+  ].sort((a, b) => new Date(a.ts) - new Date(b.ts));
+  let active = "";
+  const list = h("div", { class: "list timeline" });
+  let markerDone = false;
+  const draw = () => {
+    list.replaceChildren();
+    markerDone = false;
+    const shown = items.filter((it) => !active || it.kind === active);
+    if (!shown.length) list.append(h("div", { class: "card empty" }, t("noTimeline")));
+    for (const it of shown) {
+      if (!markerDone && new Date(it.ts).getTime() >= anchor) {
+        list.append(h("div", { class: "tl-marker" }, hhmmss(d.at) + "  " + (params.get("alert") ? t("anchor") : "")));
+        markerDone = true;
+      }
+      if (it.alert) {
+        const a = it.alert;
+        list.append(h("a", { class: "row tl-row", href: "#/alerts/" + a.id },
+          h("span", { class: "tl-time mono" }, hhmmss(it.ts)),
+          h("div", null, h("div", { class: "title" }, sevChip(a.severity), " ", a.title), h("div", { class: "sub mono" }, a.rule)),
+          h("span", { class: "dot " + a.severity })));
+        continue;
+      }
+      const r = it.rec;
+      const late = r.time && r.event.ts && Math.abs(new Date(r.time) - new Date(r.event.ts)) > 60000;
+      list.append(h("div", { class: "row tl-row" + (anchorSeqs.has(r.seq) ? " tl-anchor" : "") },
+        h("span", { class: "tl-time mono" }, hhmmss(it.ts)),
+        h("div", null,
+          h("div", { class: "title mono" }, r.event.type,
+            r.event.type === "forensics.snapshot" ? [" ", h("a", { href: "#/snapshot/" + r.seq + "?at=" + encodeURIComponent(r.time) }, t("snapshots"))] : null),
+          h("div", { class: "sub mono" }, dataLine(r.event.data)),
+          late ? h("div", { class: "sub warn" }, t("receivedLate") + " " + abs(r.time)) : null,
+          diffBlock(r.event.data)),
+        h("span", { class: "tl-kind muted" }, t(it.kind))));
+    }
+    if (!markerDone) list.append(h("div", { class: "tl-marker" }, hhmmss(d.at) + "  " + (params.get("alert") ? t("anchor") : "")));
+  };
+  const chips = h("div", { class: "flex" }, ["", ...kinds].map((k) => {
+    const n = k ? items.filter((it) => it.kind === k).length : items.length;
+    if (k && !n) return null;
+    const b = h("button", { class: "btn small ghost" + (k === active ? " on" : ""), onclick: () => { active = k; chips.querySelectorAll("button").forEach((x) => x.classList.remove("on")); b.classList.add("on"); draw(); } },
+      (k ? t(k) : t("allKinds")) + " " + n);
+    return b;
+  }));
+  const shift = (mins) => tlHref(d.agent, new Date(anchor + mins * 60000).toISOString(), { minutes: d.minutes });
+  const minutesSel = h("select", { onchange: () => { location.hash = tlHref(d.agent, d.at, { minutes: minutesSel.value, ...(params.get("alert") ? { alert: params.get("alert") } : {}) }); } },
+    [15, 30, 60, 240, 720].map((m) => h("option", { value: m, selected: m === d.minutes }, "± " + (m < 60 ? m + " min" : m / 60 + " h"))));
+  mount(shell("events",
+    h("div", { class: "crumbs" }, h("a", { href: "#/hosts/" + d.agent }, d.host || d.agent), " / ", t("timeline")),
+    h("h1", null, t("timeline") + ": " + (d.host || d.agent)),
+    h("div", { class: "card" },
+      h("div", { class: "flex" },
+        h("span", { class: "muted" }, abs(d.from) + "  ·  " + abs(d.to)),
+        h("label", { class: "right" }, t("window"), " ", minutesSel),
+        h("a", { class: "btn small ghost", href: shift(-d.minutes) }, t("earlier")),
+        h("a", { class: "btn small ghost", href: shift(d.minutes) }, t("later"))),
+      h("div", { class: "mt" }, chips),
+      d.truncated ? h("div", { class: "muted mt" }, t("truncatedRows").replace("{n}", d.records.length)) : null),
+    h("div", { class: "mt" }, list)));
+  draw();
+}
+
+async function pivotView(kind, value, params) {
+  const days = params.get("days") || "30";
+  const d = await api("/api/ui/pivot?" + new URLSearchParams({ kind, value, days }));
+  const daysSel = h("select", { onchange: () => { location.hash = pivotHref(kind, value) + "?days=" + daysSel.value; } },
+    [1, 7, 30, 90, 365].map((n) => h("option", { value: n, selected: String(n) === String(d.days) }, t("days30").replace("{n}", n))));
+  const counts = (m) => Object.entries(m || {}).sort((a, b) => b[1] - a[1]).map(([k, n]) => h("span", { class: "chip" }, h("span", { class: "mono" }, k || "·"), " " + n));
+  const label = { ip: "IP", user: t("user"), hash: "SHA-256" }[kind] || kind;
+  mount(shell("events",
+    h("div", { class: "crumbs" }, t("pivot"), " / ", label),
+    h("h1", { class: "mono break" }, value),
+    h("div", { class: "card" },
+      h("div", { class: "flex" }, h("span", { class: "pill" }, label),
+        kind === "ip" ? h("span", { class: "chip" }, t(d.public ? "publicAddr" : "privateAddr")) : null,
+        d.intel ? h("span", { class: "pill warn" }, t("onList") + ": " + d.intel) : null,
+        h("label", { class: "right" }, daysSel)),
+      h("dl", { class: "kv" },
+        h("dt", null, t("total")), h("dd", null, d.total),
+        h("dt", null, t("firstSeen")), h("dd", null, d.first ? abs(d.first) : "·"),
+        h("dt", null, t("lastSeenShort")), h("dd", null, d.last ? abs(d.last) : "·"),
+        h("dt", null, t("seenOn")), h("dd", { class: "flex" }, counts(d.hosts)),
+        h("dt", null, t("eventTypes")), h("dd", { class: "flex" }, counts(d.types)))),
+    d.alerts.length ? [h("h2", null, t("alerts")), h("div", { class: "list" }, d.alerts.map(alertRow))] : null,
+    h("h2", null, t("events")),
+    d.records.length ? h("div", { class: "tablewrap" }, h("table", null,
+      h("thead", null, h("tr", null, [t("time"), t("host"), t("type"), t("details")].map((x) => h("th", null, x)))),
+      h("tbody", null, d.records.map((r) => h("tr", null,
+        h("td", { class: "nowrap" }, h("a", { href: tlHref(r.agent, r.event.ts || r.time), title: t("timeline") }, new Date(r.event.ts || r.time).toLocaleString(lang))),
+        h("td", null, r.host || r.source),
+        h("td", { class: "mono" }, r.event.type),
+        h("td", { class: "mono" }, dataLine(r.event.data))))))) : h("div", { class: "card empty" }, t("noEvents"))));
+}
+
+// snapshotsCard lists the evidence of a host or an alert and asks for more.
+async function snapshotsCard(agent, alertID) {
+  const q = new URLSearchParams(alertID ? { alert: alertID } : { agent });
+  const d = await api("/api/ui/snapshots?" + q);
+  const note = h("span", { class: "muted" });
+  const ask = can("analyst") && agent ? h("button", { class: "btn small ghost", onclick: async () => {
+    try { await post("/api/ui/agents/" + agent + "/snapshot", { alert: alertID || "" }); note.textContent = t("snapshotAsked"); setTimeout(render, 45000); }
+    catch (x) { note.textContent = x.message; }
+  } }, t("takeSnapshot")) : null;
+  const pending = d.requests.filter((r) => r.status === "pending" || r.status === "failed" || r.status === "expired").slice(0, 3);
+  return h("div", { class: "card mt" },
+    h("div", { class: "flex" }, h("h3", null, t("snapshots")), h("span", { class: "right flex" }, note, ask)),
+    pending.map((r) => h("div", { class: "chip mt" }, h("span", { class: "dot " + (r.status === "pending" ? "pending" : "error") }),
+      t("requestStatus") + " " + abs(r.created) + ": " + r.status + (r.error ? " (" + r.error + ")" : ""))),
+    d.snapshots.length ? h("div", { class: "tablewrap flat mt" }, h("table", null, h("tbody", null, d.snapshots.slice(0, 20).map((x) => h("tr", null,
+      h("td", { class: "nowrap" }, x.error ? abs(x.time) : h("a", { href: "#/snapshot/" + x.seq + "?at=" + encodeURIComponent(x.time) }, abs(x.time))),
+      h("td", { class: "mono" }, x.trigger),
+      h("td", { class: "mono" }, x.error ? h("span", { class: "muted" }, x.error) : [x.comm, x.pid ? " (" + x.pid + ")" : ""]),
+      h("td", { class: "mono muted" }, x.exe || "")))))) : h("div", { class: "muted mt" }, t("noSnapshots")));
+}
+
+async function snapshotView(seq, params) {
+  const recs = await api("/api/ui/records?" + new URLSearchParams({ seq, at: params.get("at") || "" }));
+  const r = recs[0];
+  if (!r) { mount(shell("events", h("div", { class: "card err" }, "not found"))); return; }
+  const d = r.event.data;
+  const tg = d.target && typeof d.target === "object" ? d.target : null;
+  const table = (cols, rows) => h("div", { class: "tablewrap" }, h("table", null,
+    h("thead", null, h("tr", null, cols.map((c) => h("th", null, c)))), h("tbody", null, rows)));
+  const remoteLink = (addr) => {
+    if (!addr) return "";
+    const ip = addr.replace(/^\[/, "").replace(/\]?:\d+$/, "");
+    return IP_RE.test(ip) ? h("a", { href: pivotHref("ip", ip) }, addr) : addr;
+  };
+  // the process list as a tree, children under their parent
+  const procs = Array.isArray(d.processes) ? d.processes : [];
+  const kids = new Map();
+  for (const p of procs) { if (!kids.has(p.ppid)) kids.set(p.ppid, []); kids.get(p.ppid).push(p); }
+  const pids = new Set(procs.map((p) => p.pid));
+  const procRows = [];
+  const walk = (p, depth) => {
+    if (procRows.length > 1000) return;
+    procRows.push(h("tr", { class: p.pid === d.pid ? "hl" : "" },
+      h("td", { class: "mono" }, p.pid), h("td", { class: "mono" }, p.uid),
+      h("td", { class: "mono" }, "  ".repeat(Math.min(depth, 12)) + (depth ? "└ " : "") + p.comm),
+      h("td", { class: "mono muted" }, p.cmdline || p.exe || "")));
+    for (const c of kids.get(p.pid) || []) walk(c, depth + 1);
+  };
+  for (const p of procs) if (!pids.has(p.ppid) || p.ppid === p.pid) walk(p, 0);
+  mount(shell("events",
+    h("div", { class: "crumbs" }, h("a", { href: "#/hosts/" + r.agent }, r.host || r.agent), " / ", t("snapshots")),
+    h("h1", null, t("snapshots") + ": " + (r.host || r.agent) + ", " + abs(r.event.ts)),
+    h("div", { class: "card" }, h("dl", { class: "kv" },
+      h("dt", null, t("trigger")), h("dd", { class: "mono" }, d.trigger || "·"),
+      d.alert ? [h("dt", null, t("alerts")), h("dd", null, h("a", { href: "#/alerts/" + d.alert }, d.alert))] : null,
+      h("dt", null, t("timeline")), h("dd", null, h("a", { href: tlHref(r.agent, r.event.ts) }, "± 30 min")),
+      h("dt", null, t("snapshotHash")), h("dd", { class: "mono break" }, d.sha256 || "·"),
+      h("dt", null, "Seq"), h("dd", { class: "mono" }, r.seq))),
+    tg ? h("div", { class: "card mt" }, h("h3", null, t("suspect")),
+      tg.gone ? h("div", { class: "muted" }, t("gone") + " (pid " + tg.pid + ")") : h("dl", { class: "kv" },
+        h("dt", null, "PID / UID"), h("dd", { class: "mono" }, tg.pid + " / " + tg.uid),
+        h("dt", null, "exe"), h("dd", { class: "mono break" }, tg.exe),
+        h("dt", null, t("programHash")), h("dd", { class: "mono break" }, tg.exe_sha256 ? h("a", { href: pivotHref("hash", tg.exe_sha256) }, tg.exe_sha256) : "·"),
+        h("dt", null, "cmdline"), h("dd", { class: "mono break" }, tg.cmdline || "·"),
+        h("dt", null, "cwd"), h("dd", { class: "mono" }, tg.cwd || "·"),
+        tg.ld_preload ? [h("dt", null, "LD_PRELOAD"), h("dd", { class: "mono" }, tg.ld_preload)] : null,
+        tg.quarantined ? [h("dt", null, t("quarantined")), h("dd", { class: "mono" }, tg.quarantined)] : null,
+        tg.quarantine_error ? [h("dt", null, t("quarantined")), h("dd", { class: "muted" }, tg.quarantine_error)] : null,
+        h("dt", null, t("parents")), h("dd", { class: "mono" }, (tg.ancestry || []).map((x) => h("div", null, x.pid + " " + x.comm + "  " + (x.cmdline || x.exe || "")))),
+        h("dt", null, t("children")), h("dd", { class: "mono" }, (tg.children || []).map((x) => h("div", null, x.pid + " " + x.comm)), (tg.children || []).length ? null : "·"),
+        h("dt", null, t("sockets")), h("dd", { class: "mono" }, (tg.sockets || []).map((c) => h("div", null, c.proto + " " + c.state + " " + c.local + " ", remoteLink(c.remote)))), 
+        h("dt", null, t("openFiles")), h("dd", { class: "mono small" }, (tg.fds || []).map((x) => h("div", null, x))),
+        h("dt", null, t("libraries")), h("dd", { class: "mono small" }, (tg.maps || []).map((x) => h("div", null, x))),
+        h("dt", null, t("envNames")), h("dd", { class: "mono small" }, (tg.env_names || []).join(" ")))) : null,
+    Array.isArray(d.sessions) && d.sessions.length ? [h("h2", null, t("sessions")), table([t("user"), "TTY", "Host", t("time")],
+      d.sessions.map((x) => h("tr", null, h("td", null, entityLink("user", x.user) || x.user), h("td", { class: "mono" }, x.tty),
+        h("td", { class: "mono" }, entityLink("ip", x.host) || x.host), h("td", null, abs(x.since)))))] : null,
+    Array.isArray(d.connections) ? [h("h2", null, t("connections")), table(["Proto", "State", "Local", "Remote", t("process")],
+      d.connections.map((c) => h("tr", null, h("td", null, c.proto), h("td", null, c.state), h("td", { class: "mono" }, c.local),
+        h("td", { class: "mono" }, remoteLink(c.remote)), h("td", { class: "mono" }, c.comm ? c.comm + " (" + c.pid + ")" : "·"))))] : null,
+    procs.length ? [h("h2", null, t("processes") + " (" + procs.length + ")"), table(["PID", "UID", t("process"), "cmdline"], procRows)] : null,
+    Array.isArray(d.journal) ? [h("h2", null, t("journal")), h("pre", { class: "card logpre" }, d.journal.join("\n"))] : null,
+    Array.isArray(d.modules) ? [h("h2", null, t("modules")), h("div", { class: "card mono small" }, d.modules.join("  "))] : null));
+}
+
+// causingEvents shows the events an alert was raised for, with diffs.
+async function causingEvents(a) {
+  if (!a.seqs || !a.seqs.length) return null;
+  const recs = await api("/api/ui/records?" + new URLSearchParams({ seq: a.seqs.slice(0, 10).join(","), at: a.updated }));
+  if (!recs.length) return null;
+  return [h("h2", null, t("causingEvents")), h("div", { class: "list" }, recs.map((r) => h("div", { class: "row" },
+    h("span", { class: "mono muted" }, hhmmss(r.event.ts || r.time)),
+    h("div", null, h("div", { class: "title mono" }, r.event.type), h("div", { class: "sub mono" }, dataLine(r.event.data)), diffBlock(r.event.data)),
+    h("a", { class: "meta", href: tlHref(r.agent, r.event.ts || r.time) }, t("timeline")))))];
+}
+
 // ---------- router ----------
 
 let refreshTimer = null;
@@ -1153,6 +1430,9 @@ async function render() {
     else if (parts[0] === "alerts") await alertsView();
     else if (parts[0] === "hosts" && parts[1]) await hostView(parts[1]);
     else if (parts[0] === "events") await eventsView(params);
+    else if (parts[0] === "timeline") await timelineView(params);
+    else if (parts[0] === "pivot" && parts[2]) await pivotView(parts[1], decodeURIComponent(parts.slice(2).join("/")), params);
+    else if (parts[0] === "snapshot" && parts[1]) await snapshotView(parts[1], params);
     else if (parts[0] === "canaries") await canariesView();
     else if (parts[0] === "suppressions") await suppressionsView();
     else if (parts[0] === "rules") await rulesView();
@@ -1161,7 +1441,7 @@ async function render() {
     else if (parts[0] === "settings") await settingsView();
     else await overview();
   } catch (x) {
-    if (x.message !== "unauthorized") mount(shell("", h("div", { class: "card err" }, x.message)));
+    if (x.message !== "unauthorized") { console.error(x); mount(shell("", h("div", { class: "card err" }, x.message))); }
   }
   // The overview and alert list refresh themselves; forms are left alone.
   if (!parts.length || (parts[0] === "alerts" && !parts[1])) refreshTimer = setTimeout(render, 30000);

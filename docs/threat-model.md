@@ -174,3 +174,11 @@ them runs arbitrary commands. Hosts where this risk is not acceptable leave
 - Hardening checks describe settings, not what an attacker already changed in
   memory; a weakened sshd that reads another configuration file than the one
   `sshd -T` shows is not seen.
+- Evidence snapshots are taken after the fact: for the agent's own signals
+  within about a second, for server requests within a minute. A process that
+  exited before is described from the process event alone. A snapshot shows
+  what `/proc` shows; a rootkit that hides processes from `/proc` hides them
+  from the snapshot too.
+- Change contents are only as old as the agent's copy of the file. Lines the
+  redaction does not recognise as secrets are sent as they are; keep secrets
+  out of the watched files or turn the file out of the watch list.

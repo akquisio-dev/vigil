@@ -14,6 +14,47 @@ of a new one.
 
 Every alert names its rule. The [rule catalogue](rules.md) explains each one.
 
+## Investigating
+
+Every alert tied to a host has a **timeline**: everything the host reported
+30 minutes before and after the event behind the alert (the window can be
+widened to 12 hours and moved). Events are placed by the time they happened
+on the host; events that arrived late (agent offline, queue sent later) show
+when they were received. The timeline of a host starts from its page.
+
+Addresses, user names and SHA-256 hashes in alerts and events are links to a
+**pivot page**: every event and alert naming that value across all hosts,
+over up to the whole retention, with first and last sighting, the hosts and
+the event types, and for addresses whether a threat list names them. All of
+it is read from the event log on the server; nothing is looked up outside.
+
+Changes to watched configuration files (sudoers, sshd, cron, systemd units,
+PAM, shell init, `passwd`, `ld.so.preload`) carry the **changed lines**. The
+agent keeps a copy of each file to compare with; the first change after the
+copy was made (the first scan, or the upgrade to v0.14.0) says that the
+previous content is unknown. Lines that look like secrets are replaced
+before they leave the host, and password hashes and SSH keys are never
+copied.
+
+**Evidence snapshots** keep what is gone after a reboot or when a process
+exits: the process list, network sockets with their processes, logged-in
+users, loaded kernel modules, the last journal lines, and for the suspect
+process its program hash, parents, children, open and mapped files and the
+names (not values) of its environment variables. The agent takes one at once
+for reverse shells, miners, programs from memory or deleted files,
+`LD_PRELOAD`, services starting shells, download and run, and opened
+canaries. For other high and critical alerts about activity the server asks
+for one (at most every ten minutes per host), and analysts can ask from an
+alert or a host page. With `quarantine` on, the program is copied while it is
+hashed, before anything else.
+
+Snapshots travel in the signed agent batches and are part of the hash chain
+like every event, so a snapshot shown in the dashboard is the one the agent
+sent. The snapshot's own SHA-256 is shown for reference in reports.
+
+Viewers see the timeline and pivot pages without change contents and
+snapshot details; those need the analyst role.
+
 ## Response actions
 
 On an alert, admins can contain an attack on the host directly, if the host's

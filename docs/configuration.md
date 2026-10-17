@@ -42,6 +42,8 @@ the defaults below.
 | `backups` | none | backup locations to watch, see below |
 | `secrets` | true | look for private keys, tokens and passwords in files every user can read (daily) |
 | `secret_roots` | `/etc`, `/home`, `/root`, `/srv`, `/opt`, `/var/www`, `/var/backups`, `/var/lib`, `/tmp`, `/var/tmp` | replaces the directories searched for exposed secrets |
+| `forensics` | true | take evidence snapshots (read only), see [Operations](operations.md#investigating) |
+| `quarantine` | false | also copy the suspect program into `state_dir/quarantine` (root only, 30 days, 512 MB at most) |
 | `packages` | true | send the installed package list to the server for `vuln_lookup` |
 | `web_logs` | none | access logs to watch, see below |
 | `response` | off | allow response actions from the dashboard, see below |

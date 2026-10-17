@@ -44,6 +44,8 @@ socket and runs only these external programs: `journalctl`, `iptables-save`,
 | Certificates | Let's Encrypt `live/*/fullchain.pem`, `ssl_certificate` in nginx and `SSLCertificateFile` in Apache configuration, `tls_certs` | 6 hours |
 | Backups | newest file of each `backups` location | 6 hours |
 | Exposed secrets | world-readable files below `secret_roots`, entering only directories every user can enter; files up to 512 KB, vendored code and package data skipped, own list in `secrets.json` | daily |
+| Change contents | last copy of small text files from the watch list (not `shadow`, `gshadow`, SSH keys) in `content/`, at most 64 KB each and 8 MB in all; a change carries the changed lines with two lines of context, secrets replaced, at most 8 KB | with the file scan |
+| Evidence snapshots | `/proc` (processes, the suspect's program, parents, open files, mapped files, names of its environment variables), `/proc/net`, `/run/utmp`, `/proc/modules`, `journalctl -n 60`; on the agent's strongest signals at once, otherwise when the server asks; at most 12 per hour | on demand |
 | Packages | source packages and versions from `/var/lib/dpkg/status`, sent to the server for `vuln_lookup` | on change, at least daily |
 | eBPF | `bpf(BPF_PROG_GET_NEXT_ID)` and `BPF_OBJ_GET_INFO_BY_FD`, hooking program types only, own list in `bpf.json` | `scan_seconds` |
 
@@ -154,7 +156,8 @@ can use. Fields in brackets are only present when known.
 | `ssh.failed` | `ip`, `count`, `users` (list), aggregated per address and interval |
 | `sudo.command` | `user`, `tty`, `cwd`, `as`, `command` |
 | `ssh.key_added`, `ssh.key_removed` | `file`, `fingerprint`, `key_type`, `comment` |
-| `file.added`, `file.changed`, `file.removed` | `path`, `category`, (`hash`, `old_hash`, `mode`, `old_mode`, `uid`, `old_uid`, `size`) |
+| `file.added`, `file.changed`, `file.removed` | `path`, `category`, (`hash`, `old_hash`, `mode`, `old_mode`, `uid`, `old_uid`, `size`, `diff`, `diff_truncated`, `diff_note`) |
+| `forensics.snapshot` | `trigger`, `pid`, `hostname`, `processes`, `connections`, `sessions`, `modules`, `journal`, `seconds`, `sha256`, (`target`, `request`, `alert`, `error`, `processes_truncated`, `connections_truncated`) |
 | `user.added`, `user.removed` | `user`, `uid` |
 | `user.uid_changed` | `user`, `uid`, `old_uid` |
 | `port.opened`, `port.closed` | `key`, `proto`, `addr`, `port`, `scope`, `via`, (`process`, `target`) |
