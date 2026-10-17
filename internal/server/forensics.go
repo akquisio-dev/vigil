@@ -20,6 +20,10 @@ import (
 // (pivot). Both read the day files on disk, so they reach back as far as
 // the retention, not only over the in-memory window.
 
+// scanBudget bounds a scan of the log on disk, below the dashboard's write
+// timeout; a scan that runs out says the result is partial.
+const scanBudget = 20 * time.Second
+
 const (
 	timelineMax  = 2000
 	pivotMax     = 1000
@@ -347,7 +351,13 @@ func (s *Server) handlePivot(w http.ResponseWriter, r *http.Request, sess *sessi
 	var first, last time.Time
 	perHost := map[string]int{}
 	perType := map[string]int{}
+	deadline := time.Now().Add(scanBudget)
+	partial := false
 	s.store.Between(now.AddDate(0, 0, -days), now, func(rec Record) bool {
+		if time.Now().After(deadline) {
+			partial = true
+			return false
+		}
 		hit := false
 		for _, e := range entities(rec.Event) {
 			if e.Kind == kind && e.Value == value {
@@ -394,7 +404,7 @@ func (s *Server) handlePivot(w http.ResponseWriter, r *http.Request, sess *sessi
 	}
 	s.mu.Unlock()
 	out := map[string]any{"kind": kind, "value": value, "days": days, "total": total, "records": recs, "alerts": alerts,
-		"hosts": perHost, "types": perType}
+		"hosts": perHost, "types": perType, "partial": partial}
 	if !first.IsZero() {
 		out["first"], out["last"] = first, last
 	}

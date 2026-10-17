@@ -90,7 +90,7 @@ const T = {
     huntRun: "Search", notFound: "not seen", invalidValues: "Not an address, user or hash",
     started: "Start", ended: "End", duration: "Duration", commands: "Commands", sudoShort: "sudo", filesShort: "Files", stillOpen: "open",
     noSessions: "No SSH sessions in this period", sessionOf: "Session of {user}", dropped: "{n} more commands not recorded (limit per hour)",
-    filesDuring: "changed while the session was open",
+    filesDuring: "changed while the session was open", partialScan: "stopped after 20 s, shorten the period",
   },
   de: {
     overview: "Lage", alerts: "Alarme", events: "Ereignisse", canaries: "Köder", settings: "Einstellungen",
@@ -178,7 +178,7 @@ const T = {
     huntRun: "Suchen", notFound: "nicht gesehen", invalidValues: "Keine Adresse, kein Benutzer, kein Hash",
     started: "Beginn", ended: "Ende", duration: "Dauer", commands: "Befehle", sudoShort: "sudo", filesShort: "Dateien", stillOpen: "offen",
     noSessions: "Keine SSH-Sitzungen in diesem Zeitraum", sessionOf: "Sitzung von {user}", dropped: "{n} weitere Befehle nicht aufgezeichnet (Grenze pro Stunde)",
-    filesDuring: "geändert, während die Sitzung offen war",
+    filesDuring: "geändert, während die Sitzung offen war", partialScan: "nach 20 s abgebrochen, Zeitraum verkürzen",
   },
 };
 
@@ -909,7 +909,7 @@ async function searchView(params) {
   const exp = (fmt) => "/api/ui/search?" + new URLSearchParams({ q, days, limit: "5000", format: fmt });
   mount(shell("events", h("h1", null, t("search")), h("div", { class: "crumbs mono" }, q),
     await searchCard(q, days),
-    h("div", { class: "flex mt" }, h("span", { class: "muted" }, t("found").replace("{n}", res.total).replace("{ms}", res.ms)),
+    h("div", { class: "flex mt" }, h("span", { class: "muted" }, t("found").replace("{n}", res.total).replace("{ms}", res.ms) + (res.partial ? " · " + t("partialScan") : "")),
       h("span", { class: "right flex" }, h("a", { class: "btn small ghost", href: exp("csv") }, t("exportCSV")), h("a", { class: "btn small ghost", href: exp("jsonl") }, t("exportJSONL")))),
     res.records.length ? h("div", { class: "tablewrap mt" }, h("table", { class: "evtable" },
       h("thead", null, h("tr", null, [t("time"), t("host"), t("type"), t("details")].map((x) => h("th", null, x)))),

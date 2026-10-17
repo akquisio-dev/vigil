@@ -106,3 +106,17 @@ func TestVolumeDelta(t *testing.T) {
 		t.Fatal("no /proc/net/dev")
 	}
 }
+
+func TestRarityIgnoresBuildOutput(t *testing.T) {
+	dir := t.TempDir()
+	a := &Agent{cfg: &Config{MaxQueue: 100, StateDir: dir, RareIgnore: []string{"/srv/builds/"}}, flushNow: make(chan struct{}, 1)}
+	a.rare = loadRare(dir)
+	a.rare.Since = time.Now().Add(-30 * 24 * time.Hour)
+	for _, p := range []string{"/root/.cache/go-tmp/go-build123/b001/x.test", "/home/u/app/target/debug/app", "/srv/builds/42/tool"} {
+		a.rareExec(&ExecInfo{Exe: p, ParentComm: "bash"})
+	}
+	time.Sleep(100 * time.Millisecond)
+	if n := len(eventTypes(a)); n != 0 || len(a.rare.Exes) != 0 {
+		t.Fatalf("build output learned or reported: %d events, %d exes", n, len(a.rare.Exes))
+	}
+}

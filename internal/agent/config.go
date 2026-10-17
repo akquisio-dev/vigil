@@ -101,6 +101,9 @@ type Config struct {
 	// RareParents adds process names whose children are learned, on top of
 	// web servers, databases and common runtimes.
 	RareParents []string `json:"rare_parents,omitempty"`
+	// RareIgnore adds path parts whose programs are not learned (build
+	// output directories, for example).
+	RareIgnore []string `json:"rare_ignore,omitempty"`
 	// Volume reports bytes sent and received per hour.
 	Volume *bool `json:"volume,omitempty"`
 	// WebLogs are access logs to watch for scans and attacks.

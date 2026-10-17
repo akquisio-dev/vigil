@@ -45,6 +45,9 @@ var interactiveParents = map[string]bool{"sshd": true, "sshd-session": true, "su
 var rareParents = map[string]bool{"node": true, "java": true, "ruby": true, "gunicorn": true, "uwsgi": true, "srcds_linux": true,
 	"php": true, "dotnet": true, "beam.smp": true, "containerd-shim": false}
 
+// rareIgnore are path parts of build outputs and caches.
+var rareIgnore = []string{"/.cache/", "/go-build", "/node_modules/", "/target/debug/", "/target/release/", "/__pycache__/"}
+
 type sshSession struct {
 	PID   int
 	User  string
@@ -268,6 +271,12 @@ func (a *Agent) rareExec(e *ExecInfo) {
 	for _, d := range tmpDirs {
 		if strings.HasPrefix(e.Exe, d) {
 			return // process.tmp_exec already reports these
+		}
+	}
+	// Build tools write programs into new directories on every run.
+	for _, p := range append(rareIgnore, a.cfg.RareIgnore...) {
+		if strings.Contains(e.Exe, p) {
+			return
 		}
 	}
 	rs := a.rare

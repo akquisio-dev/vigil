@@ -46,6 +46,7 @@ the defaults below.
 | `rarity` | true | report new programs and new children of services after the learning period |
 | `rare_learn_days` | 7 | learning period for `rarity` |
 | `rare_parents` | none | more process names whose children are learned |
+| `rare_ignore` | none | more path parts whose programs are not learned; build outputs (`/.cache/`, `/go-build`, `/node_modules/`, `target/debug`, `target/release`) are left out already |
 | `volume` | true | report bytes sent and received per hour |
 | `forensics` | true | take evidence snapshots (read only), see [Operations](operations.md#investigating) |
 | `quarantine` | false | also copy the suspect program into `state_dir/quarantine` (root only, 30 days, 512 MB at most) |

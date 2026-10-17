@@ -161,7 +161,13 @@ func (s *Server) handleHunt(w http.ResponseWriter, r *http.Request, sess *sessio
 	}
 	names := s.agentNames()
 	now := time.Now().UTC()
+	deadline := time.Now().Add(scanBudget)
+	partial := false
 	s.store.Between(now.AddDate(0, 0, -req.Days), now, func(rec Record) bool {
+		if time.Now().After(deadline) {
+			partial = true
+			return false
+		}
 		for _, e := range entities(rec.Event) {
 			res := want[e.Kind+"|"+e.Value]
 			if res == nil {
@@ -190,7 +196,7 @@ func (s *Server) handleHunt(w http.ResponseWriter, r *http.Request, sess *sessio
 		return out[i].Value < out[j].Value
 	})
 	s.audit(sess.User, "admin.hunt", map[string]any{"values": len(want), "days": req.Days})
-	writeJSON(w, map[string]any{"results": out, "invalid": invalid, "days": req.Days})
+	writeJSON(w, map[string]any{"results": out, "invalid": invalid, "days": req.Days, "partial": partial})
 }
 
 // ---------- SSH sessions ----------

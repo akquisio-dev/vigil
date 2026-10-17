@@ -183,7 +183,12 @@ func (s *Server) search(conds []cond, days, limit int) ([]Record, int) {
 	names := s.agentNames()
 	var ring []Record
 	total := 0
+	deadline := time.Now().Add(scanBudget)
 	s.store.Between(now.AddDate(0, 0, -days), now, func(rec Record) bool {
+		if time.Now().After(deadline) {
+			total = -total - 1 // partial
+			return false
+		}
 		if recordTime(rec).Before(now.AddDate(0, 0, -days)) {
 			return true
 		}
@@ -240,6 +245,10 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request, sess *sess
 	}
 	start := time.Now()
 	recs, total := s.search(conds, days, limit)
+	partial := total < 0
+	if partial {
+		total = -total - 1
+	}
 	names := s.agentNames()
 	role := s.roleFor(sess)
 	views := make([]viewRecord, len(recs))
@@ -271,7 +280,7 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request, sess *sess
 		cw.Flush()
 		return
 	}
-	writeJSON(w, map[string]any{"records": views, "total": total, "days": days, "limit": limit, "ms": time.Since(start).Milliseconds()})
+	writeJSON(w, map[string]any{"records": views, "total": total, "days": days, "limit": limit, "ms": time.Since(start).Milliseconds(), "partial": partial})
 }
 
 // csvSafe keeps spreadsheet programs from running agent-controlled text as
