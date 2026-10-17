@@ -53,6 +53,8 @@ type Agent struct {
 	snaps         snapLimiter
 	preloadSeen   map[string]bool // exe|LD_PRELOAD pairs already reported
 	sessions      sessionTracker
+	yara          yaraEngine
+	bg            sync.WaitGroup // background scans, waited for in tests
 	rare          *RareState
 }
 
@@ -164,6 +166,10 @@ func (a *Agent) Run(ctx context.Context) error {
 	}
 	if on(a.cfg.Volume) {
 		go a.runVolume(ctx)
+	}
+	if on(a.cfg.Yara) {
+		a.loadYaraState()
+		go a.runTmpScan(ctx.Done())
 	}
 	if on(a.cfg.Updates) {
 		go a.runUpdates(ctx)

@@ -472,6 +472,10 @@ func (a *Agent) snapshot(pid int, trigger, request, alert string) {
 			qdir = filepath.Join(a.cfg.StateDir, "quarantine")
 		}
 		target = targetDetail(pid, qdir)
+		if len(a.yara.get()) > 0 {
+			exe, _ := target["exe"].(string)
+			a.scanProcess(pid, exe, "snapshot")()
+		}
 	}
 	owners := socketInodes()
 	conns := listConns(owners)

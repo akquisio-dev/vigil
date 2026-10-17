@@ -5,6 +5,7 @@ import (
 )
 
 func eventTypes(a *Agent) map[string][]map[string]any {
+	a.bg.Wait()
 	out := map[string][]map[string]any{}
 	for _, ev := range a.queue {
 		out[ev.Type] = append(out[ev.Type], ev.Data)

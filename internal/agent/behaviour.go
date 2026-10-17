@@ -306,20 +306,26 @@ func (a *Agent) rareExec(e *ExecInfo) {
 	}
 	d := map[string]any{"pid": e.PID, "uid": e.UID, "exe": e.Exe, "comm": e.Comm, "cmdline": clipCmd(redactCmd(e.Cmdline)),
 		"parent_comm": e.ParentComm, "parent_exe": e.ParentExe, "cwd": e.Cwd}
-	if newPair {
-		a.emit(proto.NewEvent("process.rare_child", d))
-	}
-	if newExe {
-		// A program a package installed (an update, a new tool from apt)
-		// is expected; only unpackaged ones are reported.
-		go func() {
+	scan := a.scanProcess(e.PID, e.Exe, "rare")
+	a.bg.Add(1)
+	go func() {
+		defer a.bg.Done()
+		if sha := scan(); sha != "" {
+			d["exe_sha256"] = sha
+		}
+		if newPair {
+			a.emit(proto.NewEvent("process.rare_child", d))
+		}
+		if newExe {
+			// A program a package installed (an update, a new tool from
+			// apt) is expected; only unpackaged ones are reported.
 			info := lookupDpkg([]string{e.Exe})
 			if info.ok && info.owner[e.Exe] != "" {
 				return
 			}
 			a.emit(proto.NewEvent("process.rare", d))
-		}()
-	}
+		}
+	}()
 }
 
 func (a *Agent) runRare(ctx context.Context) {

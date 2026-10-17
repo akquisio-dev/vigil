@@ -110,6 +110,8 @@ var rules = map[string]ruleDef{
 	"ssh.rare_time":              {"low", "T1078", "{user} logged in at {hour}:00 UTC, an hour without logins in {logins} before ({ip})", "{user} hat sich um {hour}:00 UTC angemeldet, eine Uhrzeit ohne Anmeldungen in {logins} bisherigen ({ip})"},
 	"net.volume_spike":           {"medium", "T1048", "{sent} sent in one hour, usually at most {usual}", "{sent} in einer Stunde gesendet, sonst höchstens {usual}"},
 	"net.retro_hit":              {"high", "T1071", "{process} talked to {ip} on {when}, now listed by {list}", "{process} hat am {when} mit {ip} gesprochen, jetzt gelistet von {list}"},
+	"malware.known":              {"critical", "T1204.002", "Known malware on this host: {path} (SHA-256 listed by {list})", "Bekannte Schadsoftware auf diesem Host: {path} (SHA-256 gelistet bei {list})"},
+	"malware.yara":               {"high", "T1204.002", "YARA rule {rules} matches {path} ({source})", "YARA-Regel {rules} trifft auf {path} ({source})"},
 	"chain.broken":               {"critical", "T1565.001", "Event chain broken: {error}", "Ereigniskette gebrochen: {error}"},
 	"selftest.failed":            {"high", "T1562.001", "Self test on {host} failed: {missing}", "Selbsttest auf {host} fehlgeschlagen: {missing}"},
 	"notify.failed":              {"high", "", "Notifier {notifier} ({type}) failed: {error}", "Benachrichtigung {notifier} ({type}) fehlgeschlagen: {error}"},
@@ -507,6 +509,10 @@ func (s *Server) evaluate(a *AgentRec, r *Record) []finding {
 		if f := volumeFinding(a, d, recordTime(*r)); f != nil {
 			add("net.volume_spike", recordTime(*r).Format("2006-01-02T15"), f)
 		}
+	case "malware.yara":
+		p := map[string]string{"path": str(d, "path"), "rules": strings.Join(strSlice(d["rules"]), ", "), "source": str(d, "source"),
+			"sha256": str(d, "sha256"), "pid": str(d, "pid"), "description": str(d, "description")}
+		add("malware.yara", p["sha256"]+"|"+p["path"], p)
 	case "forensics.snapshot":
 		s.snapshotReceived(a, r)
 	case "system.packages":

@@ -81,6 +81,14 @@ type AgentConfig struct {
 	// Snapshots ask for evidence snapshots. A request names a process id
 	// at most; what is collected is fixed in the agent.
 	Snapshots []SnapshotRequest `json:"snapshots,omitempty"`
+	// Yara are detection rules for programs. They only ever raise findings.
+	Yara *YaraRules `json:"yara,omitempty"`
+}
+
+// YaraRules are the server's YARA rules, sent whole; Hash names the version.
+type YaraRules struct {
+	Hash   string `json:"hash"`
+	Source string `json:"source"`
 }
 
 type SnapshotRequest struct {

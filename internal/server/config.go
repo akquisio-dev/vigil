@@ -61,6 +61,13 @@ type Config struct {
 	// each release in use once a week (about 150 MB for an Ubuntu LTS
 	// release) and the changes daily; nothing is sent.
 	VulnLookup bool `json:"vuln_lookup,omitempty"`
+	// HashIntel matches the SHA-256 of programs the agents report against
+	// abuse.ch MalwareBazaar and ThreatFox (the full list once a week, about
+	// 45 MB, the newest every six hours). Only downloads; nothing is sent.
+	HashIntel bool `json:"hash_intel,omitempty"`
+	// YaraDir holds YARA rules (*.yar, *.yara) the agents scan suspicious
+	// programs with. A subset of the language is supported, see the docs.
+	YaraDir string `json:"yara_dir,omitempty"`
 	// RulesDir holds custom rules (*.json), loaded at start.
 	RulesDir string `json:"rules_dir,omitempty"`
 

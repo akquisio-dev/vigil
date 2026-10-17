@@ -233,6 +233,7 @@ func (a *Agent) applyConfig(cfg proto.AgentConfig) {
 	a.runActions(cfg.Actions)
 	a.runSelfTest(cfg.SelfTest)
 	a.runSnapshots(cfg.Snapshots)
+	a.setYara(cfg.Yara, true)
 }
 
 // checkCanaries notices canaries that were deleted, replaced or edited.

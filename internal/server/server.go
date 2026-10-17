@@ -45,6 +45,8 @@ type Server struct {
 	challenges challenges
 	intel      intelSet
 	vdb        vulnDB
+	hashes     hashSet
+	yara       yaraSet
 	pkgs       map[string]*agentPackages // latest package list per agent, guarded by mu
 	nh         notifierHealth
 
@@ -132,6 +134,8 @@ func (s *Server) Run(ctx context.Context) error {
 	go s.refreshIntel()
 	s.loadPackages()
 	go s.refreshVulns()
+	s.loadYara()
+	go s.refreshHashes()
 	if s.cfg.RulesDir != "" {
 		n, errs := LoadCustomRules(s.cfg.RulesDir)
 		log.Printf("custom rules: %d loaded from %s", n, s.cfg.RulesDir)
@@ -215,6 +219,8 @@ func (s *Server) loop(ctx context.Context) {
 			s.daily()
 			go s.refreshIntel()
 			go s.refreshVulns()
+			go s.refreshHashes()
+			s.loadYara()
 		}
 	}
 }
@@ -474,6 +480,11 @@ func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		fs := s.selfTestFindings(a, rec, append(s.evaluate(a, rec), s.evaluateCustom(a, rec)...))
+		for _, f := range s.malwareFindings(rec.Event) {
+			f.Key = "malware.known|" + a.ID + "|" + f.Params["sha256"]
+			f.Params["host"] = a.Name
+			fs = append(fs, f)
+		}
 		fresh = append(fresh, s.raise(fs, a.ID, rec.Seq)...)
 	}
 	s.correlate(fresh)
@@ -506,7 +517,7 @@ func (s *Server) forgedRequest(a *AgentRec, ip, reason string) {
 
 // agentConfig builds and signs the canary set for one agent. Caller holds s.mu.
 func (s *Server) agentConfig(a *AgentRec) (json.RawMessage, string) {
-	cfg := proto.AgentConfig{AgentID: a.ID, Version: a.ConfigVersion, Canaries: []proto.Canary{}, Actions: s.pendingActions(a.ID), SelfTest: s.pendingSelfTest(a.ID), Snapshots: s.pendingSnapshots(a.ID)}
+	cfg := proto.AgentConfig{AgentID: a.ID, Version: a.ConfigVersion, Canaries: []proto.Canary{}, Actions: s.pendingActions(a.ID), SelfTest: s.pendingSelfTest(a.ID), Snapshots: s.pendingSnapshots(a.ID), Yara: s.yaraConfig()}
 	for _, c := range s.state.Canaries {
 		if c.AgentID == a.ID {
 			cfg.Canaries = append(cfg.Canaries, proto.Canary{ID: c.ID, Type: c.Type, Path: c.Path, Params: c.Params})

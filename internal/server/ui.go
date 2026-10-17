@@ -162,7 +162,7 @@ func (s *Server) uiHandler() http.Handler {
 	mux.HandleFunc("POST /api/ui/agents/{id}/respond", s.adminOnly(s.handleRespond))
 	mux.HandleFunc("GET /api/ui/actions", s.auth(s.handleActions))
 	mux.HandleFunc("GET /api/ui/intel", s.auth(func(w http.ResponseWriter, r *http.Request, sess *session) {
-		writeJSON(w, map[string]any{"enabled": s.cfg.ThreatIntel, "lists": s.intel.status(), "vulns": s.vulnStatus()})
+		writeJSON(w, map[string]any{"enabled": s.cfg.ThreatIntel, "lists": s.intel.status(), "vulns": s.vulnStatus(), "malware": s.malwareStatus()})
 	}))
 	mux.HandleFunc("GET /api/ui/incidents", s.auth(s.handleIncidents))
 	mux.HandleFunc("GET /api/ui/incidents/{id}", s.auth(s.handleIncident))

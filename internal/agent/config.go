@@ -104,6 +104,10 @@ type Config struct {
 	// RareIgnore adds path parts whose programs are not learned (build
 	// output directories, for example).
 	RareIgnore []string `json:"rare_ignore,omitempty"`
+	// Yara accepts YARA rules from the server and scans suspicious and new
+	// programs and new programs in temp directories with them. On by
+	// default; without rules on the server nothing is scanned.
+	Yara *bool `json:"yara,omitempty"`
 	// Volume reports bytes sent and received per hour.
 	Volume *bool `json:"volume,omitempty"`
 	// WebLogs are access logs to watch for scans and attacks.

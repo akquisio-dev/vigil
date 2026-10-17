@@ -402,6 +402,16 @@ var ruleDocs = map[string]ruleDoc{
 		"Packages held back on purpose. The kernel: the newest installed kernel version counts, so a host that was not rebooted shows in `updates.reboot_pending` instead.",
 		"Install the update (`apt upgrade`) and restart the services that use the package.",
 	},
+	"malware.known": {
+		"The SHA-256 of a program on the host (from a suspicious or new program start, an evidence snapshot or the package integrity check) is on abuse.ch MalwareBazaar or ThreatFox. Checked when the event arrives and again for the last 30 days whenever the lists grow. Needs `hash_intel` on the server.",
+		"None in practice; the lists hold malware samples. A security tool or test file you placed on purpose (EICAR-like samples).",
+		"Treat the host as compromised: isolate it, take an evidence snapshot if the process still runs, find how the file got there (timeline, sessions).",
+	},
+	"malware.yara": {
+		"A YARA rule from `yara_dir` matched a suspicious or new program, a program in an evidence snapshot or a new program in a temp directory. The rule names and the description from its meta are in the alert.",
+		"Broad rules (packers, generic strings) match legitimate tools. Narrow the rule or suppress it per path with a reason.",
+		"Look at the matching file (`sha256sum`, the pivot page of its hash, `strings`), how it was started and what it connected to.",
+	},
 	"process.rare": {
 		"After the learning period (`rare_learn_days`, default 7), a program ran on this host for the first time, and no package installed it. Programs in containers, in temp directories (`process.tmp_exec`) and from memory (`process.memfd_exec`) are left to their own rules.",
 		"Software installed by hand, programs built on the host, new releases of tools in `/opt` or a home directory.",

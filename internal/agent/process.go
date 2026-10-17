@@ -167,8 +167,18 @@ func (a *Agent) reportExec(e *ExecInfo) {
 	if e.Preload != "" {
 		d["ld_preload"] = clipCmd(e.Preload)
 	}
-	a.emit(proto.NewEvent("process.exec", d))
-	a.flushSoon()
+	// The program is opened right away, hashed and scanned in the
+	// background; the report follows with the hash.
+	scan := a.scanProcess(e.PID, e.Exe, "exec")
+	a.bg.Add(1)
+	go func() {
+		defer a.bg.Done()
+		if sha := scan(); sha != "" {
+			d["exe_sha256"] = sha
+		}
+		a.emit(proto.NewEvent("process.exec", d))
+		a.flushSoon()
+	}()
 	for _, x := range sig {
 		if snapSignals[x] {
 			go a.snapshot(e.PID, "process.exec:"+x, "", "")
