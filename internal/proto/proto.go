@@ -78,6 +78,16 @@ type AgentConfig struct {
 	// SelfTest asks the agent to leave its fixed set of harmless traces,
 	// marked with the id. It carries no paths and no content.
 	SelfTest *SelfTest `json:"selftest,omitempty"`
+	// Snapshots ask for evidence snapshots. A request names a process id
+	// at most; what is collected is fixed in the agent.
+	Snapshots []SnapshotRequest `json:"snapshots,omitempty"`
+}
+
+type SnapshotRequest struct {
+	ID      string    `json:"id"`
+	PID     int       `json:"pid,omitempty"`
+	Alert   string    `json:"alert,omitempty"`
+	Expires time.Time `json:"expires"`
 }
 
 type SelfTest struct {

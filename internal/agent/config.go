@@ -81,6 +81,13 @@ type Config struct {
 	// so it can match it against vulnerability data (server option
 	// vuln_lookup). The agent itself never contacts third parties.
 	Packages *bool `json:"packages,omitempty"`
+	// Forensics takes evidence snapshots (processes, sockets, sessions,
+	// modules, journal tail, the suspect process in detail) on the agent's
+	// strongest signals and when the server asks. Read only. On by default.
+	Forensics *bool `json:"forensics,omitempty"`
+	// Quarantine also copies the suspect program into the state directory
+	// (root only, 30 days, 512 MB at most). Off by default.
+	Quarantine *bool `json:"quarantine,omitempty"`
 	// WebLogs are access logs to watch for scans and attacks.
 	WebLogs []WebLog `json:"web_logs,omitempty"`
 

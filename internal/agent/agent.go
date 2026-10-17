@@ -33,22 +33,25 @@ type Agent struct {
 	http  *http.Client
 	watch *canaryWatch
 
-	mu          sync.Mutex
-	queue       []proto.Event
-	dropped     int
-	keyNames    map[string]keyRef
-	sshFails    map[string]*failures
-	canaryPaths map[string]string
-	portsSent   bool
-	lastSeq     int64
-	cursor      string
-	flushNow    chan struct{}
-	procLimit   procLimiter
-	outSeen     map[string]bool   // remote network:port combinations already reported
-	broken      map[string]string // collector -> why it stopped, for the self test
-	kernel      *KernelState      // main loop only
-	bpf         *BPFState         // main loop only
-	preloadSeen map[string]bool   // exe|LD_PRELOAD pairs already reported
+	mu            sync.Mutex
+	queue         []proto.Event
+	dropped       int
+	keyNames      map[string]keyRef
+	sshFails      map[string]*failures
+	canaryPaths   map[string]string
+	portsSent     bool
+	lastSeq       int64
+	cursor        string
+	flushNow      chan struct{}
+	procLimit     procLimiter
+	outSeen       map[string]bool   // remote network:port combinations already reported
+	broken        map[string]string // collector -> why it stopped, for the self test
+	kernel        *KernelState      // main loop only
+	bpf           *BPFState         // main loop only
+	content       *contentStore     // main loop only
+	contentSeeded bool
+	snaps         snapLimiter
+	preloadSeen   map[string]bool // exe|LD_PRELOAD pairs already reported
 }
 
 func New(cfg *Config) (*Agent, error) {
@@ -136,7 +139,7 @@ func (a *Agent) Run(ctx context.Context) error {
 			allowed = append(allowed, t)
 		}
 	}
-	a.emit(proto.NewEvent("agent.started", map[string]any{"version": Version, "hostname": host, "canary_roots": a.cfg.CanaryRoots, "response": allowed, "selftest": on(a.cfg.SelfTest)}))
+	a.emit(proto.NewEvent("agent.started", map[string]any{"version": Version, "hostname": host, "canary_roots": a.cfg.CanaryRoots, "response": allowed, "selftest": on(a.cfg.SelfTest), "forensics": on(a.cfg.Forensics)}))
 	cleanSelfTests()
 
 	a.scan()

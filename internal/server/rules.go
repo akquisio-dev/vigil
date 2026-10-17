@@ -317,6 +317,7 @@ func (s *Server) evaluate(a *AgentRec, r *Record) []finding {
 		}
 		a.ResponseTypes = strSlice(d["response"])
 		a.SelfTest, _ = d["selftest"].(bool)
+		a.Forensics, _ = d["forensics"].(bool)
 		a.CanaryRoots = a.CanaryRoots[:0]
 		if roots, ok := d["canary_roots"].([]any); ok {
 			for _, root := range roots {
@@ -487,6 +488,8 @@ func (s *Server) evaluate(a *AgentRec, r *Record) []finding {
 			"fingerprint": str(d, "fingerprint"), "uid": str(d, "uid"), "mode": str(d, "mode")}
 		// One alert per file; further secrets in it count on that alert.
 		add("secret.exposed", p["path"], p)
+	case "forensics.snapshot":
+		s.snapshotReceived(a, r)
 	case "system.packages":
 		out = append(out, s.packagesReceived(a, d)...)
 	case "response.result":

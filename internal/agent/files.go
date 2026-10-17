@@ -127,21 +127,57 @@ func (a *Agent) scanFiles() {
 		}
 	}
 
+	cs := a.contents()
 	if !first {
 		for p, st := range current {
 			old, known := a.state.Files[p]
 			switch {
 			case !known:
-				a.emit(proto.NewEvent("file.added", fileData(p, st, FileState{})))
+				d := fileData(p, st, FileState{})
+				if diffable(p, st) {
+					if cur, ok := readText(p); ok {
+						fileDiff(d, p, nil, true, cur)
+						cs.put(p, cur)
+					}
+				}
+				a.emit(proto.NewEvent("file.added", d))
 			case old.Hash != st.Hash || old.Mode != st.Mode || old.UID != st.UID:
-				a.emit(proto.NewEvent("file.changed", fileData(p, st, old)))
+				d := fileData(p, st, old)
+				if old.Hash != st.Hash && diffable(p, st) {
+					if cur, ok := readText(p); ok {
+						prev, had := cs.get(p)
+						fileDiff(d, p, prev, had, cur)
+						cs.put(p, cur)
+					}
+				}
+				a.emit(proto.NewEvent("file.changed", d))
 			}
 		}
 		for p, old := range a.state.Files {
 			if _, ok := current[p]; !ok {
-				a.emit(proto.NewEvent("file.removed", fileData(p, FileState{}, old)))
+				d := fileData(p, FileState{}, old)
+				if prev, had := cs.get(p); had {
+					fileDiff(d, p, prev, true, nil)
+					cs.drop(p)
+				}
+				a.emit(proto.NewEvent("file.removed", d))
 			}
 		}
+	}
+	// The first scan, and the first after an upgrade, keeps a copy of every
+	// diffable file, so the next change can be shown.
+	if !a.contentSeeded {
+		for p, st := range current {
+			if !diffable(p, st) {
+				continue
+			}
+			if _, had := cs.get(p); !had {
+				if cur, ok := readText(p); ok {
+					cs.put(p, cur)
+				}
+			}
+		}
+		a.contentSeeded = true
 	}
 	a.state.Files = current
 

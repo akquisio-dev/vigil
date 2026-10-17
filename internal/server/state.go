@@ -53,6 +53,12 @@ type AgentRec struct {
 	// Vulns is the result of the last vulnerability match (vuln_lookup).
 	Vulns *VulnSummary `json:"vulns,omitempty"`
 
+	// Forensics is true when the agent takes evidence snapshots.
+	Forensics       bool          `json:"forensics,omitempty"`
+	LastSnapshot    time.Time     `json:"last_snapshot,omitempty"`
+	LastSnapshotAsk time.Time     `json:"last_snapshot_ask,omitempty"`
+	SnapshotIndex   []SnapshotRef `json:"snapshots,omitempty"`
+
 	// SelfTest is true when the agent accepts self tests (from agent.json).
 	SelfTest     bool      `json:"selftest,omitempty"`
 	LastSelfTest time.Time `json:"last_selftest,omitempty"`
@@ -121,6 +127,7 @@ type State struct {
 	Incidents    []*Incident             `json:"incidents"`
 	Actions      []*ActionRec            `json:"actions,omitempty"`
 	SelfTests    []*SelfTest             `json:"selftests,omitempty"`
+	Snapshots    []*SnapshotReq          `json:"snapshot_requests,omitempty"`
 	LastAnchor   time.Time               `json:"last_anchor"`
 }
 

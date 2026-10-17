@@ -151,6 +151,7 @@ func (a *Agent) reportCanaryOpen(path string, pid int, seen map[string]time.Time
 	info["path"] = path
 	a.emit(proto.NewEvent("canary.opened", info))
 	a.flushSoon()
+	go a.snapshot(pid, "canary.opened", "", "")
 }
 
 // procInfo collects who touched a canary. The process may already be gone

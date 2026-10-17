@@ -166,4 +166,10 @@ func (a *Agent) reportExec(e *ExecInfo) {
 	}
 	a.emit(proto.NewEvent("process.exec", d))
 	a.flushSoon()
+	for _, x := range sig {
+		if snapSignals[x] {
+			go a.snapshot(e.PID, "process.exec:"+x, "", "")
+			break
+		}
+	}
 }

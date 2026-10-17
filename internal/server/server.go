@@ -477,6 +477,7 @@ func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 		fresh = append(fresh, s.raise(fs, a.ID, rec.Seq)...)
 	}
 	s.correlate(fresh)
+	s.autoSnapshots(fresh)
 	resp := proto.BatchResponse{ConfigVersion: a.ConfigVersion}
 	if a.ConfigVersion > b.ConfigVersion {
 		resp.Config, resp.ConfigSig = s.agentConfig(a)
@@ -505,7 +506,7 @@ func (s *Server) forgedRequest(a *AgentRec, ip, reason string) {
 
 // agentConfig builds and signs the canary set for one agent. Caller holds s.mu.
 func (s *Server) agentConfig(a *AgentRec) (json.RawMessage, string) {
-	cfg := proto.AgentConfig{AgentID: a.ID, Version: a.ConfigVersion, Canaries: []proto.Canary{}, Actions: s.pendingActions(a.ID), SelfTest: s.pendingSelfTest(a.ID)}
+	cfg := proto.AgentConfig{AgentID: a.ID, Version: a.ConfigVersion, Canaries: []proto.Canary{}, Actions: s.pendingActions(a.ID), SelfTest: s.pendingSelfTest(a.ID), Snapshots: s.pendingSnapshots(a.ID)}
 	for _, c := range s.state.Canaries {
 		if c.AgentID == a.ID {
 			cfg.Canaries = append(cfg.Canaries, proto.Canary{ID: c.ID, Type: c.Type, Path: c.Path, Params: c.Params})

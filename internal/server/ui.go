@@ -136,6 +136,11 @@ func (s *Server) uiHandler() http.Handler {
 	mux.HandleFunc("GET /api/ui/alerts", s.auth(s.handleAlerts))
 	mux.HandleFunc("POST /api/ui/alerts/{id}/{action}", s.analyst(s.handleAlertAction))
 	mux.HandleFunc("GET /api/ui/events", s.auth(s.handleEventsList))
+	mux.HandleFunc("GET /api/ui/timeline", s.auth(s.handleTimeline))
+	mux.HandleFunc("GET /api/ui/records", s.auth(s.handleRecords))
+	mux.HandleFunc("GET /api/ui/pivot", s.auth(s.handlePivot))
+	mux.HandleFunc("GET /api/ui/snapshots", s.auth(s.handleSnapshots))
+	mux.HandleFunc("POST /api/ui/agents/{id}/snapshot", s.analyst(s.handleSnapshotRequest))
 	mux.HandleFunc("GET /api/ui/agents/{id}", s.auth(s.handleAgent))
 	mux.HandleFunc("POST /api/ui/agents/{id}/{action}", s.adminOnly(s.handleAgentAction))
 	mux.HandleFunc("POST /api/ui/tokens", s.adminOnly(s.handleToken))
@@ -429,19 +434,11 @@ func (s *Server) handleEventsList(w http.ResponseWriter, r *http.Request, sess *
 	before, _ := strconv.ParseUint(q.Get("before"), 10, 64)
 	limit, _ := strconv.Atoi(q.Get("limit"))
 	recs := s.store.Recent(Query{Agent: q.Get("agent"), Prefix: q.Get("type"), Before: before, Limit: limit})
-	s.mu.Lock()
-	names := map[string]string{}
-	for id, a := range s.state.Agents {
-		names[id] = a.Name
-	}
-	s.mu.Unlock()
-	type ev struct {
-		Record
-		Host string `json:"host,omitempty"`
-	}
-	out := make([]ev, len(recs))
+	names := s.agentNames()
+	role := s.roleFor(sess)
+	out := make([]viewRecord, len(recs))
 	for i, rec := range recs {
-		out[i] = ev{Record: rec, Host: names[rec.Agent]}
+		out[i] = s.view(rec, names, role)
 	}
 	writeJSON(w, out)
 }
