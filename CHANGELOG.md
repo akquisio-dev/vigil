@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.13.1
+
+- Fix: when hosts on two releases sent their package lists at the same time, the second release got no vulnerability data until the next hourly refresh.
+- `secret.exposed` raises one alert per file; more secrets in the same file raise its count.
+
 ## v0.13.0
 
 - Vulnerabilities: agents send their installed source packages; with `vuln_lookup` the server matches them against Canonical's OVAL data (Ubuntu, kernels included), the Debian security tracker and CISA's catalogue of exploited vulnerabilities. One alert per package for exploited (`vuln.exploited`) and for high or critical fixable vulnerabilities (`vuln.severe`); counts and lists on the host page. Agent option `packages`.
