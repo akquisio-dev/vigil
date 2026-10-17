@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -246,5 +247,48 @@ func TestSelfTestScheduleAndAgentWithoutSupport(t *testing.T) {
 	s.checkSelfTests()
 	if st := s.state.SelfTests[0]; st.Status != "failed" || st.Error == "" {
 		t.Fatalf("unclaimed test: %+v", st)
+	}
+}
+
+func TestSelfTestTraceDoesNotTriggerSigma(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(dir+"/tmp.yml", []byte(`title: Execution From Tmp
+logsource:
+  product: linux
+  category: process_creation
+detection:
+  sel:
+    Image|startswith: '/tmp/'
+  condition: sel
+level: medium
+`), 0o644)
+	LoadSigma(dir)
+	defer LoadSigma("")
+	s, err := New(&Config{DataDir: t.TempDir()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ta := newTestAgent(t, s)
+	s.mu.Lock()
+	st, _ := s.startSelfTest(ta.a, "admin")
+	s.mu.Unlock()
+	ta.send(t)
+	marker := "vigil-selftest-" + st.ID
+	ta.send(t,
+		proto.NewEvent("selftest.started", map[string]any{"id": st.ID}),
+		proto.NewEvent("process.exec", map[string]any{"exe": "/tmp/" + marker + "-1/sleep", "comm": "sleep", "uid": 0, "signals": []any{"tmp_exe"}}),
+		// not the test's trace: alerts
+		proto.NewEvent("process.exec", map[string]any{"exe": "/tmp/x/miner", "comm": "miner", "uid": 0, "signals": []any{"tmp_exe"}}),
+	)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var sigma []string
+	for _, al := range s.state.Alerts {
+		if strings.HasPrefix(al.Rule, "sigma.") {
+			sigma = append(sigma, decodeParams(al.Detail)["exe"])
+		}
+	}
+	if len(sigma) != 1 || sigma[0] != "/tmp/x/miner" {
+		t.Fatalf("sigma alerts: %v", sigma)
 	}
 }

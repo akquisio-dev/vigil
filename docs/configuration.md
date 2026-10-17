@@ -48,6 +48,7 @@ the defaults below.
 | `rare_parents` | none | more process names whose children are learned |
 | `rare_ignore` | none | more path parts whose programs are not learned; build outputs (`/.cache/`, `/go-build`, `/node_modules/`, `target/debug`, `target/release`) are left out already |
 | `volume` | true | report bytes sent and received per hour |
+| `yara` | true | accept YARA rules from the server and scan suspicious and new programs and new programs in temp directories (every 5 minutes) |
 | `forensics` | true | take evidence snapshots (read only), see [Operations](operations.md#investigating) |
 | `quarantine` | false | also copy the suspect program into `state_dir/quarantine` (root only, 30 days, 512 MB at most) |
 | `packages` | true | send the installed package list to the server for `vuln_lookup` |
@@ -169,6 +170,10 @@ it came from the proxy.
 | `brand` | none | your own name and logo, see below |
 | `rules_dir` | none | directory with [custom rules](custom-rules.md) |
 | `vuln_lookup` | false | match the package lists of Debian and Ubuntu hosts with the distributions' security data (Canonical OVAL per release, about 10 MB; the Debian security tracker, about 14 MB) and CISA's catalogue of exploited vulnerabilities, daily and only when changed. Only plain downloads, nothing about the hosts is sent |
+| `hash_intel` | false | match the SHA-256 of suspicious and new programs against abuse.ch MalwareBazaar and ThreatFox (full list weekly, about 45 MB, newest every six hours; about 10 MB in memory). Only downloads |
+| `yara_dir` | none | directory with YARA rules (`*.yar`, `*.yara`, at most 256 KB together) the agents scan programs with; starter rules in `deploy/examples/yara` |
+| `sigma_dir` | none | directory with Sigma rules (`*.yml`, also in subdirectories) for Linux process, network and file events |
+| `forward` | none | send events and alerts to syslog, HTTP or a file, see below |
 | `threat_intel` | false | download public block lists (abuse.ch Feodo Tracker and ThreatFox, Spamhaus DROP, Tor exits) twice a day and match outbound connections against them. Only plain downloads, nothing about this installation is sent |
 
 Only enable `trust_proxy` when the dashboard listener is reachable through the
@@ -316,3 +321,55 @@ alarm. The reason is written to the server log once.
 
 With `anchor_daily`, the head of the event chain is posted to your notifiers
 every day, which leaves a copy of the log's state outside the machine.
+
+## Forwarding
+
+```json
+"forward": [
+  {"name": "graylog", "type": "syslog", "address": "logs.example.com:6514", "protocol": "tls"},
+  {"name": "elastic", "type": "http", "url": "https://ingest.example.com/vigil", "headers": {"Authorization": "Bearer ..."}, "what": "alerts", "min_severity": "high"},
+  {"name": "vector", "type": "file", "path": "/var/log/vigil/events.jsonl", "what": "events"}
+]
+```
+
+| Key | Meaning |
+|---|---|
+| `type` | `syslog` (RFC 5424, facility local0, the message is JSON; UDP, TCP with octet counting, or TLS), `http` (POST of JSON lines in batches of up to 500 every five seconds) or `file` (JSON lines; reopened after log rotation) |
+| `what` | `events`, `alerts` or `all` (default) |
+| `min_severity` | lowest alert severity to forward |
+| `headers` | extra HTTP headers, for tokens; never written to logs |
+
+Every line is `{"vigil": "event", "record": {...}}` or `{"vigil": "alert", "alert": {...}, "params": {...}}`. Evidence snapshots are forwarded without their process and connection lists. Each target has a queue of 10 000 items; a target that fails for ten minutes raises `forward.failed`, and what does not fit is dropped and counted on the rules page.
+
+## YARA rules
+
+vigil reads the part of the YARA language most Linux rules use: text strings
+(`nocase`, `wide`, `ascii`, `fullword`), hex strings with `??`, nibble
+wildcards, jumps `[n-m]` and alternatives, regular expressions (Go syntax,
+for text), and conditions with `and`, `or`, `not`, `any of`, `all of`,
+`N of`, `them`, `$a at N`, `$a in (a..b)`, `#a`, `filesize`, `uint8/16/32`
+(also `be`) and the `KB`/`MB` suffixes. Modules (`import "pe"`), `xor` and
+`base64` strings, private and global rules and for-loops are not supported;
+such rules are skipped and listed on the rules page. Files above 16 MB are
+hashed but not scanned. vigil never scans its own programs, which contain
+the strings many rules look for.
+
+## Sigma rules
+
+Rules with `logsource` `product: linux` and the categories
+`process_creation`, `network_connection`, `file_event`, `file_change` or
+`file_delete` are matched; rules for other log sources load but stay
+inactive. Fields: `Image`, `CommandLine`, `ParentImage`,
+`CurrentDirectory`, `User`, `ProcessId`, `ParentProcessId` (processes),
+`DestinationIp`, `DestinationPort`, `Image` (connections), `TargetFilename`
+(files). Modifiers `contains`, `startswith`, `endswith`, `all`, `re`,
+`cidr`, `lt`, `lte`, `gt`, `gte`, `windash`; conditions with `and`, `or`,
+`not`, parentheses, `1 of x*`, `all of x*`, `1 of them`, `all of them`.
+Aggregations are not supported. vigil sees only suspicious program starts,
+commands typed in SSH sessions and new programs, not every program start,
+so process rules apply to those. Of the 211 Linux rules in the SigmaHQ
+repository, 122 load as active, 75 are for log sources vigil has no events
+for (auditd, syslog) and 14 use fields vigil does not have. Start with the
+rules of level `high` and `critical`; low ones like system discovery fire on
+ordinary admin commands in SSH sessions.
+

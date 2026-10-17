@@ -2,7 +2,7 @@
 
 # Detection rules
 
-vigil ships 91 rules. Every alert carries the rule id, so an alert can be looked up here.
+vigil ships 94 rules. Every alert carries the rule id, so an alert can be looked up here.
 
 Severity decides who is woken up: each notifier has a `min_severity`, `high` by default.
 
@@ -14,6 +14,7 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 | [`file.suid_tmp`](#file-suid_tmp) | critical | [T1548.001](https://attack.mitre.org/techniques/T1548/001/) |
 | [`integrity.binary_replaced`](#integrity-binary_replaced) | critical | [T1554](https://attack.mitre.org/techniques/T1554/) |
 | [`kernel.module_hidden`](#kernel-module_hidden) | critical | [T1014](https://attack.mitre.org/techniques/T1014/) |
+| [`malware.known`](#malware-known) | critical | [T1204.002](https://attack.mitre.org/techniques/T1204/002/) |
 | [`net.c2`](#net-c2) | critical | [T1071](https://attack.mitre.org/techniques/T1071/) |
 | [`posture.empty_password`](#posture-empty_password) | critical | [T1078](https://attack.mitre.org/techniques/T1078/) |
 | [`posture.ssh_empty_password`](#posture-ssh_empty_password) | critical | [T1078](https://attack.mitre.org/techniques/T1078/) |
@@ -33,11 +34,13 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 | [`file.pam`](#file-pam) | high | [T1556.003](https://attack.mitre.org/techniques/T1556/003/) |
 | [`file.sudo`](#file-sudo) | high | [T1548.003](https://attack.mitre.org/techniques/T1548/003/) |
 | [`file.suid`](#file-suid) | high | [T1548.001](https://attack.mitre.org/techniques/T1548/001/) |
+| [`forward.failed`](#forward-failed) | high |  |
 | [`integrity.many`](#integrity-many) | high | [T1554](https://attack.mitre.org/techniques/T1554/) |
 | [`integrity.modified`](#integrity-modified) | high | [T1554](https://attack.mitre.org/techniques/T1554/) |
 | [`kernel.bpf`](#kernel-bpf) | high | [T1014](https://attack.mitre.org/techniques/T1014/) |
 | [`kernel.module_unsigned`](#kernel-module_unsigned) | high | [T1547.006](https://attack.mitre.org/techniques/T1547/006/) |
 | [`log.spoofed`](#log-spoofed) | high | [T1070](https://attack.mitre.org/techniques/T1070/) |
+| [`malware.yara`](#malware-yara) | high | [T1204.002](https://attack.mitre.org/techniques/T1204/002/) |
 | [`net.blocklisted`](#net-blocklisted) | high | [T1071](https://attack.mitre.org/techniques/T1071/) |
 | [`net.miner_pool`](#net-miner_pool) | high | [T1496](https://attack.mitre.org/techniques/T1496/) |
 | [`net.retro_hit`](#net-retro_hit) | high | [T1071](https://attack.mitre.org/techniques/T1071/) |
@@ -864,6 +867,32 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 
 **What to do:** Plan the reboot. Start a maintenance window in vigil first, or the agent restart alerts.
 
+## Malware
+
+### `malware.known` {#malware-known}
+
+**Severity:** critical · **ATT&CK:** [T1204.002](https://attack.mitre.org/techniques/T1204/002/)
+
+**Alert:** `Known malware on this host: {path} (SHA-256 listed by {list})`
+
+**Fires when:** The SHA-256 of a program on the host (from a suspicious or new program start, an evidence snapshot or the package integrity check) is on abuse.ch MalwareBazaar or ThreatFox. Checked when the event arrives and again for the last 30 days whenever the lists grow. Needs `hash_intel` on the server.
+
+**Known false positives:** None in practice; the lists hold malware samples. A security tool or test file you placed on purpose (EICAR-like samples).
+
+**What to do:** Treat the host as compromised: isolate it, take an evidence snapshot if the process still runs, find how the file got there (timeline, sessions).
+
+### `malware.yara` {#malware-yara}
+
+**Severity:** high · **ATT&CK:** [T1204.002](https://attack.mitre.org/techniques/T1204/002/)
+
+**Alert:** `YARA rule {rules} matches {path} ({source})`
+
+**Fires when:** A YARA rule from `yara_dir` matched a suspicious or new program, a program in an evidence snapshot or a new program in a temp directory. The rule names and the description from its meta are in the alert.
+
+**Known false positives:** Broad rules (packers, generic strings) match legitimate tools. Narrow the rule or suppress it per path with a reason.
+
+**What to do:** Look at the matching file (`sha256sum`, the pivot page of its hash, `strings`), how it was started and what it connected to.
+
 ## Hardening, certificates, backups and secrets
 
 ### `posture.empty_password` {#posture-empty_password}
@@ -1169,6 +1198,18 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 **Known false positives:** Planned restarts and updates. Announce them with a maintenance window in the dashboard.
 
 **What to do:** Check who stopped it if no maintenance was planned.
+
+### `forward.failed` {#forward-failed}
+
+**Severity:** high
+
+**Alert:** `Forwarding {forwarder} ({type}) has failed for 10 minutes: {error}`
+
+**Fires when:** A forwarding target from `forward` (syslog, HTTP or file) has refused or not answered for ten minutes. Events and alerts wait in its queue (10 000 items) and are dropped past that.
+
+**Known false positives:** Maintenance of the receiving system.
+
+**What to do:** Check the target (address, certificate, token) with the error in the alert; the forwarding status is on the rules page.
 
 ### `log.spoofed` {#log-spoofed}
 

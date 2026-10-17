@@ -191,5 +191,11 @@ them runs arbitrary commands. Hosts where this risk is not acceptable leave
   agent's start is not tied to its commands. Someone with root in the
   session can detach a process from both the parent chain and the audit
   session.
+- Hash matching knows what abuse.ch has seen; new or rebuilt malware has
+  hashes no list knows. YARA rules find what they describe and nothing
+  else, and only in programs vigil looks at (suspicious, new, in temp
+  directories, in snapshots).
+- Forwarded data leaves the server as it is, change lines and command lines
+  included; the receiving system must be protected like the server.
 - Rarity learns what runs during the first seven days. Anything an attacker
   already ran then counts as normal; the other rules still apply to it.

@@ -359,6 +359,9 @@ th{background:#f6f6f4}code,pre{font:11px ui-monospace,Menlo,monospace}pre{backgr
 				inTable = true
 			}
 			cells := splitMDRow(line)
+			if strings.Join(cells, "") == "" {
+				continue // the empty header of key/value tables
+			}
 			b.WriteString("<tr>")
 			for _, c := range cells {
 				b.WriteString("<td>" + inlineMD(c) + "</td>")

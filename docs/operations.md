@@ -55,6 +55,18 @@ sent. The snapshot's own SHA-256 is shown for reference in reports.
 Viewers see the timeline and pivot pages without change contents and
 snapshot details; those need the analyst role.
 
+### Incident reports
+
+An incident's page offers its report as Markdown or as a page to print or
+save as PDF. It holds the figures (time from the first event to the first
+alert, to the first acknowledgement and to closing), the ATT&CK tactics,
+all alerts, the addresses, users and hashes involved, the notes, the
+evidence snapshots with their hashes, the host's timeline around the
+alerts with changed lines, and the chain hash of every record the report
+relies on together with the chain head at the time of the report. Anyone
+can later check with `vigil-server verify` that the log still holds those
+records unchanged. Making a report is written to the audit log.
+
 ### Searching the log
 
 The query box on the events page searches the stored log of all hosts (up

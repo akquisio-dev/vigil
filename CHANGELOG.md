@@ -1,7 +1,13 @@
 # Changelog
 
-## Unreleased
+## v0.16.0
 
+- Incident reports as Markdown and as a page to print or save as PDF: figures (detection delay, time to acknowledge, time to close), ATT&CK, alerts, involved addresses, users and hashes, notes, evidence, timeline with changed lines and the chain hashes of every record used.
+- Malware hashes: suspicious and new programs are hashed by the agent; with `hash_intel` the server matches them against abuse.ch MalwareBazaar and ThreatFox, also for the last 30 days when the lists grow (`malware.known`).
+- YARA: rules in `yara_dir` (a subset of the language, no cgo) go to the agents with their signed configuration; agents scan suspicious and new programs, programs in evidence snapshots and new programs in temp directories (`malware.yara`). Starter rules for Linux miners, botnets, reverse shell scripts and packed programs in `deploy/examples/yara`. Agent option `yara`.
+- Sigma: rules in `sigma_dir` for Linux process, network and file events.
+- Forwarding of events and alerts to syslog (UDP, TCP, TLS), HTTP and files (`forward`), with `forward.failed`.
+- The rules page shows the state of Sigma, YARA, hash lists and forwarding.
 - SSH sessions no longer list the message-of-the-day scripts PAM runs at every login.
 
 ## v0.15.0

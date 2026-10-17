@@ -159,9 +159,21 @@ func (s *Server) selfTestFindings(a *AgentRec, rec *Record, fs []finding) []find
 		return fs
 	}
 	now := time.Now()
+	// When the event is exactly one of the test's traces, rules the
+	// operator added (custom and Sigma rules) that match it as well are the
+	// test's too: a weekly test must not raise their alerts.
+	exact := false
+	for _, st := range t.Steps {
+		if ownTrace(st.Rule, t.marker(), rec.Event.Data) {
+			exact = true
+		}
+	}
 	var keep []finding
 	for _, f := range fs {
 		st := t.stepFor(f.Rule)
+		if st == nil && exact && (strings.HasPrefix(f.Rule, "custom.") || strings.HasPrefix(f.Rule, "sigma.")) {
+			continue
+		}
 		if st == nil || !ownTrace(f.Rule, t.marker(), rec.Event.Data) {
 			keep = append(keep, f)
 			continue

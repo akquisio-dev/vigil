@@ -25,6 +25,7 @@ var areas = []struct{ prefix, title string }{
 	{"net. web.", "Network and web"},
 	{"port.", "Exposure"},
 	{"vuln. updates.", "Vulnerabilities and updates"},
+	{"malware.", "Malware"},
 	{"posture. tls. backup. secret.", "Hardening, certificates, backups and secrets"},
 	{"canary.", "Canaries"},
 	{"", "Integrity of vigil itself"},

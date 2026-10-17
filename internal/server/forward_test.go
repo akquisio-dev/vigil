@@ -125,7 +125,11 @@ func TestForwarding(t *testing.T) {
 	mu.Lock()
 	fail = false
 	mu.Unlock()
-	waitFor(t, "http delivery", func() bool { mu.Lock(); defer mu.Unlock(); return len(httpBodies) == 1 && strings.Count(httpBodies[0], "\n") == 2 })
+	waitFor(t, "http delivery", func() bool {
+		mu.Lock()
+		defer mu.Unlock()
+		return len(httpBodies) == 1 && strings.Count(httpBodies[0], "\n") == 2
+	})
 	for _, st := range s.forwardStatus() {
 		if st["error"] != "" {
 			t.Fatalf("status: %+v", st)
