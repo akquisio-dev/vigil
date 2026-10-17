@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fix: an agent upgraded right after the server got no YARA rules until they changed (the old agent had taken the configuration). Agents without stored rules now ask for the configuration again at start.
+
 ## v0.16.0
 
 - Incident reports as Markdown and as a page to print or save as PDF: figures (detection delay, time to acknowledge, time to close), ATT&CK, alerts, involved addresses, users and hashes, notes, evidence, timeline with changed lines and the chain hashes of every record used.
