@@ -24,6 +24,8 @@ func TestSessionCommands(t *testing.T) {
 	if len(eventTypes(a)["session.exec"]) != 1 {
 		t.Fatal("tmux command not tied to its session")
 	}
+	// The message of the day PAM shows at login is not a command.
+	a.sessionExec(&ExecInfo{PID: 4, PPID: os.Getpid(), Exe: "/usr/bin/run-parts", Cmdline: "run-parts --lsbsysinit /etc/update-motd.d", ParentComm: "sshd", LoginUID: 0, SessionID: 42})
 	// Not interactive (a cron job, a service), or no login session: nothing.
 	for _, x := range []*ExecInfo{
 		{PID: 5, PPID: os.Getpid(), Exe: "/usr/bin/x", ParentComm: "cron", LoginUID: 1000, SessionID: 42},

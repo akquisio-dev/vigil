@@ -182,6 +182,10 @@ them runs arbitrary commands. Hosts where this risk is not acceptable leave
 - Change contents are only as old as the agent's copy of the file. Lines the
   redaction does not recognise as secrets are sent as they are; keep secrets
   out of the watched files or turn the file out of the watch list.
+- Session commands are read from `/proc` when the kernel reports the start;
+  commands that finish within a millisecond or two (`id`, `uptime`) are
+  often gone by then and missing from the session. `sudo` commands come from
+  the journal and are always complete.
 - Session commands are what was started from the session's shell; what a
   script started further down is not listed, and a session older than the
   agent's start is not tied to its commands. Someone with root in the

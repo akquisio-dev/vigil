@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- SSH sessions no longer list the message-of-the-day scripts PAM runs at every login.
+
 ## v0.15.0
 
 - Search: a query language for the stored log (`type:process.* uid:0 exe:/tmp/* -user:root count:>10`), saved searches, export as CSV and JSON lines (audited).

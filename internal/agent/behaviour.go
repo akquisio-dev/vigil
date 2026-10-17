@@ -171,8 +171,14 @@ func (s *sshSession) allow(now time.Time) (ok bool, dropped int) {
 	return true, dropped
 }
 
+// sessionNoise are programs PAM runs on every login (the Debian and Ubuntu
+// message of the day), not something the person typed.
+func sessionNoise(e *ExecInfo) bool {
+	return strings.Contains(e.Cmdline, "/etc/update-motd.d") || strings.Contains(e.Cmdline, "motd.dynamic")
+}
+
 func (a *Agent) sessionExec(e *ExecInfo) {
-	if !on(a.cfg.Sessions) || !interactiveParents[e.ParentComm] && !shells[e.ParentComm] {
+	if !on(a.cfg.Sessions) || !interactiveParents[e.ParentComm] && !shells[e.ParentComm] || sessionNoise(e) {
 		return
 	}
 	s := a.sessions.session(e)
