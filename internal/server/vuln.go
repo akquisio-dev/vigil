@@ -91,6 +91,7 @@ type vulnDB struct {
 	kevTime time.Time
 	errs    map[string]string
 	running atomic.Bool
+	again   atomic.Bool // a refresh was asked for while one was running
 }
 
 type agentPackages struct {
@@ -509,10 +510,18 @@ func (s *Server) setIndex(vi *vulnIndex) {
 // refreshVulns brings the data for every release in use up to date and
 // matches all hosts again. Runs in its own goroutine, one at a time.
 func (s *Server) refreshVulns() {
-	if !s.cfg.VulnLookup || !s.vdb.running.CompareAndSwap(false, true) {
+	if !s.cfg.VulnLookup {
 		return
 	}
-	defer s.vdb.running.Store(false)
+	s.vdb.again.Store(true)
+	for s.vdb.again.Load() && s.vdb.running.CompareAndSwap(false, true) {
+		s.vdb.again.Store(false)
+		s.refreshVulnsOnce()
+		s.vdb.running.Store(false)
+	}
+}
+
+func (s *Server) refreshVulnsOnce() {
 	os.MkdirAll(s.vulnDir(), 0o700)
 	s.setVulnErr("kev", s.refreshKEV())
 
