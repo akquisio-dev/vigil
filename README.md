@@ -20,6 +20,7 @@ external dependencies.
 | Processes | reverse shells, web servers and databases starting shells, download and run, crypto miners, programs from `/tmp`, from deleted files or **from memory only** (memfd), `LD_PRELOAD` injection | T1059.004, T1505.003, T1105, T1496, T1620, T1574.006 |
 | Tampered software | **replaced `sshd`, `sudo`, `ps`, `ls`, PAM modules or `libc`/`liblzma`** (checked against Debian package checksums plus an own SHA-256 inventory), new programs in `/usr/bin` that no package installed | T1554 |
 | Privilege escalation | new SUID/SGID programs and file capabilities, **SUID bits set on packaged programs after installation** (GTFOBins backdoors), root programs in temp directories | T1548.001 |
+| Prevention | **known vulnerabilities in installed packages, especially those exploited in the wild** (distribution security data and CISA KEV, kernels included), weak SSH settings, accounts without password, weak kernel settings, unsafe permissions, missing firewall, certificates about to expire, backups that stopped arriving, **private keys, tokens and passwords that every user on the host can read** | T1190, T1552.001, T1490 |
 | Accounts | new accounts, accounts that gain uid 0 | T1136.001, T1078.003 |
 | Exposure | new listening ports, **Docker publications that bypass host firewalls like ufw** (read from the NAT table, not only from sockets) | |
 | Canaries | decoy credentials, `.env` files, SSH keys and SQL dumps; any open is reported with process, user and parent chain | T1552.001, T1070.004 |

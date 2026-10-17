@@ -42,6 +42,9 @@ it watches instead of needing a cluster of its own.
 | Persistence | `authorized_keys`, cron, systemd units, sudoers, PAM, shell init files, `ld.so.preload` |
 | Accounts | new accounts, accounts that gain uid 0 |
 | Exposure | new listening ports, Docker publications that bypass host firewalls |
+| Processes and kernel | reverse shells, miners, programs from memory or `/tmp`, `LD_PRELOAD`, hidden kernel modules, eBPF hooks |
+| Tampered software | replaced packaged programs, PAM modules and libraries, new SUID programs |
+| Prevention | known and exploited vulnerabilities in installed packages, weak SSH and kernel settings, unsafe permissions, missing firewall, expiring certificates, stale backups, secrets every user can read |
 | Canaries | decoy credentials, `.env` files, SSH keys and SQL dumps |
 | vigil itself | agents that stop, restart or go silent, forged agent traffic, fake log lines, edits to the event log |
 

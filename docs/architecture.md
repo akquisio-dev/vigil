@@ -22,7 +22,7 @@ Both binaries use only the Go standard library.
 
 The agent runs as root with a reduced capability set. It never listens on a
 socket and runs only these external programs: `journalctl`, `iptables-save`,
-`apt list --upgradable`, for response actions that are enabled in
+`apt list --upgradable`, `sshd -T`, `nft list ruleset` (or `iptables -S INPUT`), for response actions that are enabled in
 `agent.json` `nft`, and for the self test its own copy of `sleep` in `/tmp`.
 
 | Collector | Source | Interval |
@@ -40,6 +40,11 @@ socket and runs only these external programs: `journalctl`, `iptables-save`,
 | SUID and capabilities | walk of local filesystems (not container trees), `security.capability` xattrs, owners from `/var/lib/dpkg/info/*.list`, own inventory in `suid.json` | 6 hours, temp directories 5 minutes |
 | Package integrity | MD5 against `/var/lib/dpkg/info/*.md5sums` for programs, PAM modules and core libraries, own SHA-256 inventory in `integrity.json`, rehash only when inode, size or ctime changed; skipped while dpkg runs, findings confirmed after 10 minutes | 6 hours |
 | Kernel | `/proc/modules`, `/sys/module/*/initstate`, `/proc/sys/kernel/tainted`, own baseline in `kernel.json` | `scan_seconds` |
+| Hardening | `sshd -T` (configuration files as fallback), `/etc/shadow`, `/proc/sys`, owners and modes of files that decide what root runs, `nft list ruleset`, AppArmor/SELinux status | 6 hours |
+| Certificates | Let's Encrypt `live/*/fullchain.pem`, `ssl_certificate` in nginx and `SSLCertificateFile` in Apache configuration, `tls_certs` | 6 hours |
+| Backups | newest file of each `backups` location | 6 hours |
+| Exposed secrets | world-readable files below `secret_roots`, entering only directories every user can enter; files up to 512 KB, vendored code and package data skipped, own list in `secrets.json` | daily |
+| Packages | source packages and versions from `/var/lib/dpkg/status`, sent to the server for `vuln_lookup` | on change, at least daily |
 | eBPF | `bpf(BPF_PROG_GET_NEXT_ID)` and `BPF_OBJ_GET_INFO_BY_FD`, hooking program types only, own list in `bpf.json` | `scan_seconds` |
 
 Program starts are only reported when something about them is suspicious
@@ -169,6 +174,10 @@ can use. Fields in brackets are only present when known.
 | `integrity.unowned` | `path`, (`sha256`, `size`, `mode`) |
 | `integrity.scan` | `files`, `suspect`, `unowned`, `first`, `seconds` |
 | `integrity.many` | `count` |
+| `posture.report` | `checks` (`check`, `key`, `ok`, `value`, `want`), `certs` (`path`, `subject`, `names`, `issuer`, `not_after`, `days`, `self_signed`, `error`), `backups` (`name`, `path`, `newest`, `modified`, `age_hours`, `max_age_hours`, `size`, `ok`, `problem`) |
+| `secret.exposed` | `path`, `kind`, `line`, `fingerprint` (first 6 bytes of SHA-256 of the secret), `uid`, `mode`, (`baseline`) |
+| `secrets.scan` | `files`, `findings`, `seconds` |
+| `system.packages` | `os_id`, `os_version`, `os_codename`, `packages` (pairs of source package and version), `hash` |
 | `kernel.bpf_loaded` | `id`, `type`, `name`, `tag`, `uid`, (`baseline`) |
 | `kernel.baseline` | `modules`, `tainted`, `out_of_tree` (list of `name (flags)`) |
 | `kernel.module_loaded` | `name`, `taint`, `size` |

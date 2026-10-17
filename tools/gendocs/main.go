@@ -13,19 +13,29 @@ import (
 	"github.com/akquisio-dev/vigil/internal/server"
 )
 
+// areas group the rules; prefixes are separated by spaces.
 var areas = []struct{ prefix, title string }{
 	{"ssh.", "SSH access"},
 	{"user.", "Accounts"},
+	{"file.suid", "Privilege escalation"},
 	{"file.", "Persistence and configuration files"},
+	{"process.", "Processes"},
+	{"kernel.", "Kernel"},
+	{"integrity.", "Tampered software"},
+	{"net. web.", "Network and web"},
 	{"port.", "Exposure"},
+	{"vuln. updates.", "Vulnerabilities and updates"},
+	{"posture. tls. backup. secret.", "Hardening, certificates, backups and secrets"},
 	{"canary.", "Canaries"},
 	{"", "Integrity of vigil itself"},
 }
 
 func area(id string) int {
 	for i, a := range areas[:len(areas)-1] {
-		if strings.HasPrefix(id, a.prefix) {
-			return i
+		for _, p := range strings.Fields(a.prefix) {
+			if strings.HasPrefix(id, p) {
+				return i
+			}
 		}
 	}
 	return len(areas) - 1

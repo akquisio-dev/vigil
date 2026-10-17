@@ -179,6 +179,10 @@ func scoreSeverity(s float64) string {
 // "swish-e source package in esm-apps/noble, might be affected and may need fixing."
 var ovalCriterion = regexp.MustCompile(`^(\S+) source package in (\S+), (.*?)(?: \(note: '([^']*)'\))?\.?$`)
 
+// Kernels have their own form, one per flavour (linux, linux-aws, ...):
+// "'linux' kernel in noble was vulnerable but has been fixed (note: '6.8.0-35.35')."
+var ovalKernel = regexp.MustCompile(`^'([a-z0-9.-]+)' kernel in (\S+) was vulnerable but has been fixed \(note: '([^']+)'\)`)
+
 // parseOVAL reads one release's CVE OVAL feed.
 func parseOVAL(r io.Reader, release string) (*vulnIndex, error) {
 	vi := &vulnIndex{Release: release, Recs: map[string]*vulnRec{}}
@@ -239,6 +243,10 @@ func parseOVAL(r io.Reader, release string) (*vulnIndex, error) {
 				sev = scoreSeverity(score)
 			}
 			for _, c := range crits {
+				if k := ovalKernel.FindStringSubmatch(c); k != nil {
+					vi.add(cve, vulnPkg{Name: k[1], Fixed: k[3], Severity: sev, Pro: strings.HasPrefix(k[2], "esm-")})
+					continue
+				}
 				m := ovalCriterion.FindStringSubmatch(c)
 				if m == nil || strings.Contains(m[3], "not affected") {
 					continue
@@ -666,6 +674,7 @@ func (s *Server) matchAgent(a *AgentRec, p *agentPackages) []finding {
 	})
 	var conds []condition
 	severe := map[string][]VulnHit{}
+	exploited := map[string][]VulnHit{}
 	for _, h := range hits {
 		fixable := h.Fixed != "" && !h.Pro
 		if fixable {
@@ -681,26 +690,34 @@ func (s *Server) matchAgent(a *AgentRec, p *agentPackages) []finding {
 				sum.Exploited = append(sum.Exploited, h)
 			}
 			if fixable {
-				conds = append(conds, condition{"vuln.exploited", h.CVE + "|" + h.Package,
-					map[string]string{"cve": h.CVE, "package": h.Package, "installed": h.Installed, "fixed": h.Fixed, "severity": h.Severity}})
+				exploited[h.Package] = append(exploited[h.Package], h)
 			}
 		}
 		if fixable && (h.Severity == "high" || h.Severity == "critical") {
 			severe[h.Package] = append(severe[h.Package], h)
 		}
 	}
-	for pkg, list := range severe {
-		var cves []string
-		for i, h := range list {
-			if i == 5 {
-				cves = append(cves, "…")
-				break
+	// One alert per package: a kernel several releases behind has hundreds.
+	perPackage := func(rule string, m map[string][]VulnHit) {
+		for pkg, list := range m {
+			var cves []string
+			fixed := ""
+			for i, h := range list {
+				if i < 5 {
+					cves = append(cves, h.CVE)
+				} else if i == 5 {
+					cves = append(cves, "…")
+				}
+				if fixed == "" || dpkgver.Compare(h.Fixed, fixed) > 0 {
+					fixed = h.Fixed
+				}
 			}
-			cves = append(cves, h.CVE)
+			conds = append(conds, condition{rule, pkg, map[string]string{"package": pkg, "installed": list[0].Installed,
+				"fixed": fixed, "count": fmt.Sprint(len(list)), "cves": strings.Join(cves, ", ")}})
 		}
-		conds = append(conds, condition{"vuln.severe", pkg, map[string]string{"package": pkg, "installed": list[0].Installed,
-			"fixed": list[0].Fixed, "count": fmt.Sprint(len(list)), "cves": strings.Join(cves, ", ")}})
 	}
+	perPackage("vuln.exploited", exploited)
+	perPackage("vuln.severe", severe)
 	sort.Slice(conds, func(i, j int) bool { return conds[i].rule+conds[i].key < conds[j].rule+conds[j].key })
 	a.Vulns = sum
 	return s.conditionFindings(a, "vuln", conds)

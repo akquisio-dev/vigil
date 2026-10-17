@@ -16,6 +16,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
@@ -118,6 +119,12 @@ func (s *Server) saveLocked() {
 }
 
 func (s *Server) Run(ctx context.Context) error {
+	// The packaged unit caps memory at 256 MB. Parsing a release's
+	// vulnerability feed (vuln_lookup) allocates a lot of short-lived
+	// garbage; a soft limit makes the collector run before the cap is near.
+	if os.Getenv("GOMEMLIMIT") == "" {
+		debug.SetMemoryLimit(160 << 20)
+	}
 	if !s.store.ChainOK {
 		s.chainBroken(s.store.ChainError)
 	}

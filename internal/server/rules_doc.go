@@ -393,7 +393,7 @@ var ruleDocs = map[string]ruleDoc{
 		"Make the file private (`chmod 600`, or `640` with the service's group) and rotate the secret: assume it has been read.",
 	},
 	"vuln.exploited": {
-		"An installed package has a vulnerability on CISA's list of vulnerabilities exploited in the wild, and the distribution has a fix. Needs `vuln_lookup` on the server.",
+		"An installed package has vulnerabilities on CISA's list of vulnerabilities exploited in the wild, and the distribution has a fix. One alert per package, naming the version that fixes all of them. Needs `vuln_lookup` on the server.",
 		"None; when the fix is available, install it.",
 		"Update the package now (`apt install --only-upgrade <package>`) and restart what uses it (`needrestart`, or reboot for the kernel).",
 	},

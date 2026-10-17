@@ -2,7 +2,7 @@
 
 # Detection rules
 
-vigil ships 69 rules. Every alert carries the rule id, so an alert can be looked up here.
+vigil ships 86 rules. Every alert carries the rule id, so an alert can be looked up here.
 
 Severity decides who is woken up: each notifier has a `min_severity`, `high` by default.
 
@@ -15,14 +15,19 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 | [`integrity.binary_replaced`](#integrity-binary_replaced) | critical | [T1554](https://attack.mitre.org/techniques/T1554/) |
 | [`kernel.module_hidden`](#kernel-module_hidden) | critical | [T1014](https://attack.mitre.org/techniques/T1014/) |
 | [`net.c2`](#net-c2) | critical | [T1071](https://attack.mitre.org/techniques/T1071/) |
+| [`posture.empty_password`](#posture-empty_password) | critical | [T1078](https://attack.mitre.org/techniques/T1078/) |
+| [`posture.ssh_empty_password`](#posture-ssh_empty_password) | critical | [T1078](https://attack.mitre.org/techniques/T1078/) |
 | [`process.miner`](#process-miner) | critical | [T1496](https://attack.mitre.org/techniques/T1496/) |
 | [`process.reverse_shell`](#process-reverse_shell) | critical | [T1059.004](https://attack.mitre.org/techniques/T1059/004/) |
 | [`user.root`](#user-root) | critical | [T1078.003](https://attack.mitre.org/techniques/T1078/003/) |
+| [`vuln.exploited`](#vuln-exploited) | critical | [T1190](https://attack.mitre.org/techniques/T1190/) |
 | [`agent.config_rejected`](#agent-config_rejected) | high | [T1557](https://attack.mitre.org/techniques/T1557/) |
 | [`agent.forged`](#agent-forged) | high | [T1557](https://attack.mitre.org/techniques/T1557/) |
 | [`agent.restarted`](#agent-restarted) | high | [T1562.001](https://attack.mitre.org/techniques/T1562/001/) |
 | [`agent.silent`](#agent-silent) | high | [T1562.001](https://attack.mitre.org/techniques/T1562/001/) |
 | [`agent.stopped`](#agent-stopped) | high | [T1562.001](https://attack.mitre.org/techniques/T1562/001/) |
+| [`backup.missing`](#backup-missing) | high | [T1490](https://attack.mitre.org/techniques/T1490/) |
+| [`backup.stale`](#backup-stale) | high | [T1490](https://attack.mitre.org/techniques/T1490/) |
 | [`canary.tampered`](#canary-tampered) | high | [T1070.004](https://attack.mitre.org/techniques/T1070/004/) |
 | [`file.cron`](#file-cron) | high | [T1053.003](https://attack.mitre.org/techniques/T1053/003/) |
 | [`file.pam`](#file-pam) | high | [T1556.003](https://attack.mitre.org/techniques/T1556/003/) |
@@ -38,18 +43,24 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 | [`net.service_outbound`](#net-service_outbound) | high | [T1572](https://attack.mitre.org/techniques/T1572/) |
 | [`notify.failed`](#notify-failed) | high |  |
 | [`port.docker`](#port-docker) | high |  |
+| [`posture.permissions`](#posture-permissions) | high |  |
+| [`posture.ssh_root_login`](#posture-ssh_root_login) | high | [T1110](https://attack.mitre.org/techniques/T1110/) |
 | [`process.deleted_exe`](#process-deleted_exe) | high | [T1070.004](https://attack.mitre.org/techniques/T1070/004/) |
 | [`process.download_exec`](#process-download_exec) | high | [T1105](https://attack.mitre.org/techniques/T1105/) |
 | [`process.memfd_exec`](#process-memfd_exec) | high | [T1620](https://attack.mitre.org/techniques/T1620/) |
 | [`process.preload`](#process-preload) | high | [T1574.006](https://attack.mitre.org/techniques/T1574/006/) |
 | [`process.service_shell`](#process-service_shell) | high | [T1505.003](https://attack.mitre.org/techniques/T1505/003/) |
+| [`secret.exposed`](#secret-exposed) | high | [T1552.001](https://attack.mitre.org/techniques/T1552/001/) |
 | [`selftest.failed`](#selftest-failed) | high | [T1562.001](https://attack.mitre.org/techniques/T1562/001/) |
 | [`ssh.key_added`](#ssh-key_added) | high | [T1098.004](https://attack.mitre.org/techniques/T1098/004/) |
 | [`ssh.password_login`](#ssh-password_login) | high | [T1078](https://attack.mitre.org/techniques/T1078/) |
 | [`ssh.unknown_key`](#ssh-unknown_key) | high | [T1098.004](https://attack.mitre.org/techniques/T1098/004/) |
+| [`tls.expired`](#tls-expired) | high |  |
 | [`user.added`](#user-added) | high | [T1136.001](https://attack.mitre.org/techniques/T1136/001/) |
+| [`vuln.severe`](#vuln-severe) | high |  |
 | [`web.exploit_success`](#web-exploit_success) | high | [T1190](https://attack.mitre.org/techniques/T1190/) |
 | [`web.shell_access`](#web-shell_access) | high | [T1505.003](https://attack.mitre.org/techniques/T1505/003/) |
+| [`backup.small`](#backup-small) | medium | [T1490](https://attack.mitre.org/techniques/T1490/) |
 | [`canary.overflow`](#canary-overflow) | medium |  |
 | [`canary.remove_failed`](#canary-remove_failed) | medium |  |
 | [`file.accounts`](#file-accounts) | medium | [T1098](https://attack.mitre.org/techniques/T1098/) |
@@ -60,9 +71,13 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 | [`kernel.tainted`](#kernel-tainted) | medium | [T1014](https://attack.mitre.org/techniques/T1014/) |
 | [`net.tor`](#net-tor) | medium | [T1090.003](https://attack.mitre.org/techniques/T1090/003/) |
 | [`port.public`](#port-public) | medium |  |
+| [`posture.aslr`](#posture-aslr) | medium |  |
+| [`posture.firewall`](#posture-firewall) | medium |  |
+| [`posture.ssh_password`](#posture-ssh_password) | medium | [T1110](https://attack.mitre.org/techniques/T1110/) |
 | [`process.decode_exec`](#process-decode_exec) | medium | [T1140](https://attack.mitre.org/techniques/T1140/) |
 | [`process.tmp_exec`](#process-tmp_exec) | medium | [T1204.002](https://attack.mitre.org/techniques/T1204/002/) |
 | [`ssh.new_source`](#ssh-new_source) | medium | [T1078](https://attack.mitre.org/techniques/T1078/) |
+| [`tls.expiring`](#tls-expiring) | medium |  |
 | [`updates.security_pending`](#updates-security_pending) | medium |  |
 | [`web.login_bruteforce`](#web-login_bruteforce) | medium | [T1110](https://attack.mitre.org/techniques/T1110/) |
 | [`agent.dropped`](#agent-dropped) | low |  |
@@ -70,6 +85,8 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 | [`file.suid_packaged`](#file-suid_packaged) | low | [T1548.001](https://attack.mitre.org/techniques/T1548/001/) |
 | [`kernel.module`](#kernel-module) | low | [T1547.006](https://attack.mitre.org/techniques/T1547/006/) |
 | [`port.local`](#port-local) | low |  |
+| [`posture.mac`](#posture-mac) | low |  |
+| [`posture.sysctl`](#posture-sysctl) | low |  |
 | [`process.rate_limited`](#process-rate_limited) | low |  |
 | [`ssh.bruteforce`](#ssh-bruteforce) | low | [T1110](https://attack.mitre.org/techniques/T1110/) |
 | [`ssh.key_removed`](#ssh-key_removed) | low |  |
@@ -190,6 +207,44 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 
 **What to do:** None, unless unexpected; removing accounts can also destroy evidence or lock admins out.
 
+## Privilege escalation
+
+### `file.suid_tmp` {#file-suid_tmp}
+
+**Severity:** critical · **ATT&CK:** [T1548.001](https://attack.mitre.org/techniques/T1548/001/)
+
+**Alert:** `Root {what} program in a temp directory: {path}`
+
+**Fires when:** A root-owned SUID/SGID program, or one with a dangerous capability, appeared in `/tmp`, `/var/tmp` or `/dev/shm`. Nothing legitimate puts root programs there.
+
+**Known false positives:** None known.
+
+**What to do:** Treat as a root compromise: someone with root left a way back in. Copy the file for analysis, remove it, and investigate how root was reached.
+
+### `file.suid` {#file-suid}
+
+**Severity:** high · **ATT&CK:** [T1548.001](https://attack.mitre.org/techniques/T1548/001/)
+
+**Alert:** `{what} on {path} ({why})`
+
+**Fires when:** A file became SUID or SGID, or got a capability that leads to root (`cap_setuid`, `cap_dac_override`, `cap_sys_admin` and similar), and either no package owns it, or the bit was set after its package was installed (`chmod u+s /usr/bin/find`). Existing such files are named once when the collector first runs.
+
+**Known false positives:** Software installed by hand (`make install`) that ships SUID helpers; tools that use `setcap` after installation; files below `/home` and `/root`.
+
+**What to do:** Check who changed the file and when (`stat`, `journalctl`). A shell, an interpreter or a GTFOBins program with the SUID bit is a backdoor: remove the bit (`chmod u-s`) and look for how root was reached.
+
+### `file.suid_packaged` {#file-suid_packaged}
+
+**Severity:** low · **ATT&CK:** [T1548.001](https://attack.mitre.org/techniques/T1548/001/)
+
+**Alert:** `{what} on {path} from package {package}`
+
+**Fires when:** A package installed a SUID/SGID program or a file with a capability, for example `sudo` or `ping`.
+
+**Known false positives:** Every package installation that ships one. That is why this rule is low.
+
+**What to do:** Confirm the package installation was planned.
+
 ## Persistence and configuration files
 
 ### `file.preload` {#file-preload}
@@ -203,18 +258,6 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 **Known false positives:** Almost none. Very few legitimate setups use it.
 
 **What to do:** Treat as compromise. Any library listed there is loaded into every process, a common userland rootkit technique.
-
-### `file.suid_tmp` {#file-suid_tmp}
-
-**Severity:** critical · **ATT&CK:** [T1548.001](https://attack.mitre.org/techniques/T1548/001/)
-
-**Alert:** `Root {what} program in a temp directory: {path}`
-
-**Fires when:** A root-owned SUID/SGID program, or one with a dangerous capability, appeared in `/tmp`, `/var/tmp` or `/dev/shm`. Nothing legitimate puts root programs there.
-
-**Known false positives:** None known.
-
-**What to do:** Treat as a root compromise: someone with root left a way back in. Copy the file for analysis, remove it, and investigate how root was reached.
 
 ### `file.cron` {#file-cron}
 
@@ -251,18 +294,6 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 **Known false positives:** Admin changes, package installs that add sudo rules.
 
 **What to do:** Read the change. New `NOPASSWD` rules for unexpected users are privilege escalation paths.
-
-### `file.suid` {#file-suid}
-
-**Severity:** high · **ATT&CK:** [T1548.001](https://attack.mitre.org/techniques/T1548/001/)
-
-**Alert:** `{what} on {path} ({why})`
-
-**Fires when:** A file became SUID or SGID, or got a capability that leads to root (`cap_setuid`, `cap_dac_override`, `cap_sys_admin` and similar), and either no package owns it, or the bit was set after its package was installed (`chmod u+s /usr/bin/find`). Existing such files are named once when the collector first runs.
-
-**Known false positives:** Software installed by hand (`make install`) that ships SUID helpers; tools that use `setcap` after installation; files below `/home` and `/root`.
-
-**What to do:** Check who changed the file and when (`stat`, `journalctl`). A shell, an interpreter or a GTFOBins program with the SUID bit is a backdoor: remove the bit (`chmod u-s`) and look for how root was reached.
 
 ### `file.accounts` {#file-accounts}
 
@@ -324,17 +355,337 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 
 **What to do:** Review the change.
 
-### `file.suid_packaged` {#file-suid_packaged}
+## Processes
 
-**Severity:** low · **ATT&CK:** [T1548.001](https://attack.mitre.org/techniques/T1548/001/)
+### `process.miner` {#process-miner}
 
-**Alert:** `{what} on {path} from package {package}`
+**Severity:** critical · **ATT&CK:** [T1496](https://attack.mitre.org/techniques/T1496/)
 
-**Fires when:** A package installed a SUID/SGID program or a file with a capability, for example `sudo` or `ping`.
+**Alert:** `Crypto miner started: {exe} (uid {uid})`
 
-**Known false positives:** Every package installation that ships one. That is why this rule is low.
+**Fires when:** A program with a known miner name or miner arguments (`stratum+tcp://`, `--donate-level`, `--randomx`).
 
-**What to do:** Confirm the package installation was planned.
+**Known false positives:** None on servers that are not meant to mine.
+
+**What to do:** Find how it got there (the parent process, cron, systemd units, `authorized_keys`), remove the persistence first, then the miner. Assume the credentials on the host are known.
+
+### `process.reverse_shell` {#process-reverse_shell}
+
+**Severity:** critical · **ATT&CK:** [T1059.004](https://attack.mitre.org/techniques/T1059/004/)
+
+**Alert:** `Reverse shell: {exe} started by {parent} (uid {uid})`
+
+**Fires when:** A shell started with its input or output connected to a network socket, or a command line that builds a reverse shell (`/dev/tcp/…`, `nc -e`, `socat exec:`, Python `pty.spawn`).
+
+**Known false positives:** Rare. Some remote administration scripts pipe a shell through `socat` on purpose.
+
+**What to do:** Treat as an active intrusion: note the parent process and the remote address (`ss -tnp`), isolate the host, preserve memory and disk if you can, then kill the process.
+
+### `process.deleted_exe` {#process-deleted_exe}
+
+**Severity:** high · **ATT&CK:** [T1070.004](https://attack.mitre.org/techniques/T1070/004/)
+
+**Alert:** `Program running from a deleted file: {exe}`
+
+**Fires when:** A program started from a file that was already deleted, a common way to hide a dropped binary.
+
+**Known false positives:** Rare. A package upgrade that replaces a binary while a service restarts at the same moment.
+
+**What to do:** Copy the binary from `/proc/<pid>/exe` before killing the process, then investigate it.
+
+### `process.download_exec` {#process-download_exec}
+
+**Severity:** high · **ATT&CK:** [T1105](https://attack.mitre.org/techniques/T1105/)
+
+**Alert:** `Download and run: {cmdline}`
+
+**Fires when:** A command line that downloads and runs code in one go (`curl … | sh`, `wget … && chmod +x`, `chmod +x /tmp/…`).
+
+**Known false positives:** Installers that are run this way on purpose, for example during a deploy.
+
+**What to do:** Check who ran it (`uid`, parent) and what was downloaded. If nobody did, treat as an intrusion.
+
+### `process.memfd_exec` {#process-memfd_exec}
+
+**Severity:** high · **ATT&CK:** [T1620](https://attack.mitre.org/techniques/T1620/)
+
+**Alert:** `Program running from memory only: {exe} (uid {uid}, started by {parent})`
+
+**Fires when:** A program was started from an anonymous memory file (`memfd_create`), so it never existed on disk. Fileless malware and in-memory loaders work this way.
+
+**Known false positives:** runc up to 1.1 re-executes itself from a memfd named `runc_cloned` on every container start; that case is excluded. Some packers and sandboxes do the same.
+
+**What to do:** Dump the program from `/proc/<pid>/exe` before killing it, then find the parent that loaded it.
+
+### `process.preload` {#process-preload}
+
+**Severity:** high · **ATT&CK:** [T1574.006](https://attack.mitre.org/techniques/T1574/006/)
+
+**Alert:** `{exe} started with LD_PRELOAD={lib} (uid {uid})`
+
+**Fires when:** A program started with `LD_PRELOAD` set, which loads a library into it before anything else. Userland rootkits and credential stealers hook functions this way. Reported once per program and library until the agent restarts.
+
+**Known false positives:** Memory allocators (jemalloc, tcmalloc), libfaketime, libeatmydata, some profilers and sandboxes. Suppress them per library with a reason.
+
+**What to do:** Check the library: who owns it (`dpkg -S`), when it appeared, what it exports. A library in `/tmp`, `/dev/shm` or a home directory is a strong sign of compromise.
+
+### `process.service_shell` {#process-service_shell}
+
+**Severity:** high · **ATT&CK:** [T1505.003](https://attack.mitre.org/techniques/T1505/003/)
+
+**Alert:** `{parent} started {exe} (uid {uid})`
+
+**Fires when:** A web server, PHP-FPM or a database started a shell or a script interpreter. This is what a web shell or an exploited service does.
+
+**Known false positives:** CGI setups and some PHP applications that call `exec()` on purpose. Application runtimes like node, java and python are not watched as parents, because they start shells in normal operation.
+
+**What to do:** Look at the command line and the web server's access log at that time; search the web root for recently changed files.
+
+### `process.decode_exec` {#process-decode_exec}
+
+**Severity:** medium · **ATT&CK:** [T1140](https://attack.mitre.org/techniques/T1140/)
+
+**Alert:** `Decoded command run in a shell: {cmdline}`
+
+**Fires when:** Base64-encoded content decoded and piped into a shell, a way to hide commands from logs.
+
+**Known false positives:** Rare in normal operation.
+
+**What to do:** Decode the payload from the command line and check what it does.
+
+### `process.tmp_exec` {#process-tmp_exec}
+
+**Severity:** medium · **ATT&CK:** [T1204.002](https://attack.mitre.org/techniques/T1204/002/)
+
+**Alert:** `Program started from a temporary directory: {exe} (uid {uid})`
+
+**Fires when:** A program started from `/tmp`, `/dev/shm` or `/var/tmp`. Attackers drop tools there because every user can write to them.
+
+**Known false positives:** Build tools that run test binaries from `/tmp` (for example `go test`), installers. Suppress them per host with a reason.
+
+**What to do:** Check the file (`sha256sum`, `strings`), its owner and how it got there.
+
+### `process.rate_limited` {#process-rate_limited}
+
+**Severity:** low
+
+**Alert:** `{dropped} suspicious program starts not reported (limit reached)`
+
+**Fires when:** The agent saw more suspicious program starts in one minute than it reports (60) and dropped the rest.
+
+**Known false positives:** A build or a loop that repeatedly matches a process rule.
+
+**What to do:** Look at the process alerts from the same minute; a flood can also hide one real event.
+
+## Kernel
+
+### `kernel.module_hidden` {#kernel-module_hidden}
+
+**Severity:** critical · **ATT&CK:** [T1014](https://attack.mitre.org/techniques/T1014/)
+
+**Alert:** `Kernel module {name} is hidden from /proc/modules`
+
+**Fires when:** A module is live in `/sys/module` but missing from `/proc/modules` on two scans in a row. Rootkits unlink themselves from the module list to hide.
+
+**Known false positives:** None known. A module that is still loading is in state `coming`, not `live`, and is ignored.
+
+**What to do:** Treat the kernel as compromised. Nothing the host reports can be trusted from here on: take it offline and rebuild it.
+
+### `kernel.bpf` {#kernel-bpf}
+
+**Severity:** high · **ATT&CK:** [T1014](https://attack.mitre.org/techniques/T1014/)
+
+**Alert:** `eBPF {type} program {name} loaded (uid {uid})`
+
+**Fires when:** An eBPF program of a type that can hook the kernel or the network path was loaded: kprobe, tracepoint, raw tracepoint, tracing (fentry/fexit), LSM, extension, perf event or XDP. eBPF rootkits such as boopkit, TripleCross and ebpfkit work this way. Programs that were loaded when the collector first ran are reported once as well, since a rootkit may already be there. The same program loaded again (same type, name and tag) stays quiet. cgroup and socket programs from systemd and Docker are not reported.
+
+**Known false positives:** Observability and security tools: bpftrace, BCC tools, Falco, Tracee, Cilium, Pixie, Parca, Datadog and similar agents, `perf`. Suppress them by name with a reason.
+
+**What to do:** List programs with `bpftool prog show` and find the loading process (`bpftool prog show id <id> --json` shows `pids` on recent kernels). A program nobody can explain is a strong sign of a kernel-level compromise.
+
+### `kernel.module_unsigned` {#kernel-module_unsigned}
+
+**Severity:** high · **ATT&CK:** [T1547.006](https://attack.mitre.org/techniques/T1547/006/)
+
+**Alert:** `Out-of-tree or unsigned kernel module {name} ({taint})`
+
+**Fires when:** A kernel module that is out of tree (`O`), unsigned (`E`) or proprietary (`P`) was loaded, or was already loaded when the agent first ran. Kernel rootkits are out-of-tree modules.
+
+**Known false positives:** DKMS modules: ZFS, VirtualBox, NVIDIA, some VPN and backup drivers. They raise this once per host; suppress them by name with a reason.
+
+**What to do:** Find the module file (`modinfo <name>`) and the package that owns it (`dpkg -S`). An out-of-tree module nobody installed means the kernel is compromised: rebuild the host.
+
+### `kernel.tainted` {#kernel-tainted}
+
+**Severity:** medium · **ATT&CK:** [T1014](https://attack.mitre.org/techniques/T1014/)
+
+**Alert:** `Kernel tainted: {added} (now {tainted})`
+
+**Fires when:** New flags appeared in `/proc/sys/kernel/tainted`, for example `O` (out-of-tree module), `E` (unsigned module), `W` (kernel warning) or `D` (kernel oops).
+
+**Known false positives:** Out-of-tree drivers, kernel warnings from buggy hardware or drivers, live patching (`K`).
+
+**What to do:** Look at `dmesg` for the cause. Taint from a module goes together with a `kernel.module_unsigned` alert.
+
+### `kernel.module` {#kernel-module}
+
+**Severity:** low · **ATT&CK:** [T1547.006](https://attack.mitre.org/techniques/T1547/006/)
+
+**Alert:** `Kernel module {name} loaded`
+
+**Fires when:** A kernel module from the kernel's own tree was loaded after the agent's baseline.
+
+**Known false positives:** The kernel loads modules on demand all the time: nf_tables for firewall rules, wireguard, bridge and overlay modules for Docker, filesystem drivers. That is why this rule is low.
+
+**What to do:** Check that the module fits something that happened on the host at that time. A module nobody can explain is worth a closer look at the host.
+
+## Tampered software
+
+### `integrity.binary_replaced` {#integrity-binary_replaced}
+
+**Severity:** critical · **ATT&CK:** [T1554](https://attack.mitre.org/techniques/T1554/)
+
+**Alert:** `{path} from {package} was modified: {reason}`
+
+**Fires when:** A program used to log in or to inspect the system (`sshd`, `sudo`, `su`, `login`, `ps`, `ss`, `ls`, `find`, shells), a PAM module or a core library (`libc`, `ld-linux`, `libpam`, `liblzma`, `libnss_*`) no longer matches the checksum its Debian package recorded, confirmed on a second look ten minutes later. Also raised when the package's checksum list changed while the package version did not.
+
+**Known false positives:** None known on systems without prelink. Files changed with `dpkg-divert` are skipped.
+
+**What to do:** Assume a rootkit or a backdoor: the tools on the host may lie to you. Compare `sha256` with a clean copy of the same package version (`apt download`), inspect from a rescue system, and rebuild the host.
+
+### `integrity.many` {#integrity-many}
+
+**Severity:** high · **ATT&CK:** [T1554](https://attack.mitre.org/techniques/T1554/)
+
+**Alert:** `{count} packaged files differ from their checksums`
+
+**Fires when:** More than 25 packaged files differed from their checksums in one run. Only the first 25 are reported one by one.
+
+**Known false positives:** A broken or interrupted package installation (`dpkg --audit`), restoring files from an old backup.
+
+**What to do:** Run `dpkg --audit` and `debsums -c`. If no package operation explains it, treat it like `integrity.binary_replaced`.
+
+### `integrity.modified` {#integrity-modified}
+
+**Severity:** high · **ATT&CK:** [T1554](https://attack.mitre.org/techniques/T1554/)
+
+**Alert:** `{path} from {package} was modified: {reason}`
+
+**Fires when:** Any other program in `/usr/bin`, `/usr/sbin`, `/usr/lib/openssh` or `/usr/libexec` differs from its package checksum (confirmed twice), or the checksum list changed without a package update.
+
+**Known false positives:** Programs patched by hand, files changed by a configuration tool without `dpkg-divert`.
+
+**What to do:** Compare with the package (`apt download`, `debsums -c`) and find out who changed it and when.
+
+### `integrity.unowned` {#integrity-unowned}
+
+**Severity:** medium · **ATT&CK:** [T1554](https://attack.mitre.org/techniques/T1554/)
+
+**Alert:** `New program {path} that no package installed`
+
+**Fires when:** A new regular file appeared in `/usr/bin` or `/usr/sbin` that no package lists. Files present when the collector first ran are accepted.
+
+**Known false positives:** Software installed with `make install` or `curl | sh` into `/usr/bin` instead of `/usr/local/bin`, binaries that a package's install script generates.
+
+**What to do:** Check what it is (`file`, `strings`, the `sha256` on a malware database) and how it got there.
+
+## Network and web
+
+### `net.c2` {#net-c2}
+
+**Severity:** critical · **ATT&CK:** [T1071](https://attack.mitre.org/techniques/T1071/)
+
+**Alert:** `{process} connected to {ip}:{port}, listed as command and control ({list})`
+
+**Fires when:** A process connected to an address on the abuse.ch Feodo Tracker or ThreatFox lists, which track botnet command and control and malware delivery servers. Needs `threat_intel`.
+
+**Known false positives:** Very rare. Lists can be wrong for a short time when an address changes hands.
+
+**What to do:** Treat as an active compromise: find the process (`exe`, `uid`), how it was started, and isolate the host.
+
+### `net.blocklisted` {#net-blocklisted}
+
+**Severity:** high · **ATT&CK:** [T1071](https://attack.mitre.org/techniques/T1071/)
+
+**Alert:** `{process} connected to {ip}:{port} on a block list ({list})`
+
+**Fires when:** A process connected to an address on the Spamhaus DROP list (networks run by criminals). Needs `threat_intel`.
+
+**Known false positives:** Rare.
+
+**What to do:** Find the process and why it connects there.
+
+### `net.miner_pool` {#net-miner_pool}
+
+**Severity:** high · **ATT&CK:** [T1496](https://attack.mitre.org/techniques/T1496/)
+
+**Alert:** `{process} connected to {ip}:{port}, a common mining pool port`
+
+**Fires when:** An outbound connection to a public address on a port typical for mining pools (3333, 14433, 14444, 45560, 45700).
+
+**Known false positives:** Other software using these ports.
+
+**What to do:** Check the process; look for `process.miner` alerts on the same host.
+
+### `net.service_outbound` {#net-service_outbound}
+
+**Severity:** high · **ATT&CK:** [T1572](https://attack.mitre.org/techniques/T1572/)
+
+**Alert:** `{process} opened a connection to the internet: {ip}:{port}`
+
+**Fires when:** `sshd` or a database (PostgreSQL, MySQL/MariaDB, Redis, MongoDB, Memcached) opened a connection to a public address. Databases do not do that on their own; an attacker using `REPLICAOF`, `COPY … PROGRAM` or SSH tunneling does.
+
+**Known false positives:** Database replication to a public address, SSH port forwarding used on purpose.
+
+**What to do:** Check the connection (`ss -tnp`), the service's log and its configuration. For Redis, check `CONFIG GET replicaof` and `dir`.
+
+### `web.exploit_success` {#web-exploit_success}
+
+**Severity:** high · **ATT&CK:** [T1190](https://attack.mitre.org/techniques/T1190/)
+
+**Alert:** `Attack on {log} from {ip} answered with 2xx ({kinds})`
+
+**Fires when:** A request from one address matched an attack signature (SQL injection, path traversal, Log4Shell `${jndi:`, command injection, PHP wrappers, Shellshock) and the server answered with 2xx. Scans that end in 404 do not alert; they show up under attacking addresses.
+
+**Known false positives:** Applications that answer every path with 200 (single page apps with a catch-all route) turn harmless probes into 2xx. Suppress per log with a reason.
+
+**What to do:** Check the request in the access log and what the application did with it. A real hit usually leaves traces in the application log or the database.
+
+### `web.shell_access` {#web-shell_access}
+
+**Severity:** high · **ATT&CK:** [T1505.003](https://attack.mitre.org/techniques/T1505/003/)
+
+**Alert:** `Web shell path answered with 2xx for {ip}: {sample}`
+
+**Fires when:** A request to a path named like a web shell (`shell.php`, `wso.php`, `c99.php`, …) was answered with 2xx.
+
+**Known false positives:** Rare. A file with such a name on purpose.
+
+**What to do:** Look at the file on disk, its owner and change time, and search the web root for other recently changed files. Treat as an intrusion until proven otherwise.
+
+### `net.tor` {#net-tor}
+
+**Severity:** medium · **ATT&CK:** [T1090.003](https://attack.mitre.org/techniques/T1090/003/)
+
+**Alert:** `{process} connected to Tor exit {ip}:{port}`
+
+**Fires when:** A process connected to a Tor exit node. Malware uses Tor to hide its command and control. Needs `threat_intel`.
+
+**Known false positives:** Hosts that run Tor or talk to services through it on purpose.
+
+**What to do:** Check the process. Suppress for hosts where this is expected.
+
+### `web.login_bruteforce` {#web-login_bruteforce}
+
+**Severity:** medium · **ATT&CK:** [T1110](https://attack.mitre.org/techniques/T1110/)
+
+**Alert:** `{logins} login attempts in one minute from {ip}`
+
+**Fires when:** 20 or more POST requests within one minute from one address to a path listed in `login_paths`.
+
+**Known false positives:** Load tests, or many users behind one address (a company NAT).
+
+**What to do:** Rate limit the login path in the web server or block the address.
 
 ## Exposure
 
@@ -373,6 +724,262 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 **Known false positives:** Local helper processes, debuggers, language servers.
 
 **What to do:** Usually harmless; check the process name.
+
+## Vulnerabilities and updates
+
+### `vuln.exploited` {#vuln-exploited}
+
+**Severity:** critical · **ATT&CK:** [T1190](https://attack.mitre.org/techniques/T1190/)
+
+**Alert:** `{package} {installed}: {count} vulnerabilities exploited in the wild ({cves}), fixed in {fixed}`
+
+**Fires when:** An installed package has vulnerabilities on CISA's list of vulnerabilities exploited in the wild, and the distribution has a fix. One alert per package, naming the version that fixes all of them. Needs `vuln_lookup` on the server.
+
+**Known false positives:** None; when the fix is available, install it.
+
+**What to do:** Update the package now (`apt install --only-upgrade <package>`) and restart what uses it (`needrestart`, or reboot for the kernel).
+
+### `vuln.severe` {#vuln-severe}
+
+**Severity:** high
+
+**Alert:** `{package} {installed}: {count} high or critical vulnerabilities ({cves}), fixed in {fixed}`
+
+**Fires when:** An installed package has vulnerabilities of high or critical priority (the distribution's rating, or CVSS when there is none) with a fix in the archive. One alert per package. Needs `vuln_lookup` on the server; unlike `updates.security_pending` it does not wait seven days.
+
+**Known false positives:** Packages held back on purpose. The kernel: the newest installed kernel version counts, so a host that was not rebooted shows in `updates.reboot_pending` instead.
+
+**What to do:** Install the update (`apt upgrade`) and restart the services that use the package.
+
+### `updates.security_pending` {#updates-security_pending}
+
+**Severity:** medium
+
+**Alert:** `{count} security updates pending for {days} days: {packages}`
+
+**Fires when:** Security updates have been waiting for at least seven days (from `apt list --upgradable`, packages from a `-security` suite).
+
+**Known false positives:** Updates held back on purpose.
+
+**What to do:** Install them (`apt upgrade`) and reboot if `updates.reboot_pending` follows.
+
+### `updates.disabled` {#updates-disabled}
+
+**Severity:** low
+
+**Alert:** `Automatic security updates are off`
+
+**Fires when:** `APT::Periodic::Unattended-Upgrade` is not enabled, so security updates wait for a person.
+
+**Known false positives:** Hosts where updates are rolled out by other tooling.
+
+**What to do:** Enable unattended-upgrades (`dpkg-reconfigure -plow unattended-upgrades`) or suppress with the name of the tooling that does it.
+
+### `updates.lists_stale` {#updates-lists_stale}
+
+**Severity:** low
+
+**Alert:** `Package lists not refreshed for {days} days`
+
+**Fires when:** The package lists have not been refreshed for at least seven days, so pending security updates are not even known.
+
+**Known false positives:** Hosts without internet access that get updates another way.
+
+**What to do:** Check `apt update` and the apt timers (`systemctl list-timers apt*`).
+
+### `updates.reboot_pending` {#updates-reboot_pending}
+
+**Severity:** low
+
+**Alert:** `Reboot pending for {days} days ({packages})`
+
+**Fires when:** `/var/run/reboot-required` has existed for at least seven days, so a patched kernel or library is not in use yet.
+
+**Known false positives:** Hosts that are rebooted only in planned windows.
+
+**What to do:** Plan the reboot. Start a maintenance window in vigil first, or the agent restart alerts.
+
+## Hardening, certificates, backups and secrets
+
+### `posture.empty_password` {#posture-empty_password}
+
+**Severity:** critical · **ATT&CK:** [T1078](https://attack.mitre.org/techniques/T1078/)
+
+**Alert:** `Accounts with a shell and no password: {value}`
+
+**Fires when:** An account with a login shell has an empty password field in `/etc/shadow`, so `su` and the console accept it without a password.
+
+**Known false positives:** None on a server.
+
+**What to do:** Lock the account (`passwd -l <user>`) or set a password. Find out who emptied it: this is also how attackers keep a way back in.
+
+### `posture.ssh_empty_password` {#posture-ssh_empty_password}
+
+**Severity:** critical · **ATT&CK:** [T1078](https://attack.mitre.org/techniques/T1078/)
+
+**Alert:** `SSH accepts empty passwords`
+
+**Fires when:** sshd accepts accounts with an empty password (`PermitEmptyPasswords yes`).
+
+**Known false positives:** None.
+
+**What to do:** Set `PermitEmptyPasswords no` and reload sshd. Check `posture.empty_password` too.
+
+### `backup.missing` {#backup-missing}
+
+**Severity:** high · **ATT&CK:** [T1490](https://attack.mitre.org/techniques/T1490/)
+
+**Alert:** `Backup {name}: no file matches {path}`
+
+**Fires when:** No file matches a backup location from `backups` in agent.json.
+
+**Known false positives:** A path that changed. Update agent.json.
+
+**What to do:** Check the backup job and its logs. A deleted backup can be the start of a ransomware attack.
+
+### `backup.stale` {#backup-stale}
+
+**Severity:** high · **ATT&CK:** [T1490](https://attack.mitre.org/techniques/T1490/)
+
+**Alert:** `Backup {name} is {age} hours old (limit {max})`
+
+**Fires when:** The newest file of a backup location is older than its `max_age_hours`.
+
+**Known false positives:** Backup jobs that were paused on purpose.
+
+**What to do:** Check the backup job (`systemctl list-timers`, cron, its log) and run it by hand once.
+
+### `posture.permissions` {#posture-permissions}
+
+**Severity:** high
+
+**Alert:** `Unsafe permissions on {key}: {value}`
+
+**Fires when:** A file or directory that decides what root runs or who may log in can be changed by other users (or is owned by one): `/etc/shadow`, sudoers, sshd and PAM configuration, cron, systemd units, root's SSH keys, the system `PATH` directories, or any world-writable file in `/etc`. For `/etc/shadow` and sudoers, being readable by everyone counts too.
+
+**Known false positives:** Rare. Some installers leave world-writable files in `/etc`.
+
+**What to do:** Fix the owner and mode (`chown root:root`, `chmod go-w`). If you did not cause it, check what was changed while it was open.
+
+### `posture.ssh_root_login` {#posture-ssh_root_login}
+
+**Severity:** high · **ATT&CK:** [T1110](https://attack.mitre.org/techniques/T1110/)
+
+**Alert:** `Root can log in over SSH with a password (PermitRootLogin {value})`
+
+**Fires when:** sshd lets root log in with a password (`PermitRootLogin yes` while password or keyboard-interactive login is on). Every brute force run on the internet tries root first. Read from `sshd -T`, or the configuration files when that fails. Alerts when the check starts failing and closes itself when it passes again; this applies to every `posture.`, `tls.`, `backup.` and `vuln.` rule.
+
+**Known false positives:** None; root with a password is never needed when keys are set up.
+
+**What to do:** Set `PermitRootLogin prohibit-password` (or `no`) in `/etc/ssh/sshd_config.d/` and reload sshd. Check first that your key works for root.
+
+### `secret.exposed` {#secret-exposed}
+
+**Severity:** high · **ATT&CK:** [T1552.001](https://attack.mitre.org/techniques/T1552/001/)
+
+**Alert:** `{kind} readable by every user: {path} line {line}`
+
+**Fires when:** A private key, API token, URL with a password, `.env` secret, `.pgpass` or `.netrc` entry is in a file every user on the host can read. A taken over web application or service runs as its own user; this is what it would read first. Only directories every user can enter are searched (daily), so secrets kept in private directories are never read. The secret itself never leaves the host: the alert names the path, the kind, the line and a short hash.
+
+**Known false positives:** Sample keys in documentation or test data outside the skipped directories. Suppress per path with a reason.
+
+**What to do:** Make the file private (`chmod 600`, or `640` with the service's group) and rotate the secret: assume it has been read.
+
+### `tls.expired` {#tls-expired}
+
+**Severity:** high
+
+**Alert:** `Certificate {subject} expired {ago} days ago ({path})`
+
+**Fires when:** A certificate that nginx, Apache or Let's Encrypt uses (or one listed in `tls_certs`) has expired.
+
+**Known false positives:** Old certificates still on disk but no longer served. Remove them from the configuration.
+
+**What to do:** Renew it (`certbot renew`) and reload the web server. Check why automatic renewal failed (`systemctl status certbot.timer`).
+
+### `backup.small` {#backup-small}
+
+**Severity:** medium · **ATT&CK:** [T1490](https://attack.mitre.org/techniques/T1490/)
+
+**Alert:** `Backup {name} is only {size} bytes ({file})`
+
+**Fires when:** The newest backup file is smaller than its `min_bytes`, which usually means the dump failed half way.
+
+**Known false positives:** A data set that really shrank. Lower `min_bytes`.
+
+**What to do:** Open the file and check it is complete; run the job again and read its errors.
+
+### `posture.aslr` {#posture-aslr}
+
+**Severity:** medium
+
+**Alert:** `Address space randomization is weakened (kernel.randomize_va_space = {value})`
+
+**Fires when:** `kernel.randomize_va_space` is not 2, so memory addresses are predictable and memory corruption exploits get easier.
+
+**Known false positives:** Debugging sessions that turned it off and forgot.
+
+**What to do:** `sysctl -w kernel.randomize_va_space=2` and remove the setting from `/etc/sysctl.d/`.
+
+### `posture.firewall` {#posture-firewall}
+
+**Severity:** medium
+
+**Alert:** `No firewall filters incoming traffic`
+
+**Fires when:** No input chain in nftables (or iptables) drops or rejects anything, so every service that listens on a public address is reachable.
+
+**Known false positives:** Hosts filtered by a cloud firewall or a separate device. Turn the check off with `posture_skip: ["firewall"]` there.
+
+**What to do:** Set up ufw or an nftables input chain with `policy drop` and the ports you need.
+
+### `posture.ssh_password` {#posture-ssh_password}
+
+**Severity:** medium · **ATT&CK:** [T1110](https://attack.mitre.org/techniques/T1110/)
+
+**Alert:** `SSH accepts passwords ({value})`
+
+**Fires when:** sshd accepts passwords (`PasswordAuthentication yes`, or keyboard-interactive with PAM). Passwords can be guessed; keys cannot.
+
+**Known false positives:** Hosts where people without keys must log in. Cloud images often turn passwords on in `50-cloud-init.conf`.
+
+**What to do:** Give every user a key, then set `PasswordAuthentication no` and `KbdInteractiveAuthentication no` and reload sshd.
+
+### `tls.expiring` {#tls-expiring}
+
+**Severity:** medium
+
+**Alert:** `Certificate {subject} expires in {days} days ({path})`
+
+**Fires when:** A certificate expires within 14 days. certbot renews 30 days before expiry, so this means renewal has been failing for two weeks.
+
+**Known false positives:** Certificates renewed by hand on a schedule.
+
+**What to do:** Run `certbot renew --dry-run` and fix what it reports, then reload the web server.
+
+### `posture.mac` {#posture-mac}
+
+**Severity:** low
+
+**Alert:** `No AppArmor or SELinux confines services ({value})`
+
+**Fires when:** Neither AppArmor nor SELinux is active, so a compromised service is not confined beyond its user.
+
+**Known false positives:** Distributions without either by default.
+
+**What to do:** Enable AppArmor (Debian, Ubuntu) or SELinux in enforcing mode (Red Hat family).
+
+### `posture.sysctl` {#posture-sysctl}
+
+**Severity:** low
+
+**Alert:** `{key} = {value}, should be {want}`
+
+**Fires when:** A kernel setting is weaker than the usual default: `kptr_restrict`, `dmesg_restrict`, `yama.ptrace_scope`, `unprivileged_bpf_disabled`, `protected_symlinks`, `protected_hardlinks`, `suid_dumpable`, `accept_redirects`, `accept_source_route` or `tcp_syncookies`. One alert per setting.
+
+**Known false positives:** Hosts where a tool needs one of them (debuggers need `ptrace_scope` 0). Turn single checks off with `posture_skip`, for example `sysctl:kernel.yama.ptrace_scope`, or suppress with a reason.
+
+**What to do:** Set the value from the alert in `/etc/sysctl.d/99-hardening.conf` and run `sysctl --system`.
 
 ## Canaries
 
@@ -438,66 +1045,6 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 
 **What to do:** Assume someone edited the log on the server. Compare with the daily chain anchors sent to your notifiers.
 
-### `integrity.binary_replaced` {#integrity-binary_replaced}
-
-**Severity:** critical · **ATT&CK:** [T1554](https://attack.mitre.org/techniques/T1554/)
-
-**Alert:** `{path} from {package} was modified: {reason}`
-
-**Fires when:** A program used to log in or to inspect the system (`sshd`, `sudo`, `su`, `login`, `ps`, `ss`, `ls`, `find`, shells), a PAM module or a core library (`libc`, `ld-linux`, `libpam`, `liblzma`, `libnss_*`) no longer matches the checksum its Debian package recorded, confirmed on a second look ten minutes later. Also raised when the package's checksum list changed while the package version did not.
-
-**Known false positives:** None known on systems without prelink. Files changed with `dpkg-divert` are skipped.
-
-**What to do:** Assume a rootkit or a backdoor: the tools on the host may lie to you. Compare `sha256` with a clean copy of the same package version (`apt download`), inspect from a rescue system, and rebuild the host.
-
-### `kernel.module_hidden` {#kernel-module_hidden}
-
-**Severity:** critical · **ATT&CK:** [T1014](https://attack.mitre.org/techniques/T1014/)
-
-**Alert:** `Kernel module {name} is hidden from /proc/modules`
-
-**Fires when:** A module is live in `/sys/module` but missing from `/proc/modules` on two scans in a row. Rootkits unlink themselves from the module list to hide.
-
-**Known false positives:** None known. A module that is still loading is in state `coming`, not `live`, and is ignored.
-
-**What to do:** Treat the kernel as compromised. Nothing the host reports can be trusted from here on: take it offline and rebuild it.
-
-### `net.c2` {#net-c2}
-
-**Severity:** critical · **ATT&CK:** [T1071](https://attack.mitre.org/techniques/T1071/)
-
-**Alert:** `{process} connected to {ip}:{port}, listed as command and control ({list})`
-
-**Fires when:** A process connected to an address on the abuse.ch Feodo Tracker or ThreatFox lists, which track botnet command and control and malware delivery servers. Needs `threat_intel`.
-
-**Known false positives:** Very rare. Lists can be wrong for a short time when an address changes hands.
-
-**What to do:** Treat as an active compromise: find the process (`exe`, `uid`), how it was started, and isolate the host.
-
-### `process.miner` {#process-miner}
-
-**Severity:** critical · **ATT&CK:** [T1496](https://attack.mitre.org/techniques/T1496/)
-
-**Alert:** `Crypto miner started: {exe} (uid {uid})`
-
-**Fires when:** A program with a known miner name or miner arguments (`stratum+tcp://`, `--donate-level`, `--randomx`).
-
-**Known false positives:** None on servers that are not meant to mine.
-
-**What to do:** Find how it got there (the parent process, cron, systemd units, `authorized_keys`), remove the persistence first, then the miner. Assume the credentials on the host are known.
-
-### `process.reverse_shell` {#process-reverse_shell}
-
-**Severity:** critical · **ATT&CK:** [T1059.004](https://attack.mitre.org/techniques/T1059/004/)
-
-**Alert:** `Reverse shell: {exe} started by {parent} (uid {uid})`
-
-**Fires when:** A shell started with its input or output connected to a network socket, or a command line that builds a reverse shell (`/dev/tcp/…`, `nc -e`, `socat exec:`, Python `pty.spawn`).
-
-**Known false positives:** Rare. Some remote administration scripts pipe a shell through `socat` on purpose.
-
-**What to do:** Treat as an active intrusion: note the parent process and the remote address (`ss -tnp`), isolate the host, preserve memory and disk if you can, then kill the process.
-
 ### `agent.config_rejected` {#agent-config_rejected}
 
 **Severity:** high · **ATT&CK:** [T1557](https://attack.mitre.org/techniques/T1557/)
@@ -558,54 +1105,6 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 
 **What to do:** Check who stopped it if no maintenance was planned.
 
-### `integrity.many` {#integrity-many}
-
-**Severity:** high · **ATT&CK:** [T1554](https://attack.mitre.org/techniques/T1554/)
-
-**Alert:** `{count} packaged files differ from their checksums`
-
-**Fires when:** More than 25 packaged files differed from their checksums in one run. Only the first 25 are reported one by one.
-
-**Known false positives:** A broken or interrupted package installation (`dpkg --audit`), restoring files from an old backup.
-
-**What to do:** Run `dpkg --audit` and `debsums -c`. If no package operation explains it, treat it like `integrity.binary_replaced`.
-
-### `integrity.modified` {#integrity-modified}
-
-**Severity:** high · **ATT&CK:** [T1554](https://attack.mitre.org/techniques/T1554/)
-
-**Alert:** `{path} from {package} was modified: {reason}`
-
-**Fires when:** Any other program in `/usr/bin`, `/usr/sbin`, `/usr/lib/openssh` or `/usr/libexec` differs from its package checksum (confirmed twice), or the checksum list changed without a package update.
-
-**Known false positives:** Programs patched by hand, files changed by a configuration tool without `dpkg-divert`.
-
-**What to do:** Compare with the package (`apt download`, `debsums -c`) and find out who changed it and when.
-
-### `kernel.bpf` {#kernel-bpf}
-
-**Severity:** high · **ATT&CK:** [T1014](https://attack.mitre.org/techniques/T1014/)
-
-**Alert:** `eBPF {type} program {name} loaded (uid {uid})`
-
-**Fires when:** An eBPF program of a type that can hook the kernel or the network path was loaded: kprobe, tracepoint, raw tracepoint, tracing (fentry/fexit), LSM, extension, perf event or XDP. eBPF rootkits such as boopkit, TripleCross and ebpfkit work this way. Programs that were loaded when the collector first ran are reported once as well, since a rootkit may already be there. The same program loaded again (same type, name and tag) stays quiet. cgroup and socket programs from systemd and Docker are not reported.
-
-**Known false positives:** Observability and security tools: bpftrace, BCC tools, Falco, Tracee, Cilium, Pixie, Parca, Datadog and similar agents, `perf`. Suppress them by name with a reason.
-
-**What to do:** List programs with `bpftool prog show` and find the loading process (`bpftool prog show id <id> --json` shows `pids` on recent kernels). A program nobody can explain is a strong sign of a kernel-level compromise.
-
-### `kernel.module_unsigned` {#kernel-module_unsigned}
-
-**Severity:** high · **ATT&CK:** [T1547.006](https://attack.mitre.org/techniques/T1547/006/)
-
-**Alert:** `Out-of-tree or unsigned kernel module {name} ({taint})`
-
-**Fires when:** A kernel module that is out of tree (`O`), unsigned (`E`) or proprietary (`P`) was loaded, or was already loaded when the agent first ran. Kernel rootkits are out-of-tree modules.
-
-**Known false positives:** DKMS modules: ZFS, VirtualBox, NVIDIA, some VPN and backup drivers. They raise this once per host; suppress them by name with a reason.
-
-**What to do:** Find the module file (`modinfo <name>`) and the package that owns it (`dpkg -S`). An out-of-tree module nobody installed means the kernel is compromised: rebuild the host.
-
 ### `log.spoofed` {#log-spoofed}
 
 **Severity:** high · **ATT&CK:** [T1070](https://attack.mitre.org/techniques/T1070/)
@@ -617,42 +1116,6 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 **Known false positives:** None known. `logger -t sshd` in a test script would trigger it.
 
 **What to do:** Someone is trying to plant fake log entries. Find the process named in the alert.
-
-### `net.blocklisted` {#net-blocklisted}
-
-**Severity:** high · **ATT&CK:** [T1071](https://attack.mitre.org/techniques/T1071/)
-
-**Alert:** `{process} connected to {ip}:{port} on a block list ({list})`
-
-**Fires when:** A process connected to an address on the Spamhaus DROP list (networks run by criminals). Needs `threat_intel`.
-
-**Known false positives:** Rare.
-
-**What to do:** Find the process and why it connects there.
-
-### `net.miner_pool` {#net-miner_pool}
-
-**Severity:** high · **ATT&CK:** [T1496](https://attack.mitre.org/techniques/T1496/)
-
-**Alert:** `{process} connected to {ip}:{port}, a common mining pool port`
-
-**Fires when:** An outbound connection to a public address on a port typical for mining pools (3333, 14433, 14444, 45560, 45700).
-
-**Known false positives:** Other software using these ports.
-
-**What to do:** Check the process; look for `process.miner` alerts on the same host.
-
-### `net.service_outbound` {#net-service_outbound}
-
-**Severity:** high · **ATT&CK:** [T1572](https://attack.mitre.org/techniques/T1572/)
-
-**Alert:** `{process} opened a connection to the internet: {ip}:{port}`
-
-**Fires when:** `sshd` or a database (PostgreSQL, MySQL/MariaDB, Redis, MongoDB, Memcached) opened a connection to a public address. Databases do not do that on their own; an attacker using `REPLICAOF`, `COPY … PROGRAM` or SSH tunneling does.
-
-**Known false positives:** Database replication to a public address, SSH port forwarding used on purpose.
-
-**What to do:** Check the connection (`ss -tnp`), the service's log and its configuration. For Redis, check `CONFIG GET replicaof` and `dir`.
 
 ### `notify.failed` {#notify-failed}
 
@@ -666,66 +1129,6 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 
 **What to do:** Run `vigil-server notify test -name <notifier>` on the server. A revoked webhook, an expired token or a blocked outbound connection are the usual causes. While it fails, alerts reach you only through the dashboard and other notifiers.
 
-### `process.deleted_exe` {#process-deleted_exe}
-
-**Severity:** high · **ATT&CK:** [T1070.004](https://attack.mitre.org/techniques/T1070/004/)
-
-**Alert:** `Program running from a deleted file: {exe}`
-
-**Fires when:** A program started from a file that was already deleted, a common way to hide a dropped binary.
-
-**Known false positives:** Rare. A package upgrade that replaces a binary while a service restarts at the same moment.
-
-**What to do:** Copy the binary from `/proc/<pid>/exe` before killing the process, then investigate it.
-
-### `process.download_exec` {#process-download_exec}
-
-**Severity:** high · **ATT&CK:** [T1105](https://attack.mitre.org/techniques/T1105/)
-
-**Alert:** `Download and run: {cmdline}`
-
-**Fires when:** A command line that downloads and runs code in one go (`curl … | sh`, `wget … && chmod +x`, `chmod +x /tmp/…`).
-
-**Known false positives:** Installers that are run this way on purpose, for example during a deploy.
-
-**What to do:** Check who ran it (`uid`, parent) and what was downloaded. If nobody did, treat as an intrusion.
-
-### `process.memfd_exec` {#process-memfd_exec}
-
-**Severity:** high · **ATT&CK:** [T1620](https://attack.mitre.org/techniques/T1620/)
-
-**Alert:** `Program running from memory only: {exe} (uid {uid}, started by {parent})`
-
-**Fires when:** A program was started from an anonymous memory file (`memfd_create`), so it never existed on disk. Fileless malware and in-memory loaders work this way.
-
-**Known false positives:** runc up to 1.1 re-executes itself from a memfd named `runc_cloned` on every container start; that case is excluded. Some packers and sandboxes do the same.
-
-**What to do:** Dump the program from `/proc/<pid>/exe` before killing it, then find the parent that loaded it.
-
-### `process.preload` {#process-preload}
-
-**Severity:** high · **ATT&CK:** [T1574.006](https://attack.mitre.org/techniques/T1574/006/)
-
-**Alert:** `{exe} started with LD_PRELOAD={lib} (uid {uid})`
-
-**Fires when:** A program started with `LD_PRELOAD` set, which loads a library into it before anything else. Userland rootkits and credential stealers hook functions this way. Reported once per program and library until the agent restarts.
-
-**Known false positives:** Memory allocators (jemalloc, tcmalloc), libfaketime, libeatmydata, some profilers and sandboxes. Suppress them per library with a reason.
-
-**What to do:** Check the library: who owns it (`dpkg -S`), when it appeared, what it exports. A library in `/tmp`, `/dev/shm` or a home directory is a strong sign of compromise.
-
-### `process.service_shell` {#process-service_shell}
-
-**Severity:** high · **ATT&CK:** [T1505.003](https://attack.mitre.org/techniques/T1505/003/)
-
-**Alert:** `{parent} started {exe} (uid {uid})`
-
-**Fires when:** A web server, PHP-FPM or a database started a shell or a script interpreter. This is what a web shell or an exploited service does.
-
-**Known false positives:** CGI setups and some PHP applications that call `exec()` on purpose. Application runtimes like node, java and python are not watched as parents, because they start shells in normal operation.
-
-**What to do:** Look at the command line and the web server's access log at that time; search the web root for recently changed files.
-
 ### `selftest.failed` {#selftest-failed}
 
 **Severity:** high · **ATT&CK:** [T1562.001](https://attack.mitre.org/techniques/T1562/001/)
@@ -738,114 +1141,6 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 
 **What to do:** The alert names the step that went missing. Check the agent log (`journalctl -u vigil-agent`) for collector warnings, then run the test again from the host page. A sensor that stopped working silently, for example after a kernel update, is exactly what this catches.
 
-### `web.exploit_success` {#web-exploit_success}
-
-**Severity:** high · **ATT&CK:** [T1190](https://attack.mitre.org/techniques/T1190/)
-
-**Alert:** `Attack on {log} from {ip} answered with 2xx ({kinds})`
-
-**Fires when:** A request from one address matched an attack signature (SQL injection, path traversal, Log4Shell `${jndi:`, command injection, PHP wrappers, Shellshock) and the server answered with 2xx. Scans that end in 404 do not alert; they show up under attacking addresses.
-
-**Known false positives:** Applications that answer every path with 200 (single page apps with a catch-all route) turn harmless probes into 2xx. Suppress per log with a reason.
-
-**What to do:** Check the request in the access log and what the application did with it. A real hit usually leaves traces in the application log or the database.
-
-### `web.shell_access` {#web-shell_access}
-
-**Severity:** high · **ATT&CK:** [T1505.003](https://attack.mitre.org/techniques/T1505/003/)
-
-**Alert:** `Web shell path answered with 2xx for {ip}: {sample}`
-
-**Fires when:** A request to a path named like a web shell (`shell.php`, `wso.php`, `c99.php`, …) was answered with 2xx.
-
-**Known false positives:** Rare. A file with such a name on purpose.
-
-**What to do:** Look at the file on disk, its owner and change time, and search the web root for other recently changed files. Treat as an intrusion until proven otherwise.
-
-### `integrity.unowned` {#integrity-unowned}
-
-**Severity:** medium · **ATT&CK:** [T1554](https://attack.mitre.org/techniques/T1554/)
-
-**Alert:** `New program {path} that no package installed`
-
-**Fires when:** A new regular file appeared in `/usr/bin` or `/usr/sbin` that no package lists. Files present when the collector first ran are accepted.
-
-**Known false positives:** Software installed with `make install` or `curl | sh` into `/usr/bin` instead of `/usr/local/bin`, binaries that a package's install script generates.
-
-**What to do:** Check what it is (`file`, `strings`, the `sha256` on a malware database) and how it got there.
-
-### `kernel.tainted` {#kernel-tainted}
-
-**Severity:** medium · **ATT&CK:** [T1014](https://attack.mitre.org/techniques/T1014/)
-
-**Alert:** `Kernel tainted: {added} (now {tainted})`
-
-**Fires when:** New flags appeared in `/proc/sys/kernel/tainted`, for example `O` (out-of-tree module), `E` (unsigned module), `W` (kernel warning) or `D` (kernel oops).
-
-**Known false positives:** Out-of-tree drivers, kernel warnings from buggy hardware or drivers, live patching (`K`).
-
-**What to do:** Look at `dmesg` for the cause. Taint from a module goes together with a `kernel.module_unsigned` alert.
-
-### `net.tor` {#net-tor}
-
-**Severity:** medium · **ATT&CK:** [T1090.003](https://attack.mitre.org/techniques/T1090/003/)
-
-**Alert:** `{process} connected to Tor exit {ip}:{port}`
-
-**Fires when:** A process connected to a Tor exit node. Malware uses Tor to hide its command and control. Needs `threat_intel`.
-
-**Known false positives:** Hosts that run Tor or talk to services through it on purpose.
-
-**What to do:** Check the process. Suppress for hosts where this is expected.
-
-### `process.decode_exec` {#process-decode_exec}
-
-**Severity:** medium · **ATT&CK:** [T1140](https://attack.mitre.org/techniques/T1140/)
-
-**Alert:** `Decoded command run in a shell: {cmdline}`
-
-**Fires when:** Base64-encoded content decoded and piped into a shell, a way to hide commands from logs.
-
-**Known false positives:** Rare in normal operation.
-
-**What to do:** Decode the payload from the command line and check what it does.
-
-### `process.tmp_exec` {#process-tmp_exec}
-
-**Severity:** medium · **ATT&CK:** [T1204.002](https://attack.mitre.org/techniques/T1204/002/)
-
-**Alert:** `Program started from a temporary directory: {exe} (uid {uid})`
-
-**Fires when:** A program started from `/tmp`, `/dev/shm` or `/var/tmp`. Attackers drop tools there because every user can write to them.
-
-**Known false positives:** Build tools that run test binaries from `/tmp` (for example `go test`), installers. Suppress them per host with a reason.
-
-**What to do:** Check the file (`sha256sum`, `strings`), its owner and how it got there.
-
-### `updates.security_pending` {#updates-security_pending}
-
-**Severity:** medium
-
-**Alert:** `{count} security updates pending for {days} days: {packages}`
-
-**Fires when:** Security updates have been waiting for at least seven days (from `apt list --upgradable`, packages from a `-security` suite).
-
-**Known false positives:** Updates held back on purpose.
-
-**What to do:** Install them (`apt upgrade`) and reboot if `updates.reboot_pending` follows.
-
-### `web.login_bruteforce` {#web-login_bruteforce}
-
-**Severity:** medium · **ATT&CK:** [T1110](https://attack.mitre.org/techniques/T1110/)
-
-**Alert:** `{logins} login attempts in one minute from {ip}`
-
-**Fires when:** 20 or more POST requests within one minute from one address to a path listed in `login_paths`.
-
-**Known false positives:** Load tests, or many users behind one address (a company NAT).
-
-**What to do:** Rate limit the login path in the web server or block the address.
-
 ### `agent.dropped` {#agent-dropped}
 
 **Severity:** low
@@ -857,63 +1152,3 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 **Known false positives:** Long server outages.
 
 **What to do:** Restore the connection; consider raising `max_queue`.
-
-### `kernel.module` {#kernel-module}
-
-**Severity:** low · **ATT&CK:** [T1547.006](https://attack.mitre.org/techniques/T1547/006/)
-
-**Alert:** `Kernel module {name} loaded`
-
-**Fires when:** A kernel module from the kernel's own tree was loaded after the agent's baseline.
-
-**Known false positives:** The kernel loads modules on demand all the time: nf_tables for firewall rules, wireguard, bridge and overlay modules for Docker, filesystem drivers. That is why this rule is low.
-
-**What to do:** Check that the module fits something that happened on the host at that time. A module nobody can explain is worth a closer look at the host.
-
-### `process.rate_limited` {#process-rate_limited}
-
-**Severity:** low
-
-**Alert:** `{dropped} suspicious program starts not reported (limit reached)`
-
-**Fires when:** The agent saw more suspicious program starts in one minute than it reports (60) and dropped the rest.
-
-**Known false positives:** A build or a loop that repeatedly matches a process rule.
-
-**What to do:** Look at the process alerts from the same minute; a flood can also hide one real event.
-
-### `updates.disabled` {#updates-disabled}
-
-**Severity:** low
-
-**Alert:** `Automatic security updates are off`
-
-**Fires when:** `APT::Periodic::Unattended-Upgrade` is not enabled, so security updates wait for a person.
-
-**Known false positives:** Hosts where updates are rolled out by other tooling.
-
-**What to do:** Enable unattended-upgrades (`dpkg-reconfigure -plow unattended-upgrades`) or suppress with the name of the tooling that does it.
-
-### `updates.lists_stale` {#updates-lists_stale}
-
-**Severity:** low
-
-**Alert:** `Package lists not refreshed for {days} days`
-
-**Fires when:** The package lists have not been refreshed for at least seven days, so pending security updates are not even known.
-
-**Known false positives:** Hosts without internet access that get updates another way.
-
-**What to do:** Check `apt update` and the apt timers (`systemctl list-timers apt*`).
-
-### `updates.reboot_pending` {#updates-reboot_pending}
-
-**Severity:** low
-
-**Alert:** `Reboot pending for {days} days ({packages})`
-
-**Fires when:** `/var/run/reboot-required` has existed for at least seven days, so a patched kernel or library is not in use yet.
-
-**Known false positives:** Hosts that are rebooted only in planned windows.
-
-**What to do:** Plan the reboot. Start a maintenance window in vigil first, or the agent restart alerts.

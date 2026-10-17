@@ -36,6 +36,13 @@ the defaults below.
 | `bpf` | true | report eBPF programs that can hook the kernel or the network path |
 | `kernel` | true | watch kernel modules (new, out of tree, hidden from `/proc/modules`) and kernel taint flags |
 | `updates` | true | report pending (security) updates and pending reboots, Debian and Ubuntu |
+| `posture` | true | hardening checks, TLS certificates and backups (every 6 hours), see below |
+| `posture_skip` | none | checks not to run, by name (`"firewall"`) or name and key (`"sysctl:kernel.yama.ptrace_scope"`) |
+| `tls_certs` | none | extra certificate files (globs), on top of Let's Encrypt and what nginx and Apache serve |
+| `backups` | none | backup locations to watch, see below |
+| `secrets` | true | look for private keys, tokens and passwords in files every user can read (daily) |
+| `secret_roots` | `/etc`, `/home`, `/root`, `/srv`, `/opt`, `/var/www`, `/var/backups`, `/var/lib`, `/tmp`, `/var/tmp` | replaces the directories searched for exposed secrets |
+| `packages` | true | send the installed package list to the server for `vuln_lookup` |
 | `web_logs` | none | access logs to watch, see below |
 | `response` | off | allow response actions from the dashboard, see below |
 | `selftest` | true | accept self tests from the server, see [Operations](operations.md#self-test) |
@@ -43,6 +50,35 @@ the defaults below.
 
 Everything that limits what the server may ask of an agent lives in this file
 and only here. The dashboard cannot widen `canary_roots`.
+
+### Hardening, certificates and backups
+
+The agent checks every six hours:
+
+| Check | Fails when |
+|---|---|
+| `ssh_root_login` | root may log in with a password |
+| `ssh_password` | sshd accepts passwords (or keyboard-interactive with PAM) |
+| `ssh_empty_password` | `PermitEmptyPasswords yes` |
+| `empty_password` | an account with a login shell has no password |
+| `aslr` | `kernel.randomize_va_space` is not 2 |
+| `sysctl` | `kptr_restrict`, `dmesg_restrict`, `yama.ptrace_scope`, `unprivileged_bpf_disabled`, `protected_symlinks`, `protected_hardlinks`, `suid_dumpable`, `accept_redirects`, `accept_source_route` or `tcp_syncookies` weaker than the default |
+| `permissions` | `/etc/shadow`, sudoers, sshd, PAM, cron, systemd units, root's SSH keys or the system `PATH` directories writable by others (or owned by another user), any world-writable file in `/etc` |
+| `firewall` | no input chain drops or rejects anything |
+| `mac` | neither AppArmor nor SELinux is active |
+
+Certificates are found by themselves (Let's Encrypt, nginx, Apache); add
+others with `tls_certs`. Backups are only watched when you list them:
+
+```json
+"backups": [
+  {"name": "database", "path": "/var/backups/db/*.sql.gz", "max_age_hours": 26, "min_bytes": 100000},
+  {"name": "offsite", "path": "/srv/restic/snapshots", "max_age_hours": 30}
+]
+```
+
+`path` is a glob; a matching directory counts by its newest file. A failing
+check alerts once and the alert closes itself when the check passes again.
 
 ### Response actions
 
@@ -124,6 +160,7 @@ it came from the proxy.
 | `notifiers` | none | see below |
 | `brand` | none | your own name and logo, see below |
 | `rules_dir` | none | directory with [custom rules](custom-rules.md) |
+| `vuln_lookup` | false | match the package lists of Debian and Ubuntu hosts with the distributions' security data (Canonical OVAL per release, about 10 MB; the Debian security tracker, about 14 MB) and CISA's catalogue of exploited vulnerabilities, daily and only when changed. Only plain downloads, nothing about the hosts is sent |
 | `threat_intel` | false | download public block lists (abuse.ch Feodo Tracker and ThreatFox, Spamhaus DROP, Tor exits) twice a day and match outbound connections against them. Only plain downloads, nothing about this installation is sent |
 
 Only enable `trust_proxy` when the dashboard listener is reachable through the

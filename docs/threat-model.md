@@ -161,3 +161,16 @@ them runs arbitrary commands. Hosts where this risk is not acceptable leave
 - Notifiers are the only way alerts leave the server on their own. If all of
   them fail, `notify.failed` is visible only in the dashboard; the outside
   heartbeat does not cover delivery.
+- Vulnerability matching knows only what the distribution packaged. Software
+  installed by hand, from language package managers (npm, pip, Go modules),
+  in containers or snaps is not matched. The kernel counts by the newest
+  installed version; a host that was not rebooted runs an older one, which
+  `updates.reboot_pending` reports.
+- The secret search reads only files that every user can read, in
+  directories every user can enter, up to 512 KB, and skips vendored code
+  (`node_modules`, `vendor`, test fixtures). Secrets readable by a single
+  service user or a group are not reported, and neither are formats without
+  a recognisable shape.
+- Hardening checks describe settings, not what an attacker already changed in
+  memory; a weakened sshd that reads another configuration file than the one
+  `sshd -T` shows is not seen.

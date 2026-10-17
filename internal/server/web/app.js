@@ -63,6 +63,15 @@ const T = {
     actSession: "End SSH session of {user}", actProcess: "Stop process {pid}", actKey: "Remove key {fingerprint}",
     requested: "requested, waiting for the agent", done: "done", failed: "failed", expiredAct: "expired", pendingAct: "pending",
     confirmAction: "Run this on the host?",
+    posture: "Hardening", checksOk: "{n} of {m} checks passed", checked: "checked",
+    chk_ssh_root_login: "SSH root login with password", chk_ssh_password: "SSH password login", chk_ssh_empty_password: "SSH empty passwords",
+    chk_empty_password: "Accounts without password", chk_aslr: "Address space randomization", chk_sysctl: "Kernel setting",
+    chk_permissions: "Permissions", chk_firewall: "Firewall", chk_mac: "AppArmor / SELinux",
+    certs: "Certificates", expiresIn: "expires in", days: "days", expiredAgo: "expired {n} days ago", selfSigned: "self-signed",
+    backups: "Backups", hoursOld: "h old", limit: "limit", bkMissing: "missing", bkOld: "too old", bkSmall: "too small",
+    vulns: "Vulnerabilities", fixable: "fixable", unfixed: "no fix yet", exploitedNow: "Exploited in the wild", cve: "CVE",
+    pkg: "Package", installed: "Installed", fixedIn: "Fixed in", noVulns: "No fixable vulnerability",
+    vulnPending: "No data yet", proOnly: "Ubuntu Pro",
   },
   de: {
     overview: "Lage", alerts: "Alarme", events: "Ereignisse", canaries: "Köder", settings: "Einstellungen",
@@ -123,6 +132,15 @@ const T = {
     actSession: "SSH-Sitzung von {user} beenden", actProcess: "Prozess {pid} beenden", actKey: "Schlüssel {fingerprint} entfernen",
     requested: "angefordert, wartet auf den Agent", done: "erledigt", failed: "fehlgeschlagen", expiredAct: "abgelaufen", pendingAct: "wartet",
     confirmAction: "Das auf dem Host ausführen?",
+    posture: "Härtung", checksOk: "{n} von {m} Prüfungen bestanden", checked: "geprüft",
+    chk_ssh_root_login: "SSH-Root-Login mit Passwort", chk_ssh_password: "SSH-Passwort-Login", chk_ssh_empty_password: "SSH mit leeren Passwörtern",
+    chk_empty_password: "Konten ohne Passwort", chk_aslr: "Adressraum-Randomisierung", chk_sysctl: "Kernel-Einstellung",
+    chk_permissions: "Dateirechte", chk_firewall: "Firewall", chk_mac: "AppArmor / SELinux",
+    certs: "Zertifikate", expiresIn: "läuft ab in", days: "Tagen", expiredAgo: "seit {n} Tagen abgelaufen", selfSigned: "selbst signiert",
+    backups: "Backups", hoursOld: "Std. alt", limit: "Grenze", bkMissing: "fehlt", bkOld: "zu alt", bkSmall: "zu klein",
+    vulns: "Schwachstellen", fixable: "behebbar", unfixed: "noch ohne Fix", exploitedNow: "Aktiv ausgenutzt", cve: "CVE",
+    pkg: "Paket", installed: "Installiert", fixedIn: "Behoben in", noVulns: "Keine behebbare Schwachstelle",
+    vulnPending: "Noch keine Daten", proOnly: "Ubuntu Pro",
   },
 };
 
@@ -470,6 +488,64 @@ function updatesCell(u) {
   return h("span", { class: "sevcounts" }, parts);
 }
 
+function postureSection(a) {
+  const p = a.posture, v = a.vulns;
+  if (!p && !v) return null;
+  const out = [];
+  if (p) {
+    const checks = p.checks || [];
+    const bad = checks.filter((c) => !c.ok);
+    const names = [...new Set(checks.map((c) => c.check))];
+    const failedNames = new Set(bad.map((c) => c.check));
+    out.push(h("div", { class: "card mt" },
+      h("div", { class: "flex" }, h("h3", null, t("posture")),
+        h("span", { class: "chip right" }, h("span", { class: "dot " + (bad.length ? "high" : "ok") }),
+          t("checksOk").replace("{n}", names.length - failedNames.size).replace("{m}", names.length))),
+      h("dl", { class: "kv" }, names.map((n) => {
+        const fails = bad.filter((c) => c.check === n);
+        return [h("dt", null, t("chk_" + n)),
+          h("dd", null, fails.length
+            ? fails.map((c) => h("div", { class: "chip" }, h("span", { class: "dot high" }),
+              h("span", { class: "mono" }, [c.key, c.value].filter(Boolean).join(": ") + (c.want ? " (" + c.want + ")" : ""))))
+            : h("span", { class: "chip" }, h("span", { class: "dot ok" }), "ok"))];
+      }))));
+    const certs = p.certs || [];
+    if (certs.length) out.push(h("div", { class: "card mt" }, h("h3", null, t("certs")),
+      h("div", { class: "tablewrap" }, h("table", null, h("tbody", null, certs.map((c) => h("tr", null,
+        h("td", null, h("span", { class: "dot " + (c.error || c.days < 0 ? "high" : c.days < 14 ? "medium" : "ok") })),
+        h("td", null, c.subject || "·", c.self_signed ? h("span", { class: "muted" }, " · " + t("selfSigned")) : null),
+        h("td", { class: "nowrap" }, c.error ? c.error : c.days < 0 ? t("expiredAgo").replace("{n}", -c.days) : t("expiresIn") + " " + c.days + " " + t("days")),
+        h("td", { class: "mono muted" }, c.path))))))));
+    const bks = p.backups || [];
+    if (bks.length) out.push(h("div", { class: "card mt" }, h("h3", null, t("backups")),
+      h("div", { class: "tablewrap" }, h("table", null, h("tbody", null, bks.map((b) => h("tr", null,
+        h("td", null, h("span", { class: "dot " + (b.ok ? "ok" : "high") })),
+        h("td", null, b.name),
+        h("td", { class: "nowrap" }, b.problem === "missing" ? t("bkMissing")
+          : b.age_hours + " " + t("hoursOld") + (b.max_age_hours ? " (" + t("limit") + " " + b.max_age_hours + ")" : "") + (b.problem === "small" ? ", " + t("bkSmall") : "")),
+        h("td", { class: "mono muted" }, b.newest || b.path))))))));
+  }
+  if (v) {
+    const rows = (list) => h("div", { class: "tablewrap" }, h("table", null,
+      h("thead", null, h("tr", null, ["", t("cve"), t("pkg"), t("installed"), t("fixedIn")].map((x) => h("th", null, x)))),
+      h("tbody", null, list.map((x) => h("tr", null,
+        h("td", null, h("span", { class: "sev " + (x.severity in { critical: 1, high: 1, medium: 1, low: 1 } ? x.severity : "low") }, x.severity)),
+        h("td", { class: "mono" }, h("a", { href: "https://www.cve.org/CVERecord?id=" + encodeURIComponent(x.cve), target: "_blank", rel: "noopener noreferrer" }, x.cve)),
+        h("td", { class: "mono" }, x.package),
+        h("td", { class: "mono" }, x.installed),
+        h("td", { class: "mono" }, x.fixed ? x.fixed + (x.pro ? " (" + t("proOnly") + ")" : "") : "·"))))));
+    const fixable = (v.top || []).filter((x) => !x.kev);
+    out.push(h("div", { class: "card mt" },
+      h("div", { class: "flex" }, h("h3", null, t("vulns")), h("span", { class: "muted right" }, v.release || "", v.checked ? "  ·  " + t("checked") + " " : "", v.checked ? timeEl(v.checked) : null)),
+      v.error ? h("div", { class: "muted mt" }, v.error) : h("dl", { class: "kv" },
+        h("dt", null, t("fixable")), h("dd", null, SEVS.some((s) => (v.fixable || {})[s]) ? sevCounts(v.fixable) : h("span", { class: "chip" }, h("span", { class: "dot ok" }), t("noVulns"))),
+        h("dt", null, t("unfixed")), h("dd", null, sevCounts(v.unfixed))),
+      (v.exploited || []).length ? [h("h3", { class: "mt" }, t("exploitedNow")), rows(v.exploited)] : null,
+      fixable.length ? [h("h3", { class: "mt" }, t("fixable")), rows(fixable.slice(0, 25))] : null));
+  }
+  return out;
+}
+
 const sevCounts = (m) => h("span", { class: "sevcounts" }, SEVS.filter((s) => m && m[s]).map((s) => h("span", { class: "sev " + s }, m[s])));
 
 async function overview() {
@@ -702,6 +778,7 @@ async function hostView(id) {
       h("dt", null, t("kernel")), h("dd", { class: "mono" }, a.updates.kernel_running + (a.updates.kernel_newest && a.updates.kernel_newest !== a.updates.kernel_running ? "  (" + t("newestInstalled") + " " + a.updates.kernel_newest + ")" : "")),
       h("dt", null, t("unattended")), h("dd", null, t(a.updates.unattended_upgrades ? "on" : "off")),
       h("dt", null, t("listsAge")), h("dd", null, a.updates.lists_age_days >= 0 ? a.updates.lists_age_days + " " + t("daysAgo") : "·"))) : null,
+    postureSection(a),
     h("div", { class: "flex" }, h("h2", null, t("ports")),
       d.ports.some((p) => !p.expected) ? h("button", { class: "btn small right", onclick: action("accept-port", { key: "*" }) }, t("acceptAll")) : null),
     h("div", { class: "tablewrap" }, h("table", { class: "nowrap" },

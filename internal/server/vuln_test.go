@@ -39,6 +39,12 @@ const ovalSample = `<?xml version="1.0" encoding="UTF-8"?>
 <definition id="d3" class="vulnerability"><metadata><title>CVE-2026-3</title>
  <advisory><cve priority="" cvss_score="9.8">CVE-2026-3</cve></advisory></metadata>
  <criteria><criterion test_ref="t4" comment="vim source package in noble, is affected and has been fixed (note: '2:9.1.0016-1ubuntu7.9')." /></criteria></definition>
+<definition id="d5" class="vulnerability"><metadata><title>CVE-2026-5</title>
+ <advisory><cve priority="high">CVE-2026-5</cve></advisory></metadata>
+ <criteria><criteria operator="OR"><criteria operator="AND">
+  <criterion test_ref="k1" comment="Is kernel 'linux' running?" />
+  <criterion test_ref="k2" comment="'linux' kernel in noble was vulnerable but has been fixed (note: '6.8.0-150.150')." />
+ </criteria></criteria></criteria></definition>
 <definition id="d4" class="vulnerability"><metadata><title>CVE-2026-4</title>
  <advisory><cve priority="medium">CVE-2026-4</cve></advisory></metadata>
  <criteria><criterion test_ref="t5" comment="sudo source package in noble, is affected and has been fixed (note: '1.9.15p5-3ubuntu5.24.04.1')." /></criteria></definition>
@@ -57,7 +63,10 @@ func TestParseFeeds(t *testing.T) {
 		t.Fatal(err)
 	}
 	vi.build()
-	if len(vi.Recs) != 4 || len(vi.byPkg["openssh"]) != 2 || len(vi.byPkg["vim"]) != 2 {
+	if k := vi.Recs["CVE-2026-5"]; k == nil || k.Pkgs[0].Name != "linux" || k.Pkgs[0].Fixed != "6.8.0-150.150" || len(k.Pkgs) != 1 {
+		t.Fatalf("kernel: %+v", vi.Recs["CVE-2026-5"])
+	}
+	if len(vi.Recs) != 5 || len(vi.byPkg["openssh"]) != 2 || len(vi.byPkg["vim"]) != 2 {
 		t.Fatalf("records: %+v", vi.Recs)
 	}
 	ssh := vi.Recs["CVE-2024-6387"].Pkgs[0]
@@ -108,9 +117,9 @@ func TestVulnMatching(t *testing.T) {
 		t.Fatalf("alerts: %+v", fresh)
 	}
 	titles := got["vuln.severe"][0].Title + " / " + got["vuln.severe"][1].Title
-	if !strings.Contains(titles, "openssh 1:9.6p1-3ubuntu13: 1 fixable high or critical vulnerabilities (CVE-2024-6387)") ||
-		!strings.Contains(titles, "vim 2:9.1.0016-1ubuntu7: 1 fixable high or critical vulnerabilities (CVE-2026-3)") ||
-		got["vuln.exploited"][0].Title != "CVE-2026-4 in sudo 1.9.15p5-3ubuntu5 is exploited in the wild" {
+	if !strings.Contains(titles, "openssh 1:9.6p1-3ubuntu13: 1 high or critical vulnerabilities (CVE-2024-6387), fixed in 1:9.6p1-3ubuntu13.3") ||
+		!strings.Contains(titles, "vim 2:9.1.0016-1ubuntu7: 1 high or critical vulnerabilities (CVE-2026-3), fixed in 2:9.1.0016-1ubuntu7.9") ||
+		got["vuln.exploited"][0].Title != "sudo 1.9.15p5-3ubuntu5: 1 vulnerabilities exploited in the wild (CVE-2026-4), fixed in 1.9.15p5-3ubuntu5.24.04.1" {
 		t.Fatalf("titles: %s / %s", titles, got["vuln.exploited"][0].Title)
 	}
 	v := a.Vulns

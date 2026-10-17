@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.13.0
+
+- Vulnerabilities: agents send their installed source packages; with `vuln_lookup` the server matches them against Canonical's OVAL data (Ubuntu, kernels included), the Debian security tracker and CISA's catalogue of exploited vulnerabilities. One alert per package for exploited (`vuln.exploited`) and for high or critical fixable vulnerabilities (`vuln.severe`); counts and lists on the host page. Agent option `packages`.
+- Hardening checks every six hours: SSH root and password login, empty passwords, ASLR and other kernel settings, permissions of files that decide what root runs, firewall, AppArmor/SELinux (`posture.*`). Agent options `posture`, `posture_skip`.
+- Certificates of Let's Encrypt, nginx and Apache (and `tls_certs`) close to expiry or expired (`tls.expiring`, `tls.expired`).
+- Backups listed in `backups` that are missing, too old or too small (`backup.missing`, `backup.stale`, `backup.small`).
+- Exposed secrets: private keys, API tokens, URLs with passwords, `.env`, `.pgpass` and `.netrc` entries in files every user can read (`secret.exposed`). The secret never leaves the host. Agent options `secrets`, `secret_roots`.
+- These conditions alert once when they start and close themselves when they end.
+
 ## v0.12.0
 
 - Kernel: new modules (`kernel.module`), out-of-tree or unsigned modules (`kernel.module_unsigned`), modules hidden from `/proc/modules` (`kernel.module_hidden`), new taint flags (`kernel.tainted`), eBPF programs that hook the kernel or packets (`kernel.bpf`). Agent options `kernel`, `bpf`.
