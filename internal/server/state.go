@@ -45,6 +45,9 @@ type AgentRec struct {
 	// Updates is the host's latest patch state as reported by the agent.
 	Updates map[string]any `json:"updates,omitempty"`
 
+	// Volume holds sent bytes per hour (newest last, two weeks).
+	Volume []VolumeHour `json:"volume,omitempty"`
+
 	// Posture is the host's latest hardening, certificate and backup report.
 	Posture map[string]any `json:"posture,omitempty"`
 	// Conditions are the lasting findings active now, per group, by alert
@@ -118,17 +121,23 @@ type User struct {
 }
 
 type State struct {
-	Agents       map[string]*AgentRec    `json:"agents"`
-	Tokens       map[string]*EnrollToken `json:"tokens"`
-	Canaries     map[string]*CanaryRec   `json:"canaries"`
-	Alerts       []*Alert                `json:"alerts"`
-	KnownLogins  map[string]time.Time    `json:"known_logins"` // "user|ip"
-	Suppressions []*Suppression          `json:"suppressions"`
-	Incidents    []*Incident             `json:"incidents"`
-	Actions      []*ActionRec            `json:"actions,omitempty"`
-	SelfTests    []*SelfTest             `json:"selftests,omitempty"`
-	Snapshots    []*SnapshotReq          `json:"snapshot_requests,omitempty"`
-	LastAnchor   time.Time               `json:"last_anchor"`
+	Agents      map[string]*AgentRec    `json:"agents"`
+	Tokens      map[string]*EnrollToken `json:"tokens"`
+	Canaries    map[string]*CanaryRec   `json:"canaries"`
+	Alerts      []*Alert                `json:"alerts"`
+	KnownLogins map[string]time.Time    `json:"known_logins"` // "user|ip"
+	// LoginHours counts logins per user and hour of day (UTC).
+	LoginHours map[string]*[24]int `json:"login_hours,omitempty"`
+	// RetroSeen holds address|list pairs already hunted for in the past.
+	RetroSeen map[string]time.Time `json:"retro_seen,omitempty"`
+	// Searches are saved event log queries.
+	Searches     []*SavedSearch `json:"searches,omitempty"`
+	Suppressions []*Suppression `json:"suppressions"`
+	Incidents    []*Incident    `json:"incidents"`
+	Actions      []*ActionRec   `json:"actions,omitempty"`
+	SelfTests    []*SelfTest    `json:"selftests,omitempty"`
+	Snapshots    []*SnapshotReq `json:"snapshot_requests,omitempty"`
+	LastAnchor   time.Time      `json:"last_anchor"`
 }
 
 const maxAlerts = 5000

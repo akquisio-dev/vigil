@@ -88,6 +88,8 @@ func (a *Agent) runProcesses(ctx context.Context) {
 				if pid == tgid {
 					if info := readExec(pid); info != nil {
 						a.reportExec(info)
+						a.sessionExec(info)
+						a.rareExec(info)
 					}
 				}
 			}
@@ -113,6 +115,9 @@ func readExec(pid int) *ExecInfo {
 		e.Cmdline = strings.TrimSpace(string(bytes.ReplaceAll(b, []byte{0}, []byte{' '})))
 	}
 	e.Cwd, _ = os.Readlink(dir + "/cwd")
+	e.LoginUID = readUint32File(dir + "/loginuid")
+	e.SessionID = readUint32File(dir + "/sessionid")
+	e.MntNS, _ = os.Readlink(dir + "/ns/mnt")
 	e.Preload = readPreload(dir + "/environ")
 	if b, err := os.ReadFile(dir + "/status"); err == nil {
 		for _, line := range strings.Split(string(b), "\n") {

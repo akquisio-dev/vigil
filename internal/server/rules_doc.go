@@ -402,6 +402,31 @@ var ruleDocs = map[string]ruleDoc{
 		"Packages held back on purpose. The kernel: the newest installed kernel version counts, so a host that was not rebooted shows in `updates.reboot_pending` instead.",
 		"Install the update (`apt upgrade`) and restart the services that use the package.",
 	},
+	"process.rare": {
+		"After the learning period (`rare_learn_days`, default 7), a program ran on this host for the first time, and no package installed it. Programs in containers, in temp directories (`process.tmp_exec`) and from memory (`process.memfd_exec`) are left to their own rules.",
+		"Software installed by hand, programs built on the host, new releases of tools in `/opt` or a home directory.",
+		"Check where the program came from (`ls -l`, `sha256sum`, the pivot page of its hash) and who started it (the timeline around the alert).",
+	},
+	"process.rare_child": {
+		"After the learning period, a web server, database or application runtime (nginx, Apache, PHP-FPM, MySQL, PostgreSQL, Redis, node, java, python, srcds and those in `rare_parents`) started a program it never started before. A taken over web application shows up this way before it does anything else.",
+		"A new feature of the application that runs a tool, a deployment.",
+		"Look at the command line and the timeline: what did the service receive just before (web log), what did the child do after.",
+	},
+	"ssh.rare_time": {
+		"A user logged in at an hour of the day (UTC) with no logins in the hour before, at, or after it among at least 20 earlier logins. Stolen keys are often used at the attacker's time of day.",
+		"Night shifts, travel, an incident.",
+		"Ask the person. Check the source address on its pivot page and the session's commands.",
+	},
+	"net.volume_spike": {
+		"A host sent more than 1 GB in one hour, three times more than in 95 % of the hours of the last two weeks and more than ever in them (needs three days of history). Data theft and a host used for attacks or as a file share look like this.",
+		"Backups to another machine, large deployments, a popular download.",
+		"Find who sent it: outbound connections in the timeline of that hour, the processes in an evidence snapshot.",
+	},
+	"net.retro_hit": {
+		"A threat list now names an address that a host talked to (or that logged in, or sent web requests) in the last 30 days, before it was listed. Each address and list is reported once. Needs `threat_intel`.",
+		"Addresses of shared hosting or cloud providers that were listed for someone else later.",
+		"Open the event behind the alert in the timeline: which process, what happened around it, and whether the host still talks to that address.",
+	},
 	"kernel.bpf": {
 		"An eBPF program of a type that can hook the kernel or the network path was loaded: kprobe, tracepoint, raw tracepoint, tracing (fentry/fexit), LSM, extension, perf event or XDP. eBPF rootkits such as boopkit, TripleCross and ebpfkit work this way. Programs that were loaded when the collector first ran are reported once as well, since a rootkit may already be there. The same program loaded again (same type, name and tag) stays quiet. cgroup and socket programs from systemd and Docker are not reported.",
 		"Observability and security tools: bpftrace, BCC tools, Falco, Tracee, Cilium, Pixie, Parca, Datadog and similar agents, `perf`. Suppress them by name with a reason.",

@@ -105,6 +105,11 @@ var rules = map[string]ruleDef{
 	"secret.exposed":             {"high", "T1552.001", "{kind} readable by every user: {path} line {line}", "{kind} für alle Benutzer lesbar: {path} Zeile {line}"},
 	"vuln.exploited":             {"critical", "T1190", "{package} {installed}: {count} vulnerabilities exploited in the wild ({cves}), fixed in {fixed}", "{package} {installed}: {count} aktiv ausgenutzte Schwachstellen ({cves}), behoben in {fixed}"},
 	"vuln.severe":                {"high", "", "{package} {installed}: {count} high or critical vulnerabilities ({cves}), fixed in {fixed}", "{package} {installed}: {count} hohe oder kritische Schwachstellen ({cves}), behoben in {fixed}"},
+	"process.rare":               {"low", "T1204.002", "First run of {exe} on this host, no package installed it (started by {parent})", "{exe} läuft zum ersten Mal auf diesem Host, kein Paket hat es installiert (gestartet von {parent})"},
+	"process.rare_child":         {"medium", "T1059", "{parent} started {exe} for the first time (uid {uid})", "{parent} hat zum ersten Mal {exe} gestartet (uid {uid})"},
+	"ssh.rare_time":              {"low", "T1078", "{user} logged in at {hour}:00 UTC, an hour without logins in {logins} before ({ip})", "{user} hat sich um {hour}:00 UTC angemeldet, eine Uhrzeit ohne Anmeldungen in {logins} bisherigen ({ip})"},
+	"net.volume_spike":           {"medium", "T1048", "{sent} sent in one hour, usually at most {usual}", "{sent} in einer Stunde gesendet, sonst höchstens {usual}"},
+	"net.retro_hit":              {"high", "T1071", "{process} talked to {ip} on {when}, now listed by {list}", "{process} hat am {when} mit {ip} gesprochen, jetzt gelistet von {list}"},
 	"chain.broken":               {"critical", "T1565.001", "Event chain broken: {error}", "Ereigniskette gebrochen: {error}"},
 	"selftest.failed":            {"high", "T1562.001", "Self test on {host} failed: {missing}", "Selbsttest auf {host} fehlgeschlagen: {missing}"},
 	"notify.failed":              {"high", "", "Notifier {notifier} ({type}) failed: {error}", "Benachrichtigung {notifier} ({type}) fehlgeschlagen: {error}"},
@@ -202,6 +207,10 @@ func (s *Server) evaluate(a *AgentRec, r *Record) []finding {
 		k := user + "|" + ip
 		if _, known := s.state.KnownLogins[k]; !known {
 			add("ssh.new_source", k, p)
+		}
+		if hour, total, rare := s.loginHour(user, recordTime(*r)); rare {
+			p2 := map[string]string{"user": user, "ip": ip, "hour": fmt.Sprintf("%02d", hour), "logins": fmt.Sprint(total)}
+			add("ssh.rare_time", user+"|"+recordTime(*r).Format("2006-01-02T15"), p2)
 		}
 		s.state.KnownLogins[k] = r.Event.TS
 	case "ssh.failed":
@@ -488,6 +497,16 @@ func (s *Server) evaluate(a *AgentRec, r *Record) []finding {
 			"fingerprint": str(d, "fingerprint"), "uid": str(d, "uid"), "mode": str(d, "mode")}
 		// One alert per file; further secrets in it count on that alert.
 		add("secret.exposed", p["path"], p)
+	case "process.rare":
+		add("process.rare", str(d, "exe"), map[string]string{"exe": str(d, "exe"), "parent": str(d, "parent_comm"), "uid": str(d, "uid"),
+			"cmdline": str(d, "cmdline"), "pid": str(d, "pid")})
+	case "process.rare_child":
+		add("process.rare_child", str(d, "parent_comm")+"|"+str(d, "exe"), map[string]string{"exe": str(d, "exe"), "parent": str(d, "parent_comm"),
+			"uid": str(d, "uid"), "cmdline": str(d, "cmdline"), "pid": str(d, "pid")})
+	case "net.volume":
+		if f := volumeFinding(a, d, recordTime(*r)); f != nil {
+			add("net.volume_spike", recordTime(*r).Format("2006-01-02T15"), f)
+		}
 	case "forensics.snapshot":
 		s.snapshotReceived(a, r)
 	case "system.packages":

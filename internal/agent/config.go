@@ -88,6 +88,21 @@ type Config struct {
 	// Quarantine also copies the suspect program into the state directory
 	// (root only, 30 days, 512 MB at most). Off by default.
 	Quarantine *bool `json:"quarantine,omitempty"`
+	// Sessions reports the commands typed in SSH sessions (programs started
+	// by a shell, sudo or su inside the session), at most 300 per session
+	// and hour. On by default.
+	Sessions *bool `json:"sessions,omitempty"`
+	// Rarity reports, after a learning period, programs never seen run on
+	// this host (unless a package installed them) and children a service
+	// never started before. On by default.
+	Rarity *bool `json:"rarity,omitempty"`
+	// RareLearnDays is the learning period (default 7).
+	RareLearnDays int `json:"rare_learn_days,omitempty"`
+	// RareParents adds process names whose children are learned, on top of
+	// web servers, databases and common runtimes.
+	RareParents []string `json:"rare_parents,omitempty"`
+	// Volume reports bytes sent and received per hour.
+	Volume *bool `json:"volume,omitempty"`
 	// WebLogs are access logs to watch for scans and attacks.
 	WebLogs []WebLog `json:"web_logs,omitempty"`
 

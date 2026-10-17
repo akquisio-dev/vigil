@@ -45,10 +45,12 @@ var tactics = map[string]string{
 	"T1014":     "defense-evasion",
 	"T1620":     "defense-evasion",
 	"T1490":     "impact",
+	"T1048":     "exfiltration",
+	"T1059":     "execution",
 }
 
 // TacticOrder is the kill chain order of the tactics vigil covers.
-var TacticOrder = []string{"initial-access", "execution", "persistence", "privilege-escalation", "defense-evasion", "credential-access", "command-and-control", "impact"}
+var TacticOrder = []string{"initial-access", "execution", "persistence", "privilege-escalation", "defense-evasion", "credential-access", "command-and-control", "exfiltration", "impact"}
 
 type countItem struct {
 	Key   string `json:"key"`

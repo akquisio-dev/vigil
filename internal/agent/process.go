@@ -21,7 +21,10 @@ type ExecInfo struct {
 	Cwd         string
 	ParentExe   string
 	ParentComm  string
-	StdioSocket bool // stdin or stdout is a network socket
+	StdioSocket bool   // stdin or stdout is a network socket
+	LoginUID    uint32 // audit login uid, auditUnset outside login sessions
+	SessionID   uint32 // audit session id
+	MntNS       string // mount namespace, to tell containers apart
 }
 
 var shells = map[string]bool{"sh": true, "bash": true, "dash": true, "zsh": true, "ksh": true, "ash": true, "fish": true, "csh": true, "tcsh": true}

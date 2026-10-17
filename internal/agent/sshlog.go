@@ -140,10 +140,14 @@ func (a *Agent) handleSSH(msg, pid string, ts time.Time) {
 			}
 		}
 		a.emit(proto.Event{Type: "ssh.login", TS: ts, Data: d})
+		a.sessions.login(atoi(pid), m[2], m[3], ts)
 		return
 	}
 	if m := reDisconnect.FindStringSubmatch(msg); m != nil {
 		a.emit(proto.Event{Type: "ssh.logout", TS: ts, Data: map[string]any{"user": m[1], "ip": m[2], "port": atoi(m[3]), "sshd_pid": atoi(pid)}})
+		if s := a.sessions.logout(atoi(pid), ts); s != nil && s.drops > 0 {
+			a.emit(proto.NewEvent("session.dropped", map[string]any{"sshd_pid": s.PID, "user": s.User, "count": s.drops}))
+		}
 		return
 	}
 	var user, ip string

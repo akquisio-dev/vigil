@@ -52,6 +52,8 @@ type Agent struct {
 	contentSeeded bool
 	snaps         snapLimiter
 	preloadSeen   map[string]bool // exe|LD_PRELOAD pairs already reported
+	sessions      sessionTracker
+	rare          *RareState
 }
 
 func New(cfg *Config) (*Agent, error) {
@@ -154,7 +156,14 @@ func (a *Agent) Run(ctx context.Context) error {
 		go a.runSSH(ctx)
 	}
 	if on(a.cfg.Processes) {
+		if on(a.cfg.Rarity) {
+			a.rare = loadRare(a.cfg.StateDir)
+			go a.runRare(ctx)
+		}
 		go a.runProcesses(ctx)
+	}
+	if on(a.cfg.Volume) {
+		go a.runVolume(ctx)
 	}
 	if on(a.cfg.Updates) {
 		go a.runUpdates(ctx)

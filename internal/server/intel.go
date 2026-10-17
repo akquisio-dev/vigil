@@ -166,6 +166,13 @@ func (s *Server) refreshIntel() {
 	dir := filepath.Join(s.cfg.DataDir, "intel")
 	os.MkdirAll(dir, 0o700)
 	client := &http.Client{Timeout: 30 * time.Second}
+	changed := false
+	// New entries may name addresses seen days ago: hunt for them.
+	defer func() {
+		if changed {
+			s.retroHunt()
+		}
+	}()
 	for _, l := range intelLists {
 		path := filepath.Join(dir, l.Name+".txt")
 		fi, err := os.Stat(path)
@@ -176,6 +183,7 @@ func (s *Server) refreshIntel() {
 			if !loaded {
 				if b, err := os.ReadFile(path); err == nil {
 					s.intel.set(l.Name, l.parse(b), fi.ModTime())
+					changed = true
 				}
 			}
 			continue
@@ -187,6 +195,7 @@ func (s *Server) refreshIntel() {
 			} else {
 				os.WriteFile(path, b, 0o600)
 				s.intel.set(l.Name, ps, time.Now().UTC())
+				changed = true
 				continue
 			}
 		}
