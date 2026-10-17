@@ -91,6 +91,8 @@ const T = {
     started: "Start", ended: "End", duration: "Duration", commands: "Commands", sudoShort: "sudo", filesShort: "Files", stillOpen: "open",
     noSessions: "No SSH sessions in this period", sessionOf: "Session of {user}", dropped: "{n} more commands not recorded (limit per hour)",
     reportMD: "Report (Markdown)", reportPrint: "Report to print / PDF",
+    activeRules: "rules active", otherSources: "for log sources without vigil events", notConfigured: "not set up", hashLists: "Malware hashes",
+    forwarding: "Forwarding", sentShort: "sent", droppedShort: "dropped", queuedShort: "waiting",
     filesDuring: "changed while the session was open", partialScan: "stopped after 20 s, shorten the period",
   },
   de: {
@@ -180,6 +182,8 @@ const T = {
     started: "Beginn", ended: "Ende", duration: "Dauer", commands: "Befehle", sudoShort: "sudo", filesShort: "Dateien", stillOpen: "offen",
     noSessions: "Keine SSH-Sitzungen in diesem Zeitraum", sessionOf: "Sitzung von {user}", dropped: "{n} weitere Befehle nicht aufgezeichnet (Grenze pro Stunde)",
     reportMD: "Bericht (Markdown)", reportPrint: "Bericht drucken / PDF",
+    activeRules: "Regeln aktiv", otherSources: "für Quellen ohne vigil-Ereignisse", notConfigured: "nicht eingerichtet", hashLists: "Schadsoftware-Hashes",
+    forwarding: "Weiterleitung", sentShort: "gesendet", droppedShort: "verworfen", queuedShort: "wartend",
     filesDuring: "geändert, während die Sitzung offen war", partialScan: "nach 20 s abgebrochen, Zeitraum verkürzen",
   },
 };
@@ -1120,8 +1124,21 @@ async function rulesView() {
       h("td", null, sevChip(x.Severity)), h("td", { class: "mono nowrap" }, x.ID), h("td", { class: "nowrap" }, technique(x.Technique)),
       h("td", null, h("div", null, x.Title), x.Trigger ? h("div", { class: "muted small-text" }, x.Trigger) : null),
       h("td", { class: "muted mono" }, custom ? x.File : (r.suppressible[x.ID] ? "" : h("span", { class: "pill", title: t("suppress") }, icon("bell-off"))) ))))));
+  const st = (ok, text) => h("span", { class: "chip" }, h("span", { class: "dot " + (ok ? "ok" : "high") }), text);
+  const m = r.malware || {}, hi = m.hash_intel || {}, ya = m.yara || {}, sg = r.sigma || {};
+  const engines = h("div", { class: "card" }, h("dl", { class: "kv" },
+    h("dt", null, "Sigma"), h("dd", null, st(!(sg.errors || []).length, sg.rules + " " + t("activeRules") + (sg.other_sources ? ", " + sg.other_sources + " " + t("otherSources") : "")),
+      (sg.errors || []).slice(0, 20).map((e) => h("div", { class: "mono muted small" }, e))),
+    h("dt", null, "YARA"), h("dd", null, ya.dir ? st(!(ya.errors || []).length, ya.rules + " " + t("activeRules")) : h("span", { class: "muted" }, t("notConfigured") + " (yara_dir)"),
+      (ya.errors || []).slice(0, 20).map((e) => h("div", { class: "mono muted small" }, e))),
+    h("dt", null, t("hashLists")), h("dd", null, hi.enabled ? st(!hi.error, (hi.hashes || 0).toLocaleString(lang) + " SHA-256" + (hi.recent && !hi.recent.startsWith("0001") ? ", " + t("updated") + " " + abs(hi.recent) : "")) : h("span", { class: "muted" }, t("notConfigured") + " (hash_intel)"),
+      hi.error ? h("div", { class: "mono muted small" }, hi.error) : null),
+    h("dt", null, t("forwarding")), h("dd", null, (r.forward || []).length ? (r.forward || []).map((f) => h("div", null,
+      st(!f.error, f.name + " (" + f.type + "): " + f.sent + " " + t("sentShort") + (f.dropped ? ", " + f.dropped + " " + t("droppedShort") : "") + (f.queued ? ", " + f.queued + " " + t("queuedShort") : "")),
+      f.error ? h("div", { class: "mono muted small" }, f.error) : null)) : h("span", { class: "muted" }, t("notConfigured") + " (forward)"))));
   mount(shell("rules", h("h1", null, t("rules")),
     h("div", { class: "crumbs" }, r.builtin.length + " " + t("builtin") + ", " + (r.custom || []).length + " " + t("customShort")),
+    engines,
     h("h2", null, t("customRules")),
     r.errors && r.errors.length ? h("div", { class: "card err-box" }, h("h3", null, t("ruleErrors")), r.errors.map((e) => h("div", { class: "mono" }, e))) : null,
     (r.custom || []).length ? table(r.custom, true) : h("div", { class: "card empty" }, t("noCustom")),

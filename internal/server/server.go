@@ -46,6 +46,7 @@ type Server struct {
 	intel      intelSet
 	vdb        vulnDB
 	hashes     hashSet
+	fwd        []*forwarder
 	yara       yaraSet
 	pkgs       map[string]*agentPackages // latest package list per agent, guarded by mu
 	nh         notifierHealth
@@ -137,6 +138,7 @@ func (s *Server) Run(ctx context.Context) error {
 	s.loadYara()
 	go s.refreshHashes()
 	LoadSigma(s.cfg.SigmaDir)
+	s.startForwarders()
 	if s.cfg.RulesDir != "" {
 		n, errs := LoadCustomRules(s.cfg.RulesDir)
 		log.Printf("custom rules: %d loaded from %s", n, s.cfg.RulesDir)
@@ -338,6 +340,7 @@ func (s *Server) checkDeadman() {
 
 // notifyAlerts expects s.mu held (it reads agent names).
 func (s *Server) notifyAlerts(fresh []*Alert) {
+	s.forwardAlerts(fresh)
 	for _, al := range fresh {
 		s.notify(s.alertMessage(al), false)
 	}

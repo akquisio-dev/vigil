@@ -112,6 +112,7 @@ var rules = map[string]ruleDef{
 	"net.retro_hit":              {"high", "T1071", "{process} talked to {ip} on {when}, now listed by {list}", "{process} hat am {when} mit {ip} gesprochen, jetzt gelistet von {list}"},
 	"malware.known":              {"critical", "T1204.002", "Known malware on this host: {path} (SHA-256 listed by {list})", "Bekannte Schadsoftware auf diesem Host: {path} (SHA-256 gelistet bei {list})"},
 	"malware.yara":               {"high", "T1204.002", "YARA rule {rules} matches {path} ({source})", "YARA-Regel {rules} trifft auf {path} ({source})"},
+	"forward.failed":             {"high", "", "Forwarding {forwarder} ({type}) has failed for 10 minutes: {error}", "Weiterleitung {forwarder} ({type}) scheitert seit 10 Minuten: {error}"},
 	"chain.broken":               {"critical", "T1565.001", "Event chain broken: {error}", "Ereigniskette gebrochen: {error}"},
 	"selftest.failed":            {"high", "T1562.001", "Self test on {host} failed: {missing}", "Selbsttest auf {host} fehlgeschlagen: {missing}"},
 	"notify.failed":              {"high", "", "Notifier {notifier} ({type}) failed: {error}", "Benachrichtigung {notifier} ({type}) fehlgeschlagen: {error}"},

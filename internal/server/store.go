@@ -59,6 +59,9 @@ type Store struct {
 	VerifiedAt time.Time
 
 	appendErr string // last failed write, cleared by the next good one
+
+	// onAppend is told about records after they are written (forwarding).
+	onAppend func([]*Record)
 }
 
 // Health reports whether the log is intact and writable.
@@ -167,11 +170,15 @@ func (s *Store) Verify() (bool, string) {
 
 func (s *Store) Append(recs ...*Record) error {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	err := s.appendLocked(recs)
 	s.appendErr = ""
 	if err != nil {
 		s.appendErr = err.Error()
+	}
+	cb := s.onAppend
+	s.mu.Unlock()
+	if err == nil && cb != nil {
+		cb(recs)
 	}
 	return err
 }

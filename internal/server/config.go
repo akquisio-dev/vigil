@@ -71,6 +71,8 @@ type Config struct {
 	// SigmaDir holds Sigma rules (*.yml, also in subdirectories) for Linux
 	// process, network and file events.
 	SigmaDir string `json:"sigma_dir,omitempty"`
+	// Forward sends events and alerts to syslog, HTTP or a file.
+	Forward []ForwardConfig `json:"forward,omitempty"`
 	// RulesDir holds custom rules (*.json), loaded at start.
 	RulesDir string `json:"rules_dir,omitempty"`
 

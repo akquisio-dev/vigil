@@ -402,6 +402,11 @@ var ruleDocs = map[string]ruleDoc{
 		"Packages held back on purpose. The kernel: the newest installed kernel version counts, so a host that was not rebooted shows in `updates.reboot_pending` instead.",
 		"Install the update (`apt upgrade`) and restart the services that use the package.",
 	},
+	"forward.failed": {
+		"A forwarding target from `forward` (syslog, HTTP or file) has refused or not answered for ten minutes. Events and alerts wait in its queue (10 000 items) and are dropped past that.",
+		"Maintenance of the receiving system.",
+		"Check the target (address, certificate, token) with the error in the alert; the forwarding status is on the rules page.",
+	},
 	"malware.known": {
 		"The SHA-256 of a program on the host (from a suspicious or new program start, an evidence snapshot or the package integrity check) is on abuse.ch MalwareBazaar or ThreatFox. Checked when the event arrives and again for the last 30 days whenever the lists grow. Needs `hash_intel` on the server.",
 		"None in practice; the lists hold malware samples. A security tool or test file you placed on purpose (EICAR-like samples).",

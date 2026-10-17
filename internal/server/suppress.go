@@ -39,7 +39,7 @@ func Suppressible(rule string) bool {
 	if !ok || def.Severity == "critical" {
 		return false
 	}
-	for _, p := range []string{"agent.", "canary.", "chain.", "log.", "notify.", "selftest."} {
+	for _, p := range []string{"agent.", "canary.", "chain.", "log.", "notify.", "selftest.", "forward."} {
 		if strings.HasPrefix(rule, p) {
 			return false
 		}
