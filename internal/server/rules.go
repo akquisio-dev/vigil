@@ -69,28 +69,45 @@ var rules = map[string]ruleDef{
 	"canary.remove_failed": {"medium", "", "Canary {path} could not be removed: {error}", "Köder {path} ließ sich nicht entfernen: {error}"},
 	"canary.overflow":      {"medium", "", "Canary event queue overflowed on {host}", "Köder-Warteschlange auf {host} übergelaufen"},
 
-	"agent.silent":              {"high", "T1562.001", "Agent {host} silent", "Agent {host} meldet sich nicht"},
-	"agent.stopped":             {"high", "T1562.001", "Agent {host} was stopped", "Agent {host} wurde beendet"},
-	"agent.restarted":           {"high", "T1562.001", "Agent {host} restarted after {gap} without monitoring", "Agent {host} neu gestartet nach {gap} ohne Überwachung"},
-	"agent.config_rejected":     {"high", "T1557", "Agent {host} rejected a configuration ({reason})", "Agent {host} hat eine Konfiguration abgelehnt ({reason})"},
-	"log.spoofed":               {"high", "T1070", "Fake {identifier} log entry written by {comm} (uid {uid})", "Gefälschter {identifier}-Logeintrag von {comm} (uid {uid})"},
-	"agent.dropped":             {"low", "", "Agent {host} dropped {count} events", "Agent {host} hat {count} Ereignisse verworfen"},
-	"agent.forged":              {"high", "T1557", "Request with invalid signature for agent {agent} from {ip}", "Anfrage mit ungültiger Signatur für Agent {agent} von {ip}"},
-	"file.suid":                 {"high", "T1548.001", "{what} on {path} ({why})", "{what} auf {path} ({why})"},
-	"file.suid_tmp":             {"critical", "T1548.001", "Root {what} program in a temp directory: {path}", "Root-Programm mit {what} in einem Temp-Verzeichnis: {path}"},
-	"file.suid_packaged":        {"low", "T1548.001", "{what} on {path} from package {package}", "{what} auf {path} aus Paket {package}"},
-	"integrity.binary_replaced": {"critical", "T1554", "{path} from {package} was modified: {reason}", "{path} aus {package} wurde verändert: {reason}"},
-	"integrity.modified":        {"high", "T1554", "{path} from {package} was modified: {reason}", "{path} aus {package} wurde verändert: {reason}"},
-	"integrity.unowned":         {"medium", "T1554", "New program {path} that no package installed", "Neues Programm {path}, das kein Paket installiert hat"},
-	"integrity.many":            {"high", "T1554", "{count} packaged files differ from their checksums", "{count} Paketdateien weichen von ihren Prüfsummen ab"},
-	"kernel.bpf":                {"high", "T1014", "eBPF {type} program {name} loaded (uid {uid})", "eBPF-{type}-Programm {name} geladen (uid {uid})"},
-	"kernel.module":             {"low", "T1547.006", "Kernel module {name} loaded", "Kernelmodul {name} geladen"},
-	"kernel.module_unsigned":    {"high", "T1547.006", "Out-of-tree or unsigned kernel module {name} ({taint})", "Fremdes oder unsigniertes Kernelmodul {name} ({taint})"},
-	"kernel.module_hidden":      {"critical", "T1014", "Kernel module {name} is hidden from /proc/modules", "Kernelmodul {name} ist vor /proc/modules versteckt"},
-	"kernel.tainted":            {"medium", "T1014", "Kernel tainted: {added} (now {tainted})", "Kernel markiert: {added} (jetzt {tainted})"},
-	"chain.broken":              {"critical", "T1565.001", "Event chain broken: {error}", "Ereigniskette gebrochen: {error}"},
-	"selftest.failed":           {"high", "T1562.001", "Self test on {host} failed: {missing}", "Selbsttest auf {host} fehlgeschlagen: {missing}"},
-	"notify.failed":             {"high", "", "Notifier {notifier} ({type}) failed: {error}", "Benachrichtigung {notifier} ({type}) fehlgeschlagen: {error}"},
+	"agent.silent":               {"high", "T1562.001", "Agent {host} silent", "Agent {host} meldet sich nicht"},
+	"agent.stopped":              {"high", "T1562.001", "Agent {host} was stopped", "Agent {host} wurde beendet"},
+	"agent.restarted":            {"high", "T1562.001", "Agent {host} restarted after {gap} without monitoring", "Agent {host} neu gestartet nach {gap} ohne Überwachung"},
+	"agent.config_rejected":      {"high", "T1557", "Agent {host} rejected a configuration ({reason})", "Agent {host} hat eine Konfiguration abgelehnt ({reason})"},
+	"log.spoofed":                {"high", "T1070", "Fake {identifier} log entry written by {comm} (uid {uid})", "Gefälschter {identifier}-Logeintrag von {comm} (uid {uid})"},
+	"agent.dropped":              {"low", "", "Agent {host} dropped {count} events", "Agent {host} hat {count} Ereignisse verworfen"},
+	"agent.forged":               {"high", "T1557", "Request with invalid signature for agent {agent} from {ip}", "Anfrage mit ungültiger Signatur für Agent {agent} von {ip}"},
+	"file.suid":                  {"high", "T1548.001", "{what} on {path} ({why})", "{what} auf {path} ({why})"},
+	"file.suid_tmp":              {"critical", "T1548.001", "Root {what} program in a temp directory: {path}", "Root-Programm mit {what} in einem Temp-Verzeichnis: {path}"},
+	"file.suid_packaged":         {"low", "T1548.001", "{what} on {path} from package {package}", "{what} auf {path} aus Paket {package}"},
+	"integrity.binary_replaced":  {"critical", "T1554", "{path} from {package} was modified: {reason}", "{path} aus {package} wurde verändert: {reason}"},
+	"integrity.modified":         {"high", "T1554", "{path} from {package} was modified: {reason}", "{path} aus {package} wurde verändert: {reason}"},
+	"integrity.unowned":          {"medium", "T1554", "New program {path} that no package installed", "Neues Programm {path}, das kein Paket installiert hat"},
+	"integrity.many":             {"high", "T1554", "{count} packaged files differ from their checksums", "{count} Paketdateien weichen von ihren Prüfsummen ab"},
+	"kernel.bpf":                 {"high", "T1014", "eBPF {type} program {name} loaded (uid {uid})", "eBPF-{type}-Programm {name} geladen (uid {uid})"},
+	"kernel.module":              {"low", "T1547.006", "Kernel module {name} loaded", "Kernelmodul {name} geladen"},
+	"kernel.module_unsigned":     {"high", "T1547.006", "Out-of-tree or unsigned kernel module {name} ({taint})", "Fremdes oder unsigniertes Kernelmodul {name} ({taint})"},
+	"kernel.module_hidden":       {"critical", "T1014", "Kernel module {name} is hidden from /proc/modules", "Kernelmodul {name} ist vor /proc/modules versteckt"},
+	"kernel.tainted":             {"medium", "T1014", "Kernel tainted: {added} (now {tainted})", "Kernel markiert: {added} (jetzt {tainted})"},
+	"posture.ssh_root_login":     {"high", "T1110", "Root can log in over SSH with a password (PermitRootLogin {value})", "Root kann sich per SSH mit Passwort anmelden (PermitRootLogin {value})"},
+	"posture.ssh_password":       {"medium", "T1110", "SSH accepts passwords ({value})", "SSH akzeptiert Passwörter ({value})"},
+	"posture.ssh_empty_password": {"critical", "T1078", "SSH accepts empty passwords", "SSH akzeptiert leere Passwörter"},
+	"posture.empty_password":     {"critical", "T1078", "Accounts with a shell and no password: {value}", "Konten mit Shell und ohne Passwort: {value}"},
+	"posture.aslr":               {"medium", "", "Address space randomization is weakened (kernel.randomize_va_space = {value})", "Adressraum-Randomisierung ist geschwächt (kernel.randomize_va_space = {value})"},
+	"posture.sysctl":             {"low", "", "{key} = {value}, should be {want}", "{key} = {value}, sollte {want} sein"},
+	"posture.permissions":        {"high", "", "Unsafe permissions on {key}: {value}", "Unsichere Rechte auf {key}: {value}"},
+	"posture.firewall":           {"medium", "", "No firewall filters incoming traffic", "Keine Firewall filtert eingehenden Verkehr"},
+	"posture.mac":                {"low", "", "No AppArmor or SELinux confines services ({value})", "Kein AppArmor oder SELinux schränkt Dienste ein ({value})"},
+	"tls.expired":                {"high", "", "Certificate {subject} expired {ago} days ago ({path})", "Zertifikat {subject} ist seit {ago} Tagen abgelaufen ({path})"},
+	"tls.expiring":               {"medium", "", "Certificate {subject} expires in {days} days ({path})", "Zertifikat {subject} läuft in {days} Tagen ab ({path})"},
+	"backup.missing":             {"high", "T1490", "Backup {name}: no file matches {path}", "Backup {name}: keine Datei passt zu {path}"},
+	"backup.stale":               {"high", "T1490", "Backup {name} is {age} hours old (limit {max})", "Backup {name} ist {age} Stunden alt (Grenze {max})"},
+	"backup.small":               {"medium", "T1490", "Backup {name} is only {size} bytes ({file})", "Backup {name} hat nur {size} Bytes ({file})"},
+	"secret.exposed":             {"high", "T1552.001", "{kind} readable by every user: {path} line {line}", "{kind} für alle Benutzer lesbar: {path} Zeile {line}"},
+	"vuln.exploited":             {"critical", "T1190", "{cve} in {package} {installed} is exploited in the wild", "{cve} in {package} {installed} wird aktiv ausgenutzt"},
+	"vuln.severe":                {"high", "", "{package} {installed}: {count} fixable high or critical vulnerabilities ({cves})", "{package} {installed}: {count} behebbare hohe oder kritische Schwachstellen ({cves})"},
+	"chain.broken":               {"critical", "T1565.001", "Event chain broken: {error}", "Ereigniskette gebrochen: {error}"},
+	"selftest.failed":            {"high", "T1562.001", "Self test on {host} failed: {missing}", "Selbsttest auf {host} fehlgeschlagen: {missing}"},
+	"notify.failed":              {"high", "", "Notifier {notifier} ({type}) failed: {error}", "Benachrichtigung {notifier} ({type}) fehlgeschlagen: {error}"},
 }
 
 var words = map[string]map[string]string{
@@ -458,6 +475,19 @@ func (s *Server) evaluate(a *AgentRec, r *Record) []finding {
 		add("kernel.module_hidden", str(d, "name"), map[string]string{"name": str(d, "name")})
 	case "kernel.tainted":
 		add("kernel.tainted", str(d, "added"), map[string]string{"added": str(d, "added"), "tainted": str(d, "tainted")})
+	case "posture.report":
+		cp := map[string]any{}
+		for k, v := range d {
+			cp[k] = v
+		}
+		a.Posture = cp
+		out = append(out, s.conditionFindings(a, "posture", postureConditions(d))...)
+	case "secret.exposed":
+		p := map[string]string{"path": str(d, "path"), "kind": secretKind(str(d, "kind")), "line": str(d, "line"),
+			"fingerprint": str(d, "fingerprint"), "uid": str(d, "uid"), "mode": str(d, "mode")}
+		add("secret.exposed", p["path"]+"|"+str(d, "kind")+"|"+p["fingerprint"], p)
+	case "system.packages":
+		out = append(out, s.packagesReceived(a, d)...)
 	case "response.result":
 		s.actionResult(a.ID, d)
 	case "selftest.started", "selftest.step", "selftest.done":

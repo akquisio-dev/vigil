@@ -45,6 +45,14 @@ type AgentRec struct {
 	// Updates is the host's latest patch state as reported by the agent.
 	Updates map[string]any `json:"updates,omitempty"`
 
+	// Posture is the host's latest hardening, certificate and backup report.
+	Posture map[string]any `json:"posture,omitempty"`
+	// Conditions are the lasting findings active now, per group, by alert
+	// key; they alert when they start and resolve when they end.
+	Conditions map[string]map[string]bool `json:"conditions,omitempty"`
+	// Vulns is the result of the last vulnerability match (vuln_lookup).
+	Vulns *VulnSummary `json:"vulns,omitempty"`
+
 	// SelfTest is true when the agent accepts self tests (from agent.json).
 	SelfTest     bool      `json:"selftest,omitempty"`
 	LastSelfTest time.Time `json:"last_selftest,omitempty"`

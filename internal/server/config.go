@@ -55,6 +55,12 @@ type Config struct {
 	// ThreatIntel downloads public block lists (abuse.ch, Spamhaus DROP, Tor
 	// exits) twice a day and matches outbound connections against them.
 	ThreatIntel bool `json:"threat_intel,omitempty"`
+	// VulnLookup matches the package lists of Debian and Ubuntu hosts with
+	// the distributions' vulnerability data (OSV) and CISA's catalogue of
+	// exploited vulnerabilities. The server downloads the complete data of
+	// each release in use once a week (about 150 MB for an Ubuntu LTS
+	// release) and the changes daily; nothing is sent.
+	VulnLookup bool `json:"vuln_lookup,omitempty"`
 	// RulesDir holds custom rules (*.json), loaded at start.
 	RulesDir string `json:"rules_dir,omitempty"`
 

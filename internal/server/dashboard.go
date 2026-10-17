@@ -44,6 +44,7 @@ var tactics = map[string]string{
 	"T1548.001": "privilege-escalation",
 	"T1014":     "defense-evasion",
 	"T1620":     "defense-evasion",
+	"T1490":     "impact",
 }
 
 // TacticOrder is the kill chain order of the tactics vigil covers.

@@ -317,6 +317,91 @@ var ruleDocs = map[string]ruleDoc{
 		"A broken or interrupted package installation (`dpkg --audit`), restoring files from an old backup.",
 		"Run `dpkg --audit` and `debsums -c`. If no package operation explains it, treat it like `integrity.binary_replaced`.",
 	},
+	"posture.ssh_root_login": {
+		"sshd lets root log in with a password (`PermitRootLogin yes` while password or keyboard-interactive login is on). Every brute force run on the internet tries root first. Read from `sshd -T`, or the configuration files when that fails. Alerts when the check starts failing and closes itself when it passes again; this applies to every `posture.`, `tls.`, `backup.` and `vuln.` rule.",
+		"None; root with a password is never needed when keys are set up.",
+		"Set `PermitRootLogin prohibit-password` (or `no`) in `/etc/ssh/sshd_config.d/` and reload sshd. Check first that your key works for root.",
+	},
+	"posture.ssh_password": {
+		"sshd accepts passwords (`PasswordAuthentication yes`, or keyboard-interactive with PAM). Passwords can be guessed; keys cannot.",
+		"Hosts where people without keys must log in. Cloud images often turn passwords on in `50-cloud-init.conf`.",
+		"Give every user a key, then set `PasswordAuthentication no` and `KbdInteractiveAuthentication no` and reload sshd.",
+	},
+	"posture.ssh_empty_password": {
+		"sshd accepts accounts with an empty password (`PermitEmptyPasswords yes`).",
+		"None.",
+		"Set `PermitEmptyPasswords no` and reload sshd. Check `posture.empty_password` too.",
+	},
+	"posture.empty_password": {
+		"An account with a login shell has an empty password field in `/etc/shadow`, so `su` and the console accept it without a password.",
+		"None on a server.",
+		"Lock the account (`passwd -l <user>`) or set a password. Find out who emptied it: this is also how attackers keep a way back in.",
+	},
+	"posture.aslr": {
+		"`kernel.randomize_va_space` is not 2, so memory addresses are predictable and memory corruption exploits get easier.",
+		"Debugging sessions that turned it off and forgot.",
+		"`sysctl -w kernel.randomize_va_space=2` and remove the setting from `/etc/sysctl.d/`.",
+	},
+	"posture.sysctl": {
+		"A kernel setting is weaker than the usual default: `kptr_restrict`, `dmesg_restrict`, `yama.ptrace_scope`, `unprivileged_bpf_disabled`, `protected_symlinks`, `protected_hardlinks`, `suid_dumpable`, `accept_redirects`, `accept_source_route` or `tcp_syncookies`. One alert per setting.",
+		"Hosts where a tool needs one of them (debuggers need `ptrace_scope` 0). Turn single checks off with `posture_skip`, for example `sysctl:kernel.yama.ptrace_scope`, or suppress with a reason.",
+		"Set the value from the alert in `/etc/sysctl.d/99-hardening.conf` and run `sysctl --system`.",
+	},
+	"posture.permissions": {
+		"A file or directory that decides what root runs or who may log in can be changed by other users (or is owned by one): `/etc/shadow`, sudoers, sshd and PAM configuration, cron, systemd units, root's SSH keys, the system `PATH` directories, or any world-writable file in `/etc`. For `/etc/shadow` and sudoers, being readable by everyone counts too.",
+		"Rare. Some installers leave world-writable files in `/etc`.",
+		"Fix the owner and mode (`chown root:root`, `chmod go-w`). If you did not cause it, check what was changed while it was open.",
+	},
+	"posture.firewall": {
+		"No input chain in nftables (or iptables) drops or rejects anything, so every service that listens on a public address is reachable.",
+		"Hosts filtered by a cloud firewall or a separate device. Turn the check off with `posture_skip: [\"firewall\"]` there.",
+		"Set up ufw or an nftables input chain with `policy drop` and the ports you need.",
+	},
+	"posture.mac": {
+		"Neither AppArmor nor SELinux is active, so a compromised service is not confined beyond its user.",
+		"Distributions without either by default.",
+		"Enable AppArmor (Debian, Ubuntu) or SELinux in enforcing mode (Red Hat family).",
+	},
+	"tls.expired": {
+		"A certificate that nginx, Apache or Let's Encrypt uses (or one listed in `tls_certs`) has expired.",
+		"Old certificates still on disk but no longer served. Remove them from the configuration.",
+		"Renew it (`certbot renew`) and reload the web server. Check why automatic renewal failed (`systemctl status certbot.timer`).",
+	},
+	"tls.expiring": {
+		"A certificate expires within 14 days. certbot renews 30 days before expiry, so this means renewal has been failing for two weeks.",
+		"Certificates renewed by hand on a schedule.",
+		"Run `certbot renew --dry-run` and fix what it reports, then reload the web server.",
+	},
+	"backup.missing": {
+		"No file matches a backup location from `backups` in agent.json.",
+		"A path that changed. Update agent.json.",
+		"Check the backup job and its logs. A deleted backup can be the start of a ransomware attack.",
+	},
+	"backup.stale": {
+		"The newest file of a backup location is older than its `max_age_hours`.",
+		"Backup jobs that were paused on purpose.",
+		"Check the backup job (`systemctl list-timers`, cron, its log) and run it by hand once.",
+	},
+	"backup.small": {
+		"The newest backup file is smaller than its `min_bytes`, which usually means the dump failed half way.",
+		"A data set that really shrank. Lower `min_bytes`.",
+		"Open the file and check it is complete; run the job again and read its errors.",
+	},
+	"secret.exposed": {
+		"A private key, API token, URL with a password, `.env` secret, `.pgpass` or `.netrc` entry is in a file every user on the host can read. A taken over web application or service runs as its own user; this is what it would read first. Only directories every user can enter are searched (daily), so secrets kept in private directories are never read. The secret itself never leaves the host: the alert names the path, the kind, the line and a short hash.",
+		"Sample keys in documentation or test data outside the skipped directories. Suppress per path with a reason.",
+		"Make the file private (`chmod 600`, or `640` with the service's group) and rotate the secret: assume it has been read.",
+	},
+	"vuln.exploited": {
+		"An installed package has a vulnerability on CISA's list of vulnerabilities exploited in the wild, and the distribution has a fix. Needs `vuln_lookup` on the server.",
+		"None; when the fix is available, install it.",
+		"Update the package now (`apt install --only-upgrade <package>`) and restart what uses it (`needrestart`, or reboot for the kernel).",
+	},
+	"vuln.severe": {
+		"An installed package has vulnerabilities of high or critical priority (the distribution's rating, or CVSS when there is none) with a fix in the archive. One alert per package. Needs `vuln_lookup` on the server; unlike `updates.security_pending` it does not wait seven days.",
+		"Packages held back on purpose. The kernel: the newest installed kernel version counts, so a host that was not rebooted shows in `updates.reboot_pending` instead.",
+		"Install the update (`apt upgrade`) and restart the services that use the package.",
+	},
 	"kernel.bpf": {
 		"An eBPF program of a type that can hook the kernel or the network path was loaded: kprobe, tracepoint, raw tracepoint, tracing (fentry/fexit), LSM, extension, perf event or XDP. eBPF rootkits such as boopkit, TripleCross and ebpfkit work this way. Programs that were loaded when the collector first ran are reported once as well, since a rootkit may already be there. The same program loaded again (same type, name and tag) stays quiet. cgroup and socket programs from systemd and Docker are not reported.",
 		"Observability and security tools: bpftrace, BCC tools, Falco, Tracee, Cilium, Pixie, Parca, Datadog and similar agents, `perf`. Suppress them by name with a reason.",

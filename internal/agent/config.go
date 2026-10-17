@@ -59,6 +59,28 @@ type Config struct {
 	// /etc/cron.d, a copy of `sleep` started from /tmp and an sshd-tagged log
 	// line, all removed right away. On by default.
 	SelfTest *bool `json:"selftest,omitempty"`
+	// Posture reports hardening checks (SSH, accounts, kernel settings, file
+	// permissions, firewall, AppArmor/SELinux), TLS certificates and backups
+	// every six hours.
+	Posture *bool `json:"posture,omitempty"`
+	// PostureSkip lists checks not to run, by name ("firewall") or by name
+	// and key ("sysctl:kernel.dmesg_restrict").
+	PostureSkip []string `json:"posture_skip,omitempty"`
+	// TLSCerts are extra certificate files (globs) to watch for expiry, on
+	// top of Let's Encrypt and what nginx and Apache configurations name.
+	TLSCerts []string `json:"tls_certs,omitempty"`
+	// Backups are locations whose newest file must not be older than
+	// max_age_hours. Empty by default.
+	Backups []Backup `json:"backups,omitempty"`
+	// Secrets looks for private keys, tokens and credentials that every user
+	// on the host can read (once a day).
+	Secrets *bool `json:"secrets,omitempty"`
+	// SecretRoots replaces the directories searched for exposed secrets.
+	SecretRoots []string `json:"secret_roots,omitempty"`
+	// Packages sends the installed package list to the server once a day,
+	// so it can match it against vulnerability data (server option
+	// vuln_lookup). The agent itself never contacts third parties.
+	Packages *bool `json:"packages,omitempty"`
 	// WebLogs are access logs to watch for scans and attacks.
 	WebLogs []WebLog `json:"web_logs,omitempty"`
 

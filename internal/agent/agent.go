@@ -162,6 +162,15 @@ func (a *Agent) Run(ctx context.Context) error {
 	if on(a.cfg.Integrity) {
 		go a.runIntegrity(ctx)
 	}
+	if on(a.cfg.Posture) {
+		go a.runPosture(ctx)
+	}
+	if on(a.cfg.Secrets) {
+		go a.runSecrets(ctx)
+	}
+	if on(a.cfg.Packages) {
+		go a.runPackages(ctx)
+	}
 	for _, wl := range a.cfg.WebLogs {
 		go a.tailWebLog(ctx, wl)
 	}

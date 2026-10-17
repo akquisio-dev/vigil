@@ -43,6 +43,8 @@ type Server struct {
 	users      userCache
 	challenges challenges
 	intel      intelSet
+	vdb        vulnDB
+	pkgs       map[string]*agentPackages // latest package list per agent, guarded by mu
 	nh         notifierHealth
 
 	beatWarned string // last reason the heartbeat was withheld, loop goroutine only
@@ -121,6 +123,8 @@ func (s *Server) Run(ctx context.Context) error {
 	}
 	s.record("server", "", "", proto.NewEvent("server.started", map[string]any{"version": Version}))
 	go s.refreshIntel()
+	s.loadPackages()
+	go s.refreshVulns()
 	if s.cfg.RulesDir != "" {
 		n, errs := LoadCustomRules(s.cfg.RulesDir)
 		log.Printf("custom rules: %d loaded from %s", n, s.cfg.RulesDir)
@@ -203,6 +207,7 @@ func (s *Server) loop(ctx context.Context) {
 		case <-hourly.C:
 			s.daily()
 			go s.refreshIntel()
+			go s.refreshVulns()
 		}
 	}
 }

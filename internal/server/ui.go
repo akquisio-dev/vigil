@@ -150,7 +150,7 @@ func (s *Server) uiHandler() http.Handler {
 	mux.HandleFunc("POST /api/ui/agents/{id}/respond", s.adminOnly(s.handleRespond))
 	mux.HandleFunc("GET /api/ui/actions", s.auth(s.handleActions))
 	mux.HandleFunc("GET /api/ui/intel", s.auth(func(w http.ResponseWriter, r *http.Request, sess *session) {
-		writeJSON(w, map[string]any{"enabled": s.cfg.ThreatIntel, "lists": s.intel.status()})
+		writeJSON(w, map[string]any{"enabled": s.cfg.ThreatIntel, "lists": s.intel.status(), "vulns": s.vulnStatus()})
 	}))
 	mux.HandleFunc("GET /api/ui/incidents", s.auth(s.handleIncidents))
 	mux.HandleFunc("GET /api/ui/incidents/{id}", s.auth(s.handleIncident))
@@ -262,6 +262,8 @@ type agentView struct {
 	ConfigSync  bool           `json:"config_sync"`
 	Maintenance *time.Time     `json:"maintenance_until,omitempty"`
 	Updates     map[string]any `json:"updates,omitempty"`
+	Posture     map[string]any `json:"posture,omitempty"`
+	Vulns       *VulnSummary   `json:"vulns,omitempty"`
 	SelfTest    bool           `json:"selftest"`
 }
 
@@ -277,7 +279,7 @@ func (s *Server) viewAgent(a *AgentRec) agentView {
 	}
 	v := agentView{ID: a.ID, Name: a.Name, Hostname: a.Hostname, Version: a.Version, Status: status,
 		LastSeen: a.LastSeen, LastIP: a.LastIP, Enrolled: a.Enrolled, Ports: len(a.Ports),
-		CanaryRoots: a.CanaryRoots, ConfigSync: a.AckedVersion >= a.ConfigVersion, OpenBySev: map[string]int{}, Updates: a.Updates, SelfTest: a.SelfTest}
+		CanaryRoots: a.CanaryRoots, ConfigSync: a.AckedVersion >= a.ConfigVersion, OpenBySev: map[string]int{}, Updates: a.Updates, Posture: a.Posture, Vulns: a.Vulns, SelfTest: a.SelfTest}
 	if time.Now().Before(a.MaintenanceUntil) {
 		until := a.MaintenanceUntil
 		v.Maintenance = &until
