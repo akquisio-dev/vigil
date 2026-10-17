@@ -1,6 +1,7 @@
 package server
 
 import (
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -146,5 +147,34 @@ func TestVulnMatching(t *testing.T) {
 	s.packagesReceived(b, map[string]any{"os_id": "almalinux", "os_version": "9.4", "packages": []any{}})
 	if b.Vulns == nil || b.Vulns.Error == "" {
 		t.Fatalf("unsupported: %+v", b.Vulns)
+	}
+}
+
+func TestVulnIndexKeepsOnlyInstalledPackages(t *testing.T) {
+	s := &Server{cfg: &Config{VulnLookup: true, DataDir: t.TempDir()}, state: &State{Agents: map[string]*AgentRec{}, KnownLogins: map[string]time.Time{}}}
+	os.MkdirAll(s.vulnDir(), 0o700)
+	full, _ := parseOVAL(strings.NewReader(ovalSample), "ubuntu:noble")
+	full.build()
+	if err := s.saveIndex(full); err != nil {
+		t.Fatal(err)
+	}
+	a := &AgentRec{ID: "a1", Name: "host"}
+	s.state.Agents["a1"] = a
+	s.pkgs = map[string]*agentPackages{"a1": {Eco: "ubuntu:noble", List: [][2]string{{"openssh", "1:9.6p1-3ubuntu13"}}}}
+	s.setIndex(full)
+	vi := s.vdb.idx["ubuntu:noble"]
+	if len(vi.byPkg["vim"]) != 0 || len(vi.byPkg["openssh"]) != 2 || vi.kept == nil {
+		t.Fatalf("pruned: %v", vi.byPkg)
+	}
+	if err := s.saveIndex(vi); err == nil {
+		t.Fatal("a reduced index must not overwrite the complete file")
+	}
+	// A host installs vim: its data is loaded from disk.
+	s.mu.Lock()
+	s.packagesReceived(a, map[string]any{"os_id": "ubuntu", "os_version": "24.04", "os_codename": "noble",
+		"packages": []any{[]any{"openssh", "1:9.6p1-3ubuntu13"}, []any{"vim", "2:9.1.0016-1ubuntu7"}}})
+	s.mu.Unlock()
+	if vi := s.vdb.idx["ubuntu:noble"]; len(vi.byPkg["vim"]) != 2 || a.Vulns.Fixable["critical"] != 1 {
+		t.Fatalf("after new package: %v %+v", vi.byPkg["vim"], a.Vulns)
 	}
 }

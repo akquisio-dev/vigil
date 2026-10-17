@@ -30,9 +30,18 @@ func TestVulnLive(t *testing.T) {
 	if s.vdb.idx[rel] == nil {
 		t.Fatal("no index")
 	}
-	if back := s.loadIndex(rel); back == nil || len(back.Recs) != len(s.vdb.idx[rel].Recs) {
+	back := s.loadIndex(rel)
+	if back == nil || len(back.Recs) < len(s.vdb.idx[rel].Recs) {
 		t.Fatal("index does not load back")
 	}
+	full, kept := 0, 0
+	for _, r := range back.Recs {
+		full += len(r.Pkgs)
+	}
+	for _, r := range s.vdb.idx[rel].Recs {
+		kept += len(r.Pkgs)
+	}
+	t.Logf("package entries: %d on disk, %d in memory", full, kept)
 	if fi, err := os.Stat(s.vulnDir() + "/" + ecoFile(rel) + ".json.gz"); err == nil {
 		t.Logf("index file %d bytes", fi.Size())
 	}

@@ -60,6 +60,43 @@ type vulnIndex struct {
 	Recs    map[string]*vulnRec `json:"recs"`
 
 	byPkg map[string][]*vulnRec
+	// kept is set on an index reduced to the packages installed on the
+	// hosts (in memory only; the file on disk stays complete).
+	kept map[string]bool
+}
+
+// prune keeps the vulnerabilities of the named packages. Most of a
+// release's data is about packages no host has (dozens of kernel flavours
+// for every kernel flaw), and dropping it keeps the server small.
+func (vi *vulnIndex) prune(names map[string]bool) *vulnIndex {
+	out := &vulnIndex{Release: vi.Release, Updated: vi.Updated, Source: vi.Source, Recs: map[string]*vulnRec{}, kept: names}
+	for id, r := range vi.Recs {
+		var pk []vulnPkg
+		for _, p := range r.Pkgs {
+			if names[p.Name] {
+				pk = append(pk, p)
+			}
+		}
+		if len(pk) > 0 {
+			out.Recs[id] = &vulnRec{CVE: r.CVE, Pkgs: pk}
+		}
+	}
+	out.build()
+	return out
+}
+
+// installedNames are the source packages of all hosts on a release. Caller
+// holds s.mu.
+func (s *Server) installedNames(rel string) map[string]bool {
+	names := map[string]bool{}
+	for _, p := range s.pkgs {
+		if p.Eco == rel {
+			for _, kv := range p.List {
+				names[kv[0]] = true
+			}
+		}
+	}
+	return names
 }
 
 func (vi *vulnIndex) build() {
@@ -356,6 +393,9 @@ func (s *Server) loadIndex(rel string) *vulnIndex {
 }
 
 func (s *Server) saveIndex(vi *vulnIndex) error {
+	if vi.kept != nil {
+		return fmt.Errorf("%s: a reduced index is not written to disk", vi.Release)
+	}
 	var buf bytes.Buffer
 	zw := gzip.NewWriter(&buf)
 	if err := json.NewEncoder(zw).Encode(vi); err != nil {
@@ -498,7 +538,15 @@ func (s *Server) setVulnErr(k string, err error) {
 	}
 }
 
+// setIndex keeps a complete index, reduced to the installed packages.
+// Caller does not hold s.mu.
 func (s *Server) setIndex(vi *vulnIndex) {
+	if vi.kept == nil {
+		s.mu.Lock()
+		names := s.installedNames(vi.Release)
+		s.mu.Unlock()
+		vi = vi.prune(names)
+	}
 	s.vdb.mu.Lock()
 	if s.vdb.idx == nil {
 		s.vdb.idx = map[string]*vulnIndex{}
@@ -562,8 +610,7 @@ func (s *Server) refreshVulnsOnce() {
 		}
 		f, lm, err := s.vulnFetch(fmt.Sprintf(ubuntuOVAL, code), since)
 		if err == nil && f == nil {
-			old.Updated = time.Now().UTC() // unchanged
-			s.saveIndex(old)
+			s.touchIndex(rel) // unchanged
 		} else if err == nil {
 			var vi *vulnIndex
 			vi, err = parseOVAL(bzip2.NewReader(f), rel)
@@ -589,9 +636,7 @@ func (s *Server) refreshVulnsOnce() {
 		f, lm, err := s.vulnFetch(debianJSON, since)
 		if err == nil && f == nil {
 			for _, c := range debian {
-				old := due["debian:"+c]
-				old.Updated = time.Now().UTC()
-				s.saveIndex(old)
+				s.touchIndex("debian:" + c)
 			}
 		} else if err == nil {
 			want := map[string]bool{}
@@ -619,6 +664,15 @@ func (s *Server) refreshVulnsOnce() {
 	// The KEV catalogue changes without the indexes changing, so every
 	// refresh matches again; only conditions that are new alert.
 	s.matchAll()
+}
+
+// touchIndex marks the complete index on disk as current.
+func (s *Server) touchIndex(rel string) {
+	if full := s.loadIndex(rel); full != nil {
+		full.Updated = time.Now().UTC()
+		s.saveIndex(full)
+		s.setIndex(full)
+	}
 }
 
 // matchAll matches every host whose packages are known.
@@ -764,10 +818,24 @@ func (s *Server) packagesReceived(a *AgentRec, d map[string]any) []finding {
 		writeAtomic(s.packagesPath(a.ID), raw)
 	}
 	s.vdb.mu.RLock()
-	loaded := s.vdb.idx[p.Eco] != nil
+	vi := s.vdb.idx[p.Eco]
 	s.vdb.mu.RUnlock()
-	if !loaded && p.Eco != "" {
+	if vi == nil && p.Eco != "" {
 		go s.refreshVulns()
+	}
+	// A package no host had before: its data was left out of memory.
+	if vi != nil && vi.kept != nil {
+		for _, kv := range p.List {
+			if !vi.kept[kv[0]] {
+				if full := s.loadIndex(p.Eco); full != nil {
+					reduced := full.prune(s.installedNames(p.Eco))
+					s.vdb.mu.Lock()
+					s.vdb.idx[p.Eco] = reduced
+					s.vdb.mu.Unlock()
+				}
+				break
+			}
+		}
 	}
 	return s.matchAgent(a, p)
 }

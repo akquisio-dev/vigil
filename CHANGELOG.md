@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- The server keeps only the vulnerability data of packages installed on its hosts in memory (about 5 % of a release's data, which is mostly kernel flavours nobody runs); the files on disk stay complete, and a newly installed package loads its data.
+
 ## v0.17.0
 
 - Response: isolate a host (everything blocked except the vigil server and `isolate_allow`), end isolation, lock and unlock accounts (`usermod -L -e 1`, SSH sessions ended). Isolation and locks end by themselves after their time, also without the server and across reboots, and isolation removed by hand before its end is put back. Agent options `isolate_allow`, `never_lock`.
