@@ -81,6 +81,9 @@ func TestSecretExposedRule(t *testing.T) {
 	if got := renderTitle(fs[0].Rule, fs[0].Params, "en"); got != "env secret readable by every user: /srv/app/.env line 3" {
 		t.Fatal(got)
 	}
+	if fs[0].Key != "secret.exposed|a1|/srv/app/.env" {
+		t.Fatalf("one alert per file: %s", fs[0].Key)
+	}
 	if strings.Contains(encodeParams(fs[0].Params), "hunter") {
 		t.Fatal("no secret values in alerts")
 	}

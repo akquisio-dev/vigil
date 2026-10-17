@@ -879,7 +879,7 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 
 **Alert:** `{kind} readable by every user: {path} line {line}`
 
-**Fires when:** A private key, API token, URL with a password, `.env` secret, `.pgpass` or `.netrc` entry is in a file every user on the host can read. A taken over web application or service runs as its own user; this is what it would read first. Only directories every user can enter are searched (daily), so secrets kept in private directories are never read. The secret itself never leaves the host: the alert names the path, the kind, the line and a short hash.
+**Fires when:** A private key, API token, URL with a password, `.env` secret, `.pgpass` or `.netrc` entry is in a file every user on the host can read. A taken over web application or service runs as its own user; this is what it would read first. Only directories every user can enter are searched (daily), so secrets kept in private directories are never read. The secret itself never leaves the host: the alert names the path, the kind, the line and a short hash. One alert per file; more secrets in the same file raise its count.
 
 **Known false positives:** Sample keys in documentation or test data outside the skipped directories. Suppress per path with a reason.
 

@@ -485,7 +485,8 @@ func (s *Server) evaluate(a *AgentRec, r *Record) []finding {
 	case "secret.exposed":
 		p := map[string]string{"path": str(d, "path"), "kind": secretKind(str(d, "kind")), "line": str(d, "line"),
 			"fingerprint": str(d, "fingerprint"), "uid": str(d, "uid"), "mode": str(d, "mode")}
-		add("secret.exposed", p["path"]+"|"+str(d, "kind")+"|"+p["fingerprint"], p)
+		// One alert per file; further secrets in it count on that alert.
+		add("secret.exposed", p["path"], p)
 	case "system.packages":
 		out = append(out, s.packagesReceived(a, d)...)
 	case "response.result":
