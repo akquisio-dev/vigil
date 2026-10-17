@@ -7,6 +7,8 @@
 - Changes to watched configuration files carry the changed lines (sudoers, sshd, cron, systemd, PAM, shell init, `passwd`); secrets are replaced, password hashes and SSH keys are never copied.
 - Evidence snapshots: process list, sockets, logged-in users, modules, journal tail and the suspect process in detail, taken by the agent at once for its strongest signals and on request for other high and critical alerts. Optional quarantine copy of the program. Agent options `forensics`, `quarantine`.
 - The alert page shows the events behind the alert with their changes, and the evidence taken for it.
+- Command lines in process events, canary events and snapshots have passwords and tokens replaced before they leave the host (`+rcon_password`, `?ServerAdminPassword=`, `--token`, `mysql -p...`, URLs with credentials).
+- The agent splits its queue into batches below the server's request limit, so large events (snapshots) cannot block delivery.
 - Fix: the alert page failed for admins on alerts without suggested response actions.
 
 ## v0.13.1

@@ -216,7 +216,18 @@ func (s *Server) handleIncident(w http.ResponseWriter, r *http.Request, sess *se
 			events = append(events, rec)
 		}
 	})
-	writeJSON(w, map[string]any{"incident": view, "alerts": alerts, "events": events, "login": login})
+	names := s.agentNames()
+	role := s.roleFor(sess)
+	evs := make([]viewRecord, len(events))
+	for i, rec := range events {
+		evs[i] = s.view(rec, names, role)
+	}
+	var lv *viewRecord
+	if login != nil {
+		v := s.view(*login, names, role)
+		lv = &v
+	}
+	writeJSON(w, map[string]any{"incident": view, "alerts": alerts, "events": evs, "login": lv})
 }
 
 func (s *Server) handleIncidentAction(w http.ResponseWriter, r *http.Request, sess *session) {

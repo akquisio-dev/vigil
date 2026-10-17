@@ -1404,7 +1404,7 @@ async function snapshotView(seq, params) {
 // causingEvents shows the events an alert was raised for, with diffs.
 async function causingEvents(a) {
   if (!a.seqs || !a.seqs.length) return null;
-  const recs = await api("/api/ui/records?" + new URLSearchParams({ seq: a.seqs.slice(0, 10).join(","), at: a.updated }));
+  const recs = await api("/api/ui/records?" + new URLSearchParams({ seq: a.seqs.slice(0, 10).join(","), at: a.created }));
   if (!recs.length) return null;
   return [h("h2", null, t("causingEvents")), h("div", { class: "list" }, recs.map((r) => h("div", { class: "row" },
     h("span", { class: "mono muted" }, hhmmss(r.event.ts || r.time)),

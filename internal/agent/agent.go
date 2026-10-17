@@ -242,11 +242,17 @@ func (a *Agent) nextSeq() int64 {
 func (a *Agent) send(ctx context.Context) {
 	a.flushSSHFailures()
 	a.mu.Lock()
-	events := a.queue
-	a.queue = nil
+	events, rest, tooBig := splitBatch(a.queue, batchMaxBytes)
+	a.queue = rest
 	dropped := a.dropped
 	a.dropped = 0
 	a.mu.Unlock()
+	for _, typ := range tooBig {
+		events = append(events, proto.NewEvent("agent.warning", map[string]any{"collector": "send", "error": "event " + typ + " too large to send, dropped"}))
+	}
+	if len(rest) > 0 {
+		defer a.flushSoon() // the rest goes in the next batch right away
+	}
 	if dropped > 0 {
 		events = append(events, proto.NewEvent("agent.dropped", map[string]any{"count": dropped}))
 	}
@@ -356,4 +362,30 @@ func Enroll(cfg *Config, server, token string) (*Identity, error) {
 		return nil, err
 	}
 	return id, nil
+}
+
+// batchMaxBytes keeps a batch well below the server's request limit
+// (proto.MaxBodyBytes), with room for the envelope and the agent's own
+// warnings. Evidence snapshots are up to 400 KB each.
+const batchMaxBytes = 800 << 10
+
+// splitBatch takes events from the front of the queue up to max bytes of
+// JSON. An event that alone is larger can never be delivered; it is dropped
+// and named, so one oversized event cannot block the queue for good.
+func splitBatch(queue []proto.Event, max int) (batch, rest []proto.Event, tooBig []string) {
+	size := 0
+	for i, ev := range queue {
+		raw, err := json.Marshal(ev)
+		n := len(raw)
+		if err != nil || n > max {
+			tooBig = append(tooBig, ev.Type)
+			continue
+		}
+		if size+n > max {
+			return batch, append([]proto.Event{}, queue[i:]...), tooBig
+		}
+		size += n
+		batch = append(batch, ev)
+	}
+	return batch, nil, tooBig
 }

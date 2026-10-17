@@ -132,7 +132,7 @@ func readProc(pid int) (snapProc, bool) {
 	}
 	p.Exe, _ = os.Readlink(dir + "/exe")
 	if c, err := os.ReadFile(dir + "/cmdline"); err == nil {
-		p.Cmdline = clipLen(strings.TrimSpace(string(bytes.ReplaceAll(c, []byte{0}, []byte{' '}))), 300)
+		p.Cmdline = clipLen(redactCmd(strings.TrimSpace(string(bytes.ReplaceAll(c, []byte{0}, []byte{' '})))), 300)
 	}
 	return p, true
 }

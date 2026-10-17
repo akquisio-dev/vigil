@@ -297,7 +297,8 @@ func (s *Server) handleRecords(w http.ResponseWriter, r *http.Request, sess *ses
 	role := s.roleFor(sess)
 	out := []viewRecord{}
 	if len(want) > 0 {
-		s.store.Between(at.Add(-72*time.Hour), at.Add(24*time.Hour), func(rec Record) bool {
+		// from a little before the given moment (the alert's creation) up to now
+		s.store.Between(at.Add(-72*time.Hour), time.Now().UTC(), func(rec Record) bool {
 			if want[rec.Seq] {
 				out = append(out, s.view(rec, names, role))
 				delete(want, rec.Seq)

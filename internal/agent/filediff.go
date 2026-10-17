@@ -83,8 +83,23 @@ func splitLines(b []byte) []string {
 // (DB_PASSWORD=..., api_key: ...); secretWord the bare form "password x".
 var (
 	secretAssign = regexp.MustCompile(`(?i)\b([A-Za-z0-9_.-]*(?:pass(?:word|wd|phrase)?|secret|token|api[_-]?key|private[_-]?key|credentials?)[A-Za-z0-9_.-]*)(\s*[:=]\s*)("?)([^\s"]{3,})`)
-	secretWord   = regexp.MustCompile(`(?i)\b(pass(?:word|wd|phrase)?|secret|token)(\s+)("?)([^\s"]{3,})`)
+	secretWord   = regexp.MustCompile(`(?i)(?:^|[^A-Za-z0-9_-])((?:[A-Za-z0-9_-]*[_-])?(?:pass(?:word|wd|phrase)?|secret|token|setsteamaccount|steamaccount|gslt))(\s+)("?)([^\s"]{3,})`)
+	// mysql -pSECRET, the password glued to the option
+	gluedPassword = regexp.MustCompile(`(\s-p)([^\s-][^\s]{2,})`)
 )
+
+// redactCmd cleans a command line before it leaves the host: the forms of
+// redactLine plus passwords glued to -p.
+func redactCmd(cmd string) string {
+	if cmd == "" {
+		return cmd
+	}
+	cmd = redactLine("cmdline", cmd)
+	if strings.Contains(cmd, "mysql") || strings.Contains(cmd, "mariadb") || strings.Contains(cmd, "sshpass") {
+		cmd = gluedPassword.ReplaceAllString(cmd, "${1}[removed]")
+	}
+	return cmd
+}
 
 // redactLine replaces anything that looks like a secret.
 func redactLine(name, line string) string {
@@ -98,7 +113,11 @@ func redactLine(name, line string) string {
 		}
 		return sm[1] + sm[2] + sm[3] + "[removed]"
 	})
-	return secretWord.ReplaceAllString(line, "${1}${2}${3}[removed]")
+	return secretWord.ReplaceAllStringFunc(line, func(m string) string {
+		sm := secretWord.FindStringSubmatchIndex(m)
+		// keep what precedes the name (the boundary character)
+		return m[:sm[2]] + m[sm[2]:sm[3]] + m[sm[4]:sm[5]] + m[sm[6]:sm[7]] + "[removed]"
+	})
 }
 
 type diffOp struct {

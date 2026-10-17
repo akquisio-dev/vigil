@@ -126,7 +126,7 @@ func (s *Store) verifyAndLoad() {
 					if r.Seq > s.seq {
 						s.seq = r.Seq
 					}
-					ring = append(ring, r)
+					ring = append(ring, slim(r))
 					if len(ring) > s.max*2 {
 						ring = append([]Record{}, ring[len(ring)-s.max:]...)
 					}
@@ -205,7 +205,7 @@ func (s *Store) appendLocked(recs []*Record) error {
 		line, _ := json.Marshal(cl)
 		buf = append(append(buf, line...), '\n')
 		s.head = cl.Hash
-		s.recent = append(s.recent, *r)
+		s.recent = append(s.recent, slim(*r))
 	}
 	if len(s.recent) > s.max*2 {
 		s.recent = append([]Record{}, s.recent[len(s.recent)-s.max:]...)
@@ -306,4 +306,24 @@ func lastHash(path string) (string, error) {
 		return "", errors.New("empty log file " + path)
 	}
 	return last, sc.Err()
+}
+
+// slim keeps bulky events out of the in-memory window: an evidence snapshot
+// is up to 400 KB, and the window holds thousands of records. The views
+// that show snapshots read them from disk.
+func slim(r Record) Record {
+	if r.Event.Type != "forensics.snapshot" || r.Event.Data == nil {
+		return r
+	}
+	d := map[string]any{"slim": true}
+	for _, k := range []string{"trigger", "pid", "request", "alert", "error", "sha256", "hostname"} {
+		if v, ok := r.Event.Data[k]; ok {
+			d[k] = v
+		}
+	}
+	if t, ok := r.Event.Data["target"].(map[string]any); ok {
+		d["exe"], d["exe_sha256"] = t["exe"], t["exe_sha256"]
+	}
+	r.Event.Data = d
+	return r
 }

@@ -159,7 +159,7 @@ func (a *Agent) reportExec(e *ExecInfo) {
 			return
 		}
 	}
-	d := map[string]any{"pid": e.PID, "ppid": e.PPID, "uid": e.UID, "exe": e.Exe, "comm": e.Comm, "cmdline": clipCmd(e.Cmdline),
+	d := map[string]any{"pid": e.PID, "ppid": e.PPID, "uid": e.UID, "exe": e.Exe, "comm": e.Comm, "cmdline": clipCmd(redactCmd(e.Cmdline)),
 		"cwd": e.Cwd, "parent_exe": e.ParentExe, "parent_comm": e.ParentComm, "signals": sig}
 	if e.Preload != "" {
 		d["ld_preload"] = clipCmd(e.Preload)

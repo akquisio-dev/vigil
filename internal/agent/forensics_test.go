@@ -169,3 +169,47 @@ func TestSnapLimiter(t *testing.T) {
 		t.Fatal("cap resets after an hour")
 	}
 }
+
+func TestCommandLinesLoseTheirSecrets(t *testing.T) {
+	cases := []string{
+		"./srcds_linux -game garrysmod +rcon_password hunter44 +map rp_x",
+		"./srcds_linux +sv_setsteamaccount 0123456789ABCDEF0123456789ABCDEF +maxplayers 64",
+		"ArkAscendedServer.exe TheIsland_WP?listen?ServerAdminPassword=hunter55?Port=7777",
+		"mysql -u root -phunter66 swrp",
+		"node app.js --password hunter77 --token=hunter88",
+		"curl -H Authorization: https://bot:hunter99x@example.org",
+	}
+	for _, c := range cases {
+		got := redactCmd(c)
+		if strings.Contains(got, "hunter") || strings.Contains(got, "0123456789ABCDEF") {
+			t.Errorf("secret left in %q", got)
+		}
+	}
+	for _, keep := range []string{"/usr/sbin/sshd -D", "PasswordAuthentication no", "sudo -u www-data php artisan", "Defaults !authenticate", "root ALL=(ALL) NOPASSWD: ALL"} {
+		if got := redactCmd(keep); got != keep {
+			t.Errorf("changed %q to %q", keep, got)
+		}
+	}
+}
+
+func TestSplitBatch(t *testing.T) {
+	big := strings.Repeat("x", 350<<10)
+	var q []proto.Event
+	for i := 0; i < 4; i++ {
+		q = append(q, proto.NewEvent("forensics.snapshot", map[string]any{"pad": big}))
+	}
+	q = append(q, proto.NewEvent("huge", map[string]any{"pad": strings.Repeat("y", 900<<10)}), proto.NewEvent("small", nil))
+	var sent [][]proto.Event
+	var dropped []string
+	for len(q) > 0 {
+		b, rest, tooBig := splitBatch(q, batchMaxBytes)
+		dropped = append(dropped, tooBig...)
+		if len(b) == 0 && len(rest) == len(q) {
+			t.Fatal("no progress")
+		}
+		sent, q = append(sent, b), rest
+	}
+	if len(sent) != 2 || len(sent[0]) != 2 || len(sent[1]) != 3 || len(dropped) != 1 || dropped[0] != "huge" {
+		t.Fatalf("batches %d, dropped %v", len(sent), dropped)
+	}
+}

@@ -168,7 +168,7 @@ func procInfo(pid int) map[string]any {
 		d["comm"] = strings.TrimSpace(string(comm))
 	}
 	if raw, err := os.ReadFile(base + "/cmdline"); err == nil {
-		cmd := strings.TrimSpace(strings.ReplaceAll(string(raw), "\x00", " "))
+		cmd := redactCmd(strings.TrimSpace(strings.ReplaceAll(string(raw), "\x00", " ")))
 		if len(cmd) > 300 {
 			cmd = cmd[:300]
 		}
