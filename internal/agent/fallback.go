@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -47,13 +48,13 @@ func (f *fallbackWatch) result(err error, now time.Time) {
 	var text string
 	switch {
 	case err == nil && f.down:
-		text = fmt.Sprintf("vigil: %s reaches the vigil server again, after %s. Queued events are being delivered now.", f.host, now.Sub(f.lastOK).Round(time.Minute))
+		text = fmt.Sprintf("vigil: %s reaches the vigil server again, after %s. Queued events are being delivered now.", f.host, minutes(now.Sub(f.lastOK)))
 	case err == nil:
 		f.lastOK = now
 		return
 	case !f.down && now.Sub(f.lastOK) >= f.after:
 		text = fmt.Sprintf("vigil: %s cannot reach the vigil server since %s (%s). Alerts from this host wait in its queue until the server is back. Last error: %s",
-			f.host, f.lastOK.UTC().Format("2006-01-02 15:04 UTC"), now.Sub(f.lastOK).Round(time.Minute), notify.Truncate(err.Error(), 300))
+			f.host, f.lastOK.UTC().Format("2006-01-02 15:04 UTC"), minutes(now.Sub(f.lastOK)), notify.Truncate(err.Error(), 300))
 	default:
 		return
 	}
@@ -76,4 +77,9 @@ func (f *fallbackWatch) result(err error, now time.Time) {
 			}
 		}
 	}()
+}
+
+// minutes renders a duration as "5m" or "1h20m".
+func minutes(d time.Duration) string {
+	return strings.TrimSuffix(d.Round(time.Minute).String(), "0s")
 }

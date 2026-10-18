@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.20.0
 
 - Backups of the server: `vigil-server backup` writes the data directory, the config file and the files it names into one file, sealed for a public key from `vigil-server backup keygen` (X25519, AES-256-GCM in authenticated chunks); the secret key stays off the server. `backup check` verifies a file completely, `restore` unpacks, checks and only then swaps the data directory, keeping the old one. New units `vigil-server-backup.service` and `.timer` (daily, as `vigil`, no network) and the rule `server.backup_stale`. Existing installations copy both units from the release.
 - The server locks its data directory, so a second server or a restore cannot run on it at the same time.
