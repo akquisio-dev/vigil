@@ -25,7 +25,7 @@ const T = {
     enroll: "Enroll a host", newToken: "Create token", validUntil: "valid until", notifyTest: "Send test notification",
     updateAgent: "Update agent", upToDate: "Up to date", confirmUpdate: "Update this agent to {v}? It downloads the release, checks its signature and restarts.",
     upd_asked: "update to {v} asked", upd_staged: "{v} downloaded, installing", upd_done: "updated from {f}", upd_failed: "update to {v} failed",
-    selfUpdateOff: "Updates from the dashboard are off for this agent (self_update in agent.json).",
+    selfUpdateOff: "self_update was off at the agent's last start.",
     selftest: "Self test", runSelftest: "Run self test", noSelftests: "No self test yet.", selftestOff: "This agent does not offer self tests (older version, or selftest off in agent.json).",
     st_pending: "waiting for the agent", st_running: "running", st_passed: "passed", st_warning: "passed with warnings", st_failed: "failed",
     st_waiting: "waiting", st_ok: "detected", st_suppressed: "suppressed", st_skipped: "skipped", st_missing: "not detected", notifiedTo: "Sent to",
@@ -138,7 +138,7 @@ const T = {
     enroll: "Host einschreiben", newToken: "Token erzeugen", validUntil: "gültig bis", notifyTest: "Testnachricht senden",
     updateAgent: "Agent aktualisieren", upToDate: "Aktuell", confirmUpdate: "Diesen Agent auf {v} aktualisieren? Er lädt das Release, prüft die Signatur und startet neu.",
     upd_asked: "Update auf {v} angefragt", upd_staged: "{v} geladen, wird installiert", upd_done: "aktualisiert von {f}", upd_failed: "Update auf {v} fehlgeschlagen",
-    selfUpdateOff: "Updates aus dem Dashboard sind für diesen Agent aus (self_update in agent.json).",
+    selfUpdateOff: "self_update war beim letzten Start des Agents aus.",
     selftest: "Selbsttest", runSelftest: "Selbsttest starten", noSelftests: "Noch kein Selbsttest.", selftestOff: "Dieser Agent bietet keinen Selbsttest an (ältere Version oder selftest in agent.json aus).",
     st_pending: "wartet auf den Agenten", st_running: "läuft", st_passed: "bestanden", st_warning: "bestanden mit Hinweisen", st_failed: "fehlgeschlagen",
     st_waiting: "ausstehend", st_ok: "erkannt", st_suppressed: "unterdrückt", st_skipped: "übersprungen", st_missing: "nicht erkannt", notifiedTo: "Gesendet an",
@@ -894,8 +894,10 @@ async function hostView(id) {
   const updErr = h("div", { class: "err" });
   const u = a.update;
   const updText = u ? t("upd_" + u.status).replace("{v}", u.version).replace("{f}", u.from || "?") + (u.error ? ": " + u.error : "") : "";
-  const updButton = !can("admin") ? null : !a.self_update ? h("div", { class: "muted mt" }, t("selfUpdateOff"))
-    : h("div", { class: "actions" }, h("button", { class: "btn ghost", onclick: async () => {
+  // Agents before v0.19.0 cannot update themselves. A newer one decides by
+  // its own agent.json; self_update is what it said on its last start.
+  const updButton = !can("admin") ? null : newerVersion("v0.19.0", a.version) ? null
+    : h("div", { class: "actions" }, !a.self_update ? h("div", { class: "muted" }, t("selfUpdateOff")) : null, h("button", { class: "btn ghost", onclick: async () => {
       updErr.textContent = "";
       try {
         const r = await api("/api/ui/release/latest");

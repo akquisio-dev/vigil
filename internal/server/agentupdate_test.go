@@ -23,6 +23,12 @@ func TestAgentUpdateRestartIsQuietOnlyWhenAskedAndRight(t *testing.T) {
 		return rules
 	}
 
+	a.SelfUpdate = true
+	ev("agent.update", map[string]any{"id": "x", "status": "refused", "error": "self_update is off in agent.json"})
+	if a.SelfUpdate {
+		t.Fatal("refusal does not show that self_update is off")
+	}
+
 	// The agent announcing an update by itself lowers nothing.
 	if got := ev("agent.stopping", nil); len(got) != 1 || got[0] != "agent.stopped" {
 		t.Fatalf("unasked stop: %v", got)
@@ -57,6 +63,9 @@ func TestAgentUpdateRestartIsQuietOnlyWhenAskedAndRight(t *testing.T) {
 		t.Fatal("report with a foreign id was taken")
 	}
 	ev("agent.update", map[string]any{"id": a.Update.ID, "status": "staged"})
+	if !a.SelfUpdate {
+		t.Fatal("a staged download does not show that self_update is on")
+	}
 	var cfg2 proto.AgentConfig
 	if raw, _ := s.agentConfig(a); json.Unmarshal(raw, &cfg2) == nil && cfg2.Update != nil {
 		t.Fatal("staged update is asked again")

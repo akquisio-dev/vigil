@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- The host page offers **Update agent** for every agent from v0.19.0 on. The server also learns from the agent's answer whether `self_update` is on, so agents updated before the server no longer show it as off until their next restart.
+- Daily summary: the countries are those with the most addresses, as the line says.
+
 ## v0.19.0
 
 - One message per incident: the first alert and every more severe one are sent at once, the other alerts of the incident come as one update every `notify_group_minutes` (default 10; `-1` sends every alert on its own).

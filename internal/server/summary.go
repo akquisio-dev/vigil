@@ -204,14 +204,16 @@ func (s *Server) summaryText(now time.Time) string {
 		al += fmt.Sprintf(L("; %d aimed, %d successful, %d campaigns", "; %d gezielt, %d erfolgreich, %d Kampagnen"), t.Targeted, t.Success, t.Campaigns)
 		lines = append(lines, al)
 		if len(v.Countries) > 0 {
+			byIPs := append([]geoCount(nil), v.Countries...)
+			sort.SliceStable(byIPs, func(i, j int) bool { return byIPs[i].IPs > byIPs[j].IPs })
 			var c []string
-			for i, g := range v.Countries {
+			for i, g := range byIPs {
 				if i == 3 {
 					break
 				}
 				c = append(c, fmt.Sprintf("%s %s", g.Key, num(g.IPs)))
 			}
-			lines = append(lines, L("Mostly from: ", "Meist aus: ")+strings.Join(c, ", "))
+			lines = append(lines, L("Most addresses from: ", "Die meisten Adressen aus: ")+strings.Join(c, ", "))
 		}
 	} else if v != nil && v.Ready {
 		lines = append(lines, L("Attacks since yesterday 00:00 UTC: none seen", "Angriffe seit gestern 00:00 UTC: keine gesehen"))

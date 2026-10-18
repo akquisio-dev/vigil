@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -66,6 +67,14 @@ func (s *Server) pendingUpdate(a *AgentRec) *proto.UpdateRequest {
 
 // updateEvent follows the agent's reports. The caller holds s.mu.
 func (s *Server) updateEvent(a *AgentRec, d map[string]any, add func(string, string, map[string]string)) {
+	// The agent says whether its agent.json allows updates on every start;
+	// a server updated after its agents only learns it here.
+	switch st := str(d, "status"); {
+	case st == "staged":
+		a.SelfUpdate = true
+	case st == "refused" && strings.HasPrefix(str(d, "error"), "self_update is off"):
+		a.SelfUpdate = false
+	}
 	u := a.Update
 	if u == nil || str(d, "id") != u.ID || u.Status == "done" || u.Status == "failed" {
 		return
