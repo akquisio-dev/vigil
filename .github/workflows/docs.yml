@@ -44,7 +44,8 @@ jobs:
       - name: apt repository
         env:
           GH_TOKEN: ${{ github.token }}
-          APT_SIGNING_KEY: ${{ secrets.APT_SIGNING_KEY }}
+          # API_SIGNING_KEY: the name the secret was first created under
+          APT_SIGNING_KEY: ${{ secrets.APT_SIGNING_KEY || secrets.API_SIGNING_KEY }}
         run: |
           if [ -z "$APT_SIGNING_KEY" ]; then
             echo "::notice::APT_SIGNING_KEY is not set; the site has no apt repository"
