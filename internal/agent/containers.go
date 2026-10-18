@@ -173,19 +173,25 @@ var (
 	containerIDRe   = regexp.MustCompile(`^[0-9a-f]{12,64}$`)
 )
 
-// containerOf names the container a process runs in, from its cgroup
-// (".../docker-<id>.scope" or "/docker/<id>"), or nil for the host.
-func (a *Agent) containerOf(pid int) *containerInfo {
-	ci := a.containers
-	if ci == nil || pid <= 0 {
-		return nil
+// pidContainer is the id of the container a process runs in, from its
+// cgroup (".../docker-<id>.scope" or "/docker/<id>"), or "" for the host.
+// Read it while the process still runs: short-lived ones are gone by the
+// time a scan is done.
+func (a *Agent) pidContainer(pid int) string {
+	if a.containers == nil || pid <= 0 {
+		return ""
 	}
 	b, err := os.ReadFile(fmt.Sprintf("/proc/%d/cgroup", pid))
 	if err != nil {
-		return nil
+		return ""
 	}
-	id := cgroupID(string(b))
-	if id == "" {
+	return cgroupID(string(b))
+}
+
+// container looks up a container by full id.
+func (a *Agent) container(id string) *containerInfo {
+	ci := a.containers
+	if ci == nil || id == "" {
 		return nil
 	}
 	ci.mu.Lock()
@@ -193,10 +199,15 @@ func (a *Agent) containerOf(pid int) *containerInfo {
 	if c := ci.byID[id]; c != nil {
 		return c
 	}
-	// Started since the last look; at most one extra look per few seconds.
-	if time.Since(ci.fetched) > 3*time.Second && ci.refresh() == nil {
-		if c := ci.byID[id]; c != nil {
-			return c
+	// Started since the last look: one extra look per few seconds at
+	// most, counted from the attempt, so a hung Docker daemon costs one
+	// timeout and not one per finding.
+	if time.Since(ci.fetched) > 3*time.Second {
+		ci.fetched = time.Now()
+		if ci.refresh() == nil {
+			if c := ci.byID[id]; c != nil {
+				return c
+			}
 		}
 	}
 	return &containerInfo{ID: short(id)}
@@ -213,7 +224,12 @@ func cgroupID(cgroup string) string {
 
 // tagContainer adds the container of pid to an event's data.
 func (a *Agent) tagContainer(d map[string]any, pid int) {
-	c := a.containerOf(pid)
+	a.tagContainerID(d, a.pidContainer(pid))
+}
+
+// tagContainerID adds the container with this id to an event's data.
+func (a *Agent) tagContainerID(d map[string]any, id string) {
+	c := a.container(id)
 	if c == nil {
 		return
 	}

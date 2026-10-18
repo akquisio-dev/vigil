@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -102,5 +103,37 @@ func TestDockerGroup(t *testing.T) {
 	os.WriteFile(p, []byte("docker:x:988:\n"), 0o644)
 	if g := dockerGroup(p); g != nil {
 		t.Fatal(g)
+	}
+}
+
+// A hung Docker daemon costs one timeout per few seconds, not one per
+// finding: the time of the attempt counts, not of the last success.
+func TestContainerLookupBacksOff(t *testing.T) {
+	sock := filepath.Join(t.TempDir(), "docker.sock")
+	l, err := net.Listen("unix", sock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var mu sync.Mutex
+	calls := 0
+	srv := &http.Server{Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		calls++
+		mu.Unlock()
+		http.Error(w, "busy", http.StatusInternalServerError)
+	})}
+	go srv.Serve(l)
+	t.Cleanup(func() { srv.Close() })
+	a := &Agent{containers: &containerIndex{byID: map[string]*containerInfo{}, client: newDockerClient(sock)}}
+	for i := 0; i < 5; i++ {
+		if c := a.container(idWeb); c == nil || c.ID != "984894826a87" || c.Name != "" {
+			t.Fatalf("lookup %d: %+v", i, c)
+		}
+	}
+	if calls != 1 {
+		t.Fatalf("%d requests to a failing daemon, want 1", calls)
+	}
+	if a.container("") != nil || (&Agent{}).container(idWeb) != nil || (&Agent{}).pidContainer(1) != "" {
+		t.Fatal("lookups without an id or with docker off must find nothing")
 	}
 }

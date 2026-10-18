@@ -307,13 +307,14 @@ func (a *Agent) rareExec(e *ExecInfo) {
 	d := map[string]any{"pid": e.PID, "uid": e.UID, "exe": e.Exe, "comm": e.Comm, "cmdline": clipCmd(redactCmd(e.Cmdline)),
 		"parent_comm": e.ParentComm, "parent_exe": e.ParentExe, "cwd": e.Cwd}
 	scan := a.scanProcess(e.PID, e.Exe, "rare")
+	cid := a.pidContainer(e.PID)
 	a.bg.Add(1)
 	go func() {
 		defer a.bg.Done()
 		if sha := scan(); sha != "" {
 			d["exe_sha256"] = sha
 		}
-		a.tagContainer(d, e.PID)
+		a.tagContainerID(d, cid)
 		if newPair {
 			a.emit(proto.NewEvent("process.rare_child", d))
 		}
