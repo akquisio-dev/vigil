@@ -2,13 +2,11 @@ package server
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
-	"net/url"
 	"os"
-	"regexp"
-	"strings"
 	"time"
+
+	"github.com/akquisio-dev/vigil/internal/notify"
 )
 
 type BrandConfig struct {
@@ -107,33 +105,8 @@ type Config struct {
 	SummaryTime string `json:"summary_time,omitempty"`
 }
 
-type NotifierConfig struct {
-	Type        string `json:"type"` // discord | slack | ntfy | telegram | webhook | smtp
-	Name        string `json:"name"`
-	MinSeverity string `json:"min_severity"`
-
-	URL string `json:"url,omitempty"` // discord, slack, ntfy (topic URL), webhook
-
-	// Mention is pinged in Discord for alerts of MentionMinSeverity and
-	// above (default critical): "<@&ROLE_ID>", "<@USER_ID>", "@here" or
-	// "@everyone".
-	Mention            string `json:"mention,omitempty"`
-	MentionMinSeverity string `json:"mention_min_severity,omitempty"`
-
-	// Summary false leaves this notifier out of the daily summary.
-	Summary *bool `json:"summary,omitempty"`
-
-	// Token is the ntfy access token or the Telegram bot token.
-	Token  string `json:"token,omitempty"`
-	ChatID string `json:"chat_id,omitempty"` // telegram
-
-	SMTPHost string   `json:"smtp_host,omitempty"`
-	SMTPPort int      `json:"smtp_port,omitempty"`
-	SMTPUser string   `json:"smtp_user,omitempty"`
-	SMTPPass string   `json:"smtp_pass,omitempty"`
-	From     string   `json:"from,omitempty"`
-	To       []string `json:"to,omitempty"`
-}
+// NotifierConfig is one notification channel, see notify.Config.
+type NotifierConfig = notify.Config
 
 func (c *Config) cookieSecure() bool { return c.CookieSecure == nil || *c.CookieSecure }
 func (c *Config) deadman() time.Duration {
@@ -188,69 +161,9 @@ func LoadConfig(path string) (*Config, error) {
 			return nil, fmt.Errorf("notifier name %q is used twice", n.Name)
 		}
 		names[n.Name] = true
-		if err := n.check(); err != nil {
+		if err := n.Check(); err != nil {
 			return nil, fmt.Errorf("notifier %q: %w", n.Name, err)
 		}
 	}
 	return &c, nil
-}
-
-var (
-	discordMention = regexp.MustCompile(`^(<@&?[0-9]{1,20}>|@here|@everyone)$`)
-	telegramToken  = regexp.MustCompile(`^[0-9]{1,20}:[A-Za-z0-9_-]{20,}$`)
-)
-
-func httpURL(raw string) error {
-	u, err := url.Parse(raw)
-	if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" {
-		return errors.New("url must be an http(s) address")
-	}
-	return nil
-}
-
-// check fills defaults and refuses incomplete notifiers at start, so a typo
-// is found at install time and not when the first alert is lost.
-func (n *NotifierConfig) check() error {
-	if n.MinSeverity == "" {
-		n.MinSeverity = "high"
-	}
-	if _, ok := severityRank[n.MinSeverity]; !ok {
-		return fmt.Errorf("unknown min_severity %q", n.MinSeverity)
-	}
-	switch n.Type {
-	case "discord", "slack", "webhook":
-		if err := httpURL(n.URL); err != nil {
-			return err
-		}
-	case "ntfy":
-		if err := httpURL(n.URL); err != nil {
-			return err
-		}
-		u, _ := url.Parse(n.URL)
-		if t := strings.Trim(u.Path, "/"); t == "" || strings.Contains(t, "/") {
-			return errors.New("url must be the topic URL, e.g. https://ntfy.sh/your-topic")
-		}
-	case "telegram":
-		if !telegramToken.MatchString(n.Token) || n.ChatID == "" {
-			return errors.New("telegram needs token (from @BotFather) and chat_id")
-		}
-	case "smtp":
-		if n.SMTPHost == "" || n.From == "" || len(n.To) == 0 {
-			return errors.New("smtp needs smtp_host, from and to")
-		}
-	default:
-		return fmt.Errorf("unknown type %q", n.Type)
-	}
-	if n.Mention != "" {
-		if n.Type != "discord" || !discordMention.MatchString(n.Mention) {
-			return errors.New(`mention is for discord: "<@&ROLE_ID>", "<@USER_ID>", "@here" or "@everyone"`)
-		}
-		if n.MentionMinSeverity == "" {
-			n.MentionMinSeverity = "critical"
-		}
-		if _, ok := severityRank[n.MentionMinSeverity]; !ok {
-			return fmt.Errorf("unknown mention_min_severity %q", n.MentionMinSeverity)
-		}
-	}
-	return nil
 }

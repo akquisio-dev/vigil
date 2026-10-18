@@ -5,9 +5,11 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/akquisio-dev/vigil/internal/notify"
 )
 
-var severityRank = map[string]int{"info": 0, "low": 1, "medium": 2, "high": 3, "critical": 4}
+var severityRank = notify.SeverityRank
 
 type ruleDef struct {
 	Severity  string

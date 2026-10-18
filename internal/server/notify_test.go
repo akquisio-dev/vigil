@@ -17,7 +17,7 @@ func TestRedactKeepsWebhookSecretsOutOfErrors(t *testing.T) {
 	if err == nil || strings.Contains(err.Error(), "SECRETTOKEN") {
 		t.Fatalf("error leaks the url: %v", err)
 	}
-	tg := deliverTelegram(NotifierConfig{Token: "123:SECRETSECRETSECRETSECRET", ChatID: "1"}, message{Text: "x"})
+	tg := deliver(NotifierConfig{Type: "telegram", Token: "123:SECRETSECRETSECRETSECRET", ChatID: "1"}, message{Text: "x"})
 	if tg != nil && strings.Contains(tg.Error(), "SECRETSECRET") {
 		t.Fatalf("telegram error leaks the bot token: %v", tg)
 	}
@@ -36,7 +36,7 @@ func TestNotifierConfigCheck(t *testing.T) {
 		{Type: "smtp", SMTPHost: "smtp.example.com", From: "a@example.com", To: []string{"b@example.com"}},
 	}
 	for i := range good {
-		if err := good[i].check(); err != nil {
+		if err := good[i].Check(); err != nil {
 			t.Errorf("%s refused: %v", good[i].Type, err)
 		}
 	}
@@ -55,7 +55,7 @@ func TestNotifierConfigCheck(t *testing.T) {
 		{Type: "webhook", URL: "https://x/y", MinSeverity: "urgent"},
 	}
 	for _, n := range bad {
-		if err := n.check(); err == nil {
+		if err := n.Check(); err == nil {
 			t.Errorf("accepted %+v", n)
 		}
 	}
@@ -165,7 +165,7 @@ func TestRateLimitIsRetriedAfterTheAskedDelay(t *testing.T) {
 	defer srv.Close()
 	err := postJSON(srv.URL, map[string]string{}, nil)
 	ra, ok := err.(*retryAfter)
-	if !ok || ra.wait != 200*time.Millisecond {
+	if !ok || ra.Wait != 200*time.Millisecond {
 		t.Fatalf("429 not recognised: %v", err)
 	}
 }
