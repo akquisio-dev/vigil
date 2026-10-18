@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.20.1
+
+- The agent scans programs one at a time and remembers results by file, rule set and change time. Each suspicious program start used to read up to 16 MB of the program in its own goroutine, so a large program started from `/tmp` a few dozen times (any local user can do that) pushed the agent past `MemoryHigh` and froze it until restarted. A burst of starts of one program now reads it once.
+
 ## v0.20.0
 
 - Backups of the server: `vigil-server backup` writes the data directory, the config file and the files it names into one file, sealed for a public key from `vigil-server backup keygen` (X25519, AES-256-GCM in authenticated chunks); the secret key stays off the server. `backup check` verifies a file completely, `restore` unpacks, checks and only then swaps the data directory, keeping the old one. New units `vigil-server-backup.service` and `.timer` (daily, as `vigil`, no network) and the rule `server.backup_stale` (high). Existing installations copy both units from the release.

@@ -58,6 +58,8 @@ type Agent struct {
 	bg            sync.WaitGroup // background scans, waited for in tests
 	rare          *RareState
 	fallback      *fallbackWatch
+	scanMu        sync.Mutex // one program scan at a time
+	scans         scanCache
 }
 
 func New(cfg *Config) (*Agent, error) {
