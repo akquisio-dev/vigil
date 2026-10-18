@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.18.0
 
 - Attackers page: who attacked the hosts over 24 hours, 7 or 30 days, by country and network on a world map (`geoip`: DB-IP Lite, looked up on the server), user names and paths tried, time of day, campaigns of addresses trying the same lists, and a class per address (successful, aimed, persistent, noise) with the reasons. The pivot page of an address shows its origin and class.
 - Attack report as Markdown or as a page to print or save as PDF.
