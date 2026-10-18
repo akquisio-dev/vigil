@@ -412,6 +412,21 @@ var ruleDocs = map[string]ruleDoc{
 		"Packages held back on purpose. The kernel: the newest installed kernel version counts, so a host that was not rebooted shows in `updates.reboot_pending` instead.",
 		"Install the update (`apt upgrade`) and restart the services that use the package.",
 	},
+	"vuln.app_malicious": {
+		"A lock file on the host (package-lock.json, requirements.txt, go.mod) names a package that OSV lists as malicious (a MAL- record): typosquats, hijacked releases and packages published to steal secrets. One alert per package and version. Needs `vuln_lookup` on the server.",
+		"A name that was malicious only in some versions is matched by version; a lock file left over from a project that no longer runs still counts.",
+		"Treat the host as compromised if the package was ever installed: rotate the secrets the project and its user could read, from another machine. Remove the package, rebuild `node_modules` or the virtual environment from a clean lock file, and find out how it got in.",
+	},
+	"vuln.app_exploited": {
+		"A dependency named in a lock file has a vulnerability that is exploited in the wild (CISA KEV, through the CVE aliases of the OSV record), and a fixed version exists. One alert per package and version.",
+		"The vulnerable code path may not be used by the project; that is rarely worth betting on.",
+		"Update the dependency to the fixed version (`npm update`, `pip install -U`, `go get`), deploy, and restart the service.",
+	},
+	"vuln.app_severe": {
+		"A dependency named in a lock file has vulnerabilities rated high or critical (GitHub's rating, or CVSS 3 when there is none) with a fixed version. One alert per package and version. Go records without any rating count in the summary but do not alert.",
+		"Development dependencies in package-lock.json are included, since they sit on disk; projects checked out but not deployed (worktrees, old copies) count too. Set `app_roots` on the agent to limit where it looks.",
+		"Update the dependency to the fixed version and deploy; for an unused copy, delete it.",
+	},
 	"forward.failed": {
 		"A forwarding target from `forward` (syslog, HTTP or file) has refused or not answered for ten minutes. Events and alerts wait in its queue (10 000 items) and are dropped past that.",
 		"Maintenance of the receiving system.",

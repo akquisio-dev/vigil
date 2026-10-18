@@ -81,6 +81,8 @@ const T = {
     vulns: "Vulnerabilities", fixable: "fixable", unfixed: "no fix yet", exploitedNow: "Exploited in the wild", cve: "CVE",
     pkg: "Package", installed: "Installed", fixedIn: "Fixed in", noVulns: "No fixable vulnerability",
     vulnPending: "No data yet", proOnly: "Ubuntu Pro",
+    appVulns: "Application dependencies", appFiles: "{n} lock files, {m} packages", appMalicious: "Known malicious packages",
+    appMissing: "No data yet for", appTruncated: "list cut short", unknownSev: "no rating", maliciousPkg: "malicious", vulnId: "Advisory", lockFile: "Lock file",
     timeline: "Timeline", window: "Window", earlier: "Earlier", later: "Later", anchor: "moment of the alert",
     allKinds: "All", kAuth: "Logins", kProc: "Processes", kFile: "Files", kNet: "Network", kKernel: "Kernel", kOther: "Other", kAlert: "Alerts",
     receivedLate: "received", truncatedRows: "Only the first {n} events are shown.", noTimeline: "Nothing recorded in this window",
@@ -194,6 +196,8 @@ const T = {
     vulns: "Schwachstellen", fixable: "behebbar", unfixed: "noch ohne Fix", exploitedNow: "Aktiv ausgenutzt", cve: "CVE",
     pkg: "Paket", installed: "Installiert", fixedIn: "Behoben in", noVulns: "Keine behebbare Schwachstelle",
     vulnPending: "Noch keine Daten", proOnly: "Ubuntu Pro",
+    appVulns: "Abhängigkeiten von Anwendungen", appFiles: "{n} Lock-Dateien, {m} Pakete", appMalicious: "Bekannte Schadpakete",
+    appMissing: "Noch keine Daten für", appTruncated: "Liste gekürzt", unknownSev: "ohne Einstufung", maliciousPkg: "Schadpaket", vulnId: "Meldung", lockFile: "Lock-Datei",
     timeline: "Zeitachse", window: "Zeitraum", earlier: "Früher", later: "Später", anchor: "Zeitpunkt des Alarms",
     allKinds: "Alle", kAuth: "Anmeldungen", kProc: "Prozesse", kFile: "Dateien", kNet: "Netzwerk", kKernel: "Kernel", kOther: "Sonstiges", kAlert: "Alarme",
     receivedLate: "empfangen", truncatedRows: "Nur die ersten {n} Ereignisse werden gezeigt.", noTimeline: "In diesem Zeitraum wurde nichts aufgezeichnet",
@@ -586,8 +590,8 @@ function updatesCell(u) {
 }
 
 function postureSection(a) {
-  const p = a.posture, v = a.vulns;
-  if (!p && !v) return null;
+  const p = a.posture, v = a.vulns, av = a.app_vulns;
+  if (!p && !v && !av) return null;
   const out = [];
   if (p) {
     const checks = p.checks || [];
@@ -639,6 +643,32 @@ function postureSection(a) {
         h("dt", null, t("unfixed")), h("dd", null, sevCounts(v.unfixed))),
       (v.exploited || []).length ? [h("h3", { class: "mt" }, t("exploitedNow")), rows(v.exploited)] : null,
       fixable.length ? [h("h3", { class: "mt" }, t("fixable")), rows(fixable.slice(0, 25))] : null));
+  }
+  if (av && av.manifests) {
+    const sev = (x) => x.severity in { critical: 1, high: 1, medium: 1, low: 1 } ? x.severity : "low";
+    const rows = (list) => h("div", { class: "tablewrap" }, h("table", null,
+      h("thead", null, h("tr", null, ["", t("vulnId"), t("pkg"), t("installed"), t("fixedIn"), t("lockFile")].map((x) => h("th", null, x)))),
+      h("tbody", null, list.map((x) => h("tr", null,
+        h("td", null, h("span", { class: "sev " + sev(x) }, x.malicious ? t("maliciousPkg") : x.severity || t("unknownSev"))),
+        h("td", { class: "mono nowrap" }, h("a", { href: "https://osv.dev/vulnerability/" + encodeURIComponent(x.id), target: "_blank", rel: "noopener noreferrer", title: x.summary || "" }, (x.cves || [])[0] || x.id)),
+        h("td", { class: "mono nowrap" }, x.package, h("span", { class: "muted" }, " " + x.ecosystem)),
+        h("td", { class: "mono nowrap" }, x.installed),
+        h("td", { class: "mono nowrap" }, x.fixed || "·"),
+        h("td", { class: "mono muted nowrap" }, x.path))))));
+    const counts = Object.assign({}, av.counts || {});
+    const unknown = counts.unknown || 0;
+    delete counts.unknown;
+    out.push(h("div", { class: "card mt" },
+      h("div", { class: "flex" }, h("h3", null, t("appVulns")), h("span", { class: "muted right" },
+        t("appFiles").replace("{n}", av.manifests).replace("{m}", av.packages) + (av.truncated ? ", " + t("appTruncated") : ""),
+        av.checked ? "  ·  " + t("checked") + " " : "", av.checked ? timeEl(av.checked) : null)),
+      (av.missing || []).length ? h("div", { class: "muted mt" }, t("appMissing") + " " + av.missing.join(", ")) : null,
+      h("dl", { class: "kv" },
+        h("dt", null, t("vulns")), h("dd", null, SEVS.some((s) => counts[s]) || unknown
+          ? [sevCounts(counts), unknown ? h("span", { class: "muted" }, " " + unknown + " " + t("unknownSev")) : null]
+          : h("span", { class: "chip" }, h("span", { class: "dot ok" }), t("noVulns")))),
+      (av.malicious || []).length ? [h("h3", { class: "mt" }, t("appMalicious")), rows(av.malicious)] : null,
+      (av.top || []).length ? rows(av.top.slice(0, 25)) : null));
   }
   return out;
 }

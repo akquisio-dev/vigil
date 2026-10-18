@@ -51,6 +51,7 @@ socket and runs only these external programs: `journalctl`, `iptables-save`,
 | Change contents | last copy of small text files from the watch list (not `shadow`, `gshadow`, SSH keys) in `content/`, at most 64 KB each and 8 MB in all; a change carries the changed lines with two lines of context, secrets replaced, at most 8 KB | with the file scan |
 | Evidence snapshots | `/proc` (processes, the suspect's program, parents, open files, mapped files, names of its environment variables), `/proc/net`, `/run/utmp`, `/proc/modules`, `journalctl -n 60`; on the agent's strongest signals at once, otherwise when the server asks; at most 12 per hour | on demand |
 | Packages | source packages and versions from `/var/lib/dpkg/status`, sent to the server for `vuln_lookup` | on change, at least daily |
+| Application dependencies | packages and versions from `package-lock.json`, pinned `requirements.txt` and `go.mod` below `app_roots`, read as streams and only when changed | every 3 hours, sent on change, at least daily |
 | eBPF | `bpf(BPF_PROG_GET_NEXT_ID)` and `BPF_OBJ_GET_INFO_BY_FD`, hooking program types only, own list in `bpf.json` | `scan_seconds` |
 
 Program starts are only reported when something about them is suspicious
@@ -207,6 +208,7 @@ can use. Fields in brackets are only present when known.
 | `secret.exposed` | `path`, `kind`, `line`, `fingerprint` (first 6 bytes of SHA-256 of the secret), `uid`, `mode`, (`baseline`) |
 | `secrets.scan` | `files`, `findings`, `seconds` |
 | `system.packages` | `os_id`, `os_version`, `os_codename`, `packages` (pairs of source package and version), `hash` |
+| `system.apps` | `manifests` (pairs of lock file path and package count), `packages` (ecosystem, name, version, index of the first lock file naming it), `hash`, (`truncated`) |
 | `kernel.bpf_loaded` | `id`, `type`, `name`, `tag`, `uid`, (`baseline`) |
 | `kernel.baseline` | `modules`, `tainted`, `out_of_tree` (list of `name (flags)`) |
 | `kernel.module_loaded` | `name`, `taint`, `size` |

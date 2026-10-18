@@ -272,29 +272,30 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 type agentView struct {
-	ID            string         `json:"id"`
-	Name          string         `json:"name"`
-	Hostname      string         `json:"hostname"`
-	Version       string         `json:"version"`
-	Status        string         `json:"status"`
-	LastSeen      time.Time      `json:"last_seen"`
-	LastIP        string         `json:"last_ip"`
-	Enrolled      time.Time      `json:"enrolled"`
-	OpenAlerts    int            `json:"open_alerts"`
-	OpenBySev     map[string]int `json:"open_by_severity"`
-	Ports         int            `json:"ports"`
-	Canaries      int            `json:"canaries"`
-	CanaryRoots   []string       `json:"canary_roots"`
-	ConfigSync    bool           `json:"config_sync"`
-	Maintenance   *time.Time     `json:"maintenance_until,omitempty"`
-	Updates       map[string]any `json:"updates,omitempty"`
-	Posture       map[string]any `json:"posture,omitempty"`
-	Contain       map[string]any `json:"contain,omitempty"`
-	ResponseTypes []string       `json:"response_types"`
-	Vulns         *VulnSummary   `json:"vulns,omitempty"`
-	SelfTest      bool           `json:"selftest"`
-	SelfUpdate    bool           `json:"self_update"`
-	Update        *AgentUpdate   `json:"update,omitempty"`
+	ID            string          `json:"id"`
+	Name          string          `json:"name"`
+	Hostname      string          `json:"hostname"`
+	Version       string          `json:"version"`
+	Status        string          `json:"status"`
+	LastSeen      time.Time       `json:"last_seen"`
+	LastIP        string          `json:"last_ip"`
+	Enrolled      time.Time       `json:"enrolled"`
+	OpenAlerts    int             `json:"open_alerts"`
+	OpenBySev     map[string]int  `json:"open_by_severity"`
+	Ports         int             `json:"ports"`
+	Canaries      int             `json:"canaries"`
+	CanaryRoots   []string        `json:"canary_roots"`
+	ConfigSync    bool            `json:"config_sync"`
+	Maintenance   *time.Time      `json:"maintenance_until,omitempty"`
+	Updates       map[string]any  `json:"updates,omitempty"`
+	Posture       map[string]any  `json:"posture,omitempty"`
+	Contain       map[string]any  `json:"contain,omitempty"`
+	ResponseTypes []string        `json:"response_types"`
+	Vulns         *VulnSummary    `json:"vulns,omitempty"`
+	AppVulns      *AppVulnSummary `json:"app_vulns,omitempty"`
+	SelfTest      bool            `json:"selftest"`
+	SelfUpdate    bool            `json:"self_update"`
+	Update        *AgentUpdate    `json:"update,omitempty"`
 }
 
 func (s *Server) viewAgent(a *AgentRec) agentView {
@@ -309,7 +310,7 @@ func (s *Server) viewAgent(a *AgentRec) agentView {
 	}
 	v := agentView{ID: a.ID, Name: a.Name, Hostname: a.Hostname, Version: a.Version, Status: status,
 		LastSeen: a.LastSeen, LastIP: a.LastIP, Enrolled: a.Enrolled, Ports: len(a.Ports),
-		CanaryRoots: a.CanaryRoots, ConfigSync: a.AckedVersion >= a.ConfigVersion, OpenBySev: map[string]int{}, Updates: a.Updates, Posture: a.Posture, Contain: a.Contain, ResponseTypes: append([]string{}, a.ResponseTypes...), Vulns: a.Vulns, SelfTest: a.SelfTest, SelfUpdate: a.SelfUpdate, Update: a.Update}
+		CanaryRoots: a.CanaryRoots, ConfigSync: a.AckedVersion >= a.ConfigVersion, OpenBySev: map[string]int{}, Updates: a.Updates, Posture: a.Posture, Contain: a.Contain, ResponseTypes: append([]string{}, a.ResponseTypes...), Vulns: a.Vulns, AppVulns: a.AppVulns, SelfTest: a.SelfTest, SelfUpdate: a.SelfUpdate, Update: a.Update}
 	if time.Now().Before(a.MaintenanceUntil) {
 		until := a.MaintenanceUntil
 		v.Maintenance = &until

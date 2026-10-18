@@ -50,6 +50,16 @@ func TestWriteDemoData(t *testing.T) {
 		s.state.Agents[a.ID] = a
 	}
 	hosts[2].Silent, hosts[2].LastSeen = true, now.Add(-47*time.Minute)
+	hosts[1].AppVulns = &AppVulnSummary{Checked: now.Add(-2 * time.Hour), Manifests: 3, Packages: 412,
+		Counts: map[string]int{"critical": 1, "high": 2, "medium": 3, "unknown": 1},
+		Malicious: []AppHit{{ID: "MAL-2026-1001", Ecosystem: "npm", Package: "colors-utils-plus", Installed: "1.0.2", Severity: "critical", Malicious: true,
+			Path: "/srv/app/package-lock.json", Summary: "Malicious code in colors-utils-plus (npm)"}},
+		Top: []AppHit{
+			{ID: "GHSA-r5fr-rjxr-66jc", CVEs: []string{"CVE-2026-4800"}, Ecosystem: "npm", Package: "lodash", Installed: "4.17.21", Fixed: "4.18.0", Severity: "high", Path: "/srv/app/package-lock.json"},
+			{ID: "GHSA-xj96-63gp-2gmr", Ecosystem: "PyPI", Package: "pillow", Installed: "11.3.0", Fixed: "12.3.0", Severity: "high", Path: "/srv/worker/requirements.txt"},
+			{ID: "GHSA-x5fp-wj9c-mxmx", Ecosystem: "npm", Package: "qs", Installed: "6.15.3", Fixed: "6.16.0", Severity: "medium", Path: "/srv/app/package-lock.json"},
+			{ID: "GO-2026-4001", Ecosystem: "Go", Package: "golang.org/x/net", Installed: "v0.38.0", Fixed: "0.45.0", Path: "/srv/api/go.mod"},
+		}}
 	hosts[0].ResponseTypes = []string{"block_ip", "kill_session", "kill_process", "remove_key"}
 	s.state.Canaries["demo-canary"] = &CanaryRec{ID: "demo-canary", AgentID: "demo-app", Type: "env", Path: "/srv/app/.env.backup",
 		Created: start, By: "demo", Status: "active"}

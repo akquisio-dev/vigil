@@ -181,7 +181,7 @@ them.
 | `backup` | | `recipient` public key, `dir`, `keep`: daily sealed backups with `vigil-server-backup.timer` |
 | `notifiers` | | `discord`, `slack`, `ntfy`, `telegram`, `webhook` or `smtp`, each with `min_severity` |
 | `summary_time` | | send a daily summary at this time, e.g. `"07:30"` |
-| `vuln_lookup` | false | known and exploited vulnerabilities in installed packages |
+| `vuln_lookup` | false | known and exploited vulnerabilities in installed packages and in the npm, PyPI and Go dependencies of lock files |
 | `hash_intel` | false | match programs against known malware hashes |
 | `threat_intel` | false | match addresses against public block lists |
 | `geoip` | false | country and network of attacking addresses (DB-IP Lite) |

@@ -197,6 +197,9 @@ func (a *Agent) Run(ctx context.Context) error {
 	if on(a.cfg.Packages) {
 		go a.runPackages(ctx)
 	}
+	if on(a.cfg.Apps) {
+		go a.runApps(ctx)
+	}
 	for _, wl := range a.cfg.WebLogs {
 		go a.tailWebLog(ctx, wl)
 	}

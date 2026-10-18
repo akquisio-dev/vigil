@@ -61,7 +61,8 @@ func backupCache(rel string) bool {
 		rel == "geo" || strings.HasPrefix(rel, "geo/"):
 		return true
 	case strings.HasPrefix(rel, "vuln/"):
-		return !strings.HasPrefix(path.Base(rel), "packages-")
+		b := path.Base(rel)
+		return !strings.HasPrefix(b, "packages-") && !strings.HasPrefix(b, "apps-")
 	}
 	return strings.HasPrefix(path.Base(rel), ".")
 }

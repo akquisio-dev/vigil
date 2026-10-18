@@ -2,7 +2,7 @@
 
 # Detection rules
 
-vigil ships 97 rules. Every alert carries the rule id, so an alert can be looked up here.
+vigil ships 100 rules. Every alert carries the rule id, so an alert can be looked up here.
 
 Severity decides who is woken up: each notifier has a `min_severity`, `high` by default.
 
@@ -21,6 +21,8 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 | [`process.miner`](#process-miner) | critical | [T1496](https://attack.mitre.org/techniques/T1496/) |
 | [`process.reverse_shell`](#process-reverse_shell) | critical | [T1059.004](https://attack.mitre.org/techniques/T1059/004/) |
 | [`user.root`](#user-root) | critical | [T1078.003](https://attack.mitre.org/techniques/T1078/003/) |
+| [`vuln.app_exploited`](#vuln-app_exploited) | critical | [T1190](https://attack.mitre.org/techniques/T1190/) |
+| [`vuln.app_malicious`](#vuln-app_malicious) | critical | [T1195.002](https://attack.mitre.org/techniques/T1195/002/) |
 | [`vuln.exploited`](#vuln-exploited) | critical | [T1190](https://attack.mitre.org/techniques/T1190/) |
 | [`agent.config_rejected`](#agent-config_rejected) | high | [T1557](https://attack.mitre.org/techniques/T1557/) |
 | [`agent.forged`](#agent-forged) | high | [T1557](https://attack.mitre.org/techniques/T1557/) |
@@ -63,6 +65,7 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 | [`ssh.unknown_key`](#ssh-unknown_key) | high | [T1098.004](https://attack.mitre.org/techniques/T1098/004/) |
 | [`tls.expired`](#tls-expired) | high |  |
 | [`user.added`](#user-added) | high | [T1136.001](https://attack.mitre.org/techniques/T1136/001/) |
+| [`vuln.app_severe`](#vuln-app_severe) | high |  |
 | [`vuln.severe`](#vuln-severe) | high |  |
 | [`web.exploit_success`](#web-exploit_success) | high | [T1190](https://attack.mitre.org/techniques/T1190/) |
 | [`web.shell_access`](#web-shell_access) | high | [T1505.003](https://attack.mitre.org/techniques/T1505/003/) |
@@ -810,6 +813,30 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 
 ## Vulnerabilities and updates
 
+### `vuln.app_exploited` {#vuln-app_exploited}
+
+**Severity:** critical · **ATT&CK:** [T1190](https://attack.mitre.org/techniques/T1190/)
+
+**Alert:** `{package} {installed} ({ecosystem}, {path}): {count} vulnerabilities exploited in the wild ({ids}), fixed in {fixed}`
+
+**Fires when:** A dependency named in a lock file has a vulnerability that is exploited in the wild (CISA KEV, through the CVE aliases of the OSV record), and a fixed version exists. One alert per package and version.
+
+**Known false positives:** The vulnerable code path may not be used by the project; that is rarely worth betting on.
+
+**What to do:** Update the dependency to the fixed version (`npm update`, `pip install -U`, `go get`), deploy, and restart the service.
+
+### `vuln.app_malicious` {#vuln-app_malicious}
+
+**Severity:** critical · **ATT&CK:** [T1195.002](https://attack.mitre.org/techniques/T1195/002/)
+
+**Alert:** `Known malicious package {package} {installed} ({ecosystem}) in {path}`
+
+**Fires when:** A lock file on the host (package-lock.json, requirements.txt, go.mod) names a package that OSV lists as malicious (a MAL- record): typosquats, hijacked releases and packages published to steal secrets. One alert per package and version. Needs `vuln_lookup` on the server.
+
+**Known false positives:** A name that was malicious only in some versions is matched by version; a lock file left over from a project that no longer runs still counts.
+
+**What to do:** Treat the host as compromised if the package was ever installed: rotate the secrets the project and its user could read, from another machine. Remove the package, rebuild `node_modules` or the virtual environment from a clean lock file, and find out how it got in.
+
 ### `vuln.exploited` {#vuln-exploited}
 
 **Severity:** critical · **ATT&CK:** [T1190](https://attack.mitre.org/techniques/T1190/)
@@ -821,6 +848,18 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 **Known false positives:** None; when the fix is available, install it.
 
 **What to do:** Update the package now (`apt install --only-upgrade <package>`) and restart what uses it (`needrestart`, or reboot for the kernel).
+
+### `vuln.app_severe` {#vuln-app_severe}
+
+**Severity:** high
+
+**Alert:** `{package} {installed} ({ecosystem}, {path}): {count} high or critical vulnerabilities ({ids}), fixed in {fixed}`
+
+**Fires when:** A dependency named in a lock file has vulnerabilities rated high or critical (GitHub's rating, or CVSS 3 when there is none) with a fixed version. One alert per package and version. Go records without any rating count in the summary but do not alert.
+
+**Known false positives:** Development dependencies in package-lock.json are included, since they sit on disk; projects checked out but not deployed (worktrees, old copies) count too. Set `app_roots` on the agent to limit where it looks.
+
+**What to do:** Update the dependency to the fixed version and deploy; for an unused copy, delete it.
 
 ### `vuln.severe` {#vuln-severe}
 

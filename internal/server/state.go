@@ -62,6 +62,8 @@ type AgentRec struct {
 	Conditions map[string]map[string]bool `json:"conditions,omitempty"`
 	// Vulns is the result of the last vulnerability match (vuln_lookup).
 	Vulns *VulnSummary `json:"vulns,omitempty"`
+	// AppVulns is the same for the dependencies in lock files (OSV).
+	AppVulns *AppVulnSummary `json:"app_vulns,omitempty"`
 
 	// Forensics is true when the agent takes evidence snapshots.
 	Forensics       bool          `json:"forensics,omitempty"`

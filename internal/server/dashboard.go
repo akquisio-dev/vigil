@@ -26,6 +26,7 @@ var tactics = map[string]string{
 	"T1140":     "defense-evasion",
 	"T1105":     "command-and-control",
 	"T1190":     "initial-access",
+	"T1195.002": "initial-access",
 	"T1071":     "command-and-control",
 	"T1090.003": "command-and-control",
 	"T1572":     "command-and-control",

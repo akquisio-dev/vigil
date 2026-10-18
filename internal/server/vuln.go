@@ -661,6 +661,7 @@ func (s *Server) refreshVulnsOnce() {
 		}
 		s.setVulnErr("debian", err)
 	}
+	s.refreshOSV()
 	// The KEV catalogue changes without the indexes changing, so every
 	// refresh matches again; only conditions that are new alert.
 	s.matchAll()
@@ -686,6 +687,11 @@ func (s *Server) matchAll() {
 			continue
 		}
 		fresh = append(fresh, s.raise(s.matchAgent(a, p), a.ID, 0)...)
+	}
+	for id, inv := range s.apps {
+		if a := s.state.Agents[id]; a != nil {
+			fresh = append(fresh, s.raise(s.matchApps(a, inv), a.ID, 0)...)
+		}
 	}
 	s.saveLocked()
 	s.notifyAlerts(fresh)
@@ -886,6 +892,7 @@ func (s *Server) vulnStatus() vulnStatus {
 	for eco, vi := range s.vdb.idx {
 		st.Ecosystems = append(st.Ecosystems, map[string]any{"release": eco, "cves": len(vi.Recs), "updated": vi.Updated, "source": vi.Source})
 	}
+	st.Ecosystems = append(st.Ecosystems, s.osvStatus()...)
 	sort.Slice(st.Ecosystems, func(i, j int) bool {
 		return fmt.Sprint(st.Ecosystems[i]["release"]) < fmt.Sprint(st.Ecosystems[j]["release"])
 	})

@@ -162,7 +162,7 @@ func (s *Server) reportFor(id, lg, by string) (*reportData, bool) {
 			return true
 		}
 		switch rec.Event.Type {
-		case "port.snapshot", "agent.heartbeat", "posture.report", "system.packages", "secrets.scan", "suid.scan", "integrity.scan", "net.volume":
+		case "port.snapshot", "agent.heartbeat", "posture.report", "system.packages", "system.apps", "secrets.scan", "suid.scan", "integrity.scan", "net.volume":
 			return true
 		}
 		for _, e := range entities(rec.Event) {

@@ -91,6 +91,11 @@ type Config struct {
 	// so it can match it against vulnerability data (server option
 	// vuln_lookup). The agent itself never contacts third parties.
 	Packages *bool `json:"packages,omitempty"`
+	// Apps sends the dependencies named in lock files (package-lock.json,
+	// requirements.txt, go.mod) below AppRoots, for the same matching
+	// against OSV data. Default on.
+	Apps     *bool    `json:"apps,omitempty"`
+	AppRoots []string `json:"app_roots,omitempty"`
 	// Forensics takes evidence snapshots (processes, sockets, sessions,
 	// modules, journal tail, the suspect process in detail) on the agent's
 	// strongest signals and when the server asks. Read only. On by default.

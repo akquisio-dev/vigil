@@ -109,6 +109,9 @@ var rules = map[string]ruleDef{
 	"secret.exposed":             {"high", "T1552.001", "{kind} readable by every user: {path} line {line}", "{kind} für alle Benutzer lesbar: {path} Zeile {line}"},
 	"vuln.exploited":             {"critical", "T1190", "{package} {installed}: {count} vulnerabilities exploited in the wild ({cves}), fixed in {fixed}", "{package} {installed}: {count} aktiv ausgenutzte Schwachstellen ({cves}), behoben in {fixed}"},
 	"vuln.severe":                {"high", "", "{package} {installed}: {count} high or critical vulnerabilities ({cves}), fixed in {fixed}", "{package} {installed}: {count} hohe oder kritische Schwachstellen ({cves}), behoben in {fixed}"},
+	"vuln.app_malicious":         {"critical", "T1195.002", "Known malicious package {package} {installed} ({ecosystem}) in {path}", "Bekanntes Schadpaket {package} {installed} ({ecosystem}) in {path}"},
+	"vuln.app_exploited":         {"critical", "T1190", "{package} {installed} ({ecosystem}, {path}): {count} vulnerabilities exploited in the wild ({ids}), fixed in {fixed}", "{package} {installed} ({ecosystem}, {path}): {count} aktiv ausgenutzte Schwachstellen ({ids}), behoben in {fixed}"},
+	"vuln.app_severe":            {"high", "", "{package} {installed} ({ecosystem}, {path}): {count} high or critical vulnerabilities ({ids}), fixed in {fixed}", "{package} {installed} ({ecosystem}, {path}): {count} hohe oder kritische Schwachstellen ({ids}), behoben in {fixed}"},
 	"process.rare":               {"low", "T1204.002", "First run of {exe} on this host, no package installed it (started by {parent})", "{exe} läuft zum ersten Mal auf diesem Host, kein Paket hat es installiert (gestartet von {parent})"},
 	"process.rare_child":         {"medium", "T1059", "{parent} started {exe} for the first time (uid {uid})", "{parent} hat zum ersten Mal {exe} gestartet (uid {uid})"},
 	"ssh.rare_time":              {"low", "T1078", "{user} logged in at {hour}:00 UTC, an hour without logins in {logins} before ({ip})", "{user} hat sich um {hour}:00 UTC angemeldet, eine Uhrzeit ohne Anmeldungen in {logins} bisherigen ({ip})"},
@@ -543,6 +546,8 @@ func (s *Server) evaluate(a *AgentRec, r *Record) []finding {
 		s.snapshotReceived(a, r)
 	case "system.packages":
 		out = append(out, s.packagesReceived(a, d)...)
+	case "system.apps":
+		out = append(out, s.appsReceived(a, d)...)
 	case "response.result":
 		s.actionResult(a.ID, d)
 	case "response.state":

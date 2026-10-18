@@ -52,6 +52,8 @@ the defaults below.
 | `forensics` | true | take evidence snapshots (read only), see [Operations](operations.md#investigating) |
 | `quarantine` | false | also copy the suspect program into `state_dir/quarantine` (root only, 30 days, 512 MB at most) |
 | `packages` | true | send the installed package list to the server for `vuln_lookup` |
+| `apps` | true | send the dependencies named in lock files (`package-lock.json`, `requirements.txt` with `==` pins, `go.mod`) to the server for `vuln_lookup`; every 3 hours, sent when changed. `node_modules`, `.git`, caches and test data are skipped, as are other filesystems |
+| `app_roots` | `/opt`, `/srv`, `/var/www`, `/home`, `/root` | replaces the directories searched for lock files (8 levels deep) |
 | `web_logs` | none | access logs to watch, see below |
 | `response` | off | allow response actions from the dashboard, see below |
 | `self_update` | false | let admins update this agent from the dashboard to a newer signed release, see [Operations](operations.md#agents-from-the-dashboard) |
@@ -178,7 +180,7 @@ it came from the proxy.
 | `summary_time` | none | send a [daily summary](#daily-summary) at this time (`"07:30"`, the server's local time) |
 | `brand` | none | your own name and logo, see below |
 | `rules_dir` | none | directory with [custom rules](custom-rules.md) |
-| `vuln_lookup` | false | match the package lists of Debian and Ubuntu hosts with the distributions' security data (Canonical OVAL per release, about 10 MB; the Debian security tracker, about 14 MB) and CISA's catalogue of exploited vulnerabilities, daily and only when changed. Only plain downloads, nothing about the hosts is sent |
+| `vuln_lookup` | false | match the package lists of Debian and Ubuntu hosts with the distributions' security data (Canonical OVAL per release, about 10 MB; the Debian security tracker, about 14 MB) and CISA's catalogue of exploited vulnerabilities, daily and only when changed. For the lock files agents report (`apps`), also OSV.dev's dumps for npm, PyPI and Go (only the ecosystems in use; npm is about 220 MB, read as a stream into an index of about 5 MB once a week, then brought up to date record by record every 3 hours). Only plain downloads, nothing about the hosts is sent |
 | `hash_intel` | false | match the SHA-256 of suspicious and new programs against abuse.ch MalwareBazaar and ThreatFox (full list weekly, about 45 MB, newest every six hours; about 10 MB in memory). Only downloads |
 | `yara_dir` | none | directory with YARA rules (`*.yar`, `*.yara`, at most 256 KB together) the agents scan programs with; starter rules in `deploy/examples/yara` |
 | `sigma_dir` | none | directory with Sigma rules (`*.yml`, also in subdirectories) for Linux process, network and file events |

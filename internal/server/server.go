@@ -55,6 +55,8 @@ type Server struct {
 	playbookRuns map[string][]time.Time // guarded by mu
 	yara         yaraSet
 	pkgs         map[string]*agentPackages // latest package list per agent, guarded by mu
+	apps         map[string]*appInventory  // latest application packages per agent, guarded by mu
+	odb          osvDB
 	nh           notifierHealth
 	incNotes     map[string]*incidentNote // guarded by mu
 	groupDelay   time.Duration            // tests only; see groupWindow
@@ -151,6 +153,7 @@ func (s *Server) Run(ctx context.Context) error {
 	go s.refreshIntel()
 	go s.refreshGeo()
 	s.loadPackages()
+	s.loadApps()
 	go s.refreshVulns()
 	s.loadYara()
 	go s.refreshHashes()
