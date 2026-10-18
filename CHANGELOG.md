@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- CI runs the last release and the last release of the previous minor version against the current build (`tools/mixtest`): old server with a new agent, new server on the old data, an old agent enrolling with the new server, an agent replaced on its own state, and a rollback of the server. Each phase checks the agent stays online, takes a signed config and raises no config, forgery or chain alert.
+
 ## v0.20.1
 
 - The agent scans programs one at a time and remembers results by file, rule set and change time. Each suspicious program start used to read up to 16 MB of the program in its own goroutine, so a large program started from `/tmp` a few dozen times (any local user can do that) pushed the agent past `MemoryHigh` and froze it until restarted. A burst of starts of one program now reads it once.

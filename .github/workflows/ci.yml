@@ -22,3 +22,21 @@ jobs:
       - name: Rule catalogue is up to date
         run: go run ./tools/gendocs -check
       - run: make build
+
+  # Old releases against this build: the order of an update (agents first,
+  # then the server) and a rollback of the server. Old binaries are checked
+  # like an agent checks an update. Self update itself is not covered, the
+  # build has no signed release yet.
+  mixed-versions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - run: make build
+      - run: tools/mixtest/run.sh
+        env:
+          MIXTEST_FLAGS: -selftest
