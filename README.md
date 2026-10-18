@@ -100,6 +100,8 @@ sh install.sh server
 sh install.sh agent -server http://10.0.0.1:8471 -token vgl_...   # on each host
 ```
 
+Debian and Ubuntu can also use the
+[apt repository](docs/getting-started.md#with-apt-debian-and-ubuntu).
 [Getting started](docs/getting-started.md) walks through it step by step. To
 build from source instead (Go 1.25+):
 

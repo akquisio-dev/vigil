@@ -10,6 +10,9 @@ on:
       - internal/server/rules_doc.go
       - tools/gendocs/**
       - .github/workflows/docs.yml
+      - deploy/apt/**
+  # The release workflow starts this on main after publishing, so the apt
+  # repository gets the new packages.
   workflow_dispatch:
 
 permissions:
@@ -36,6 +39,20 @@ jobs:
           python-version: "3.12"
       - run: pip install -r docs/requirements.txt
       - run: mkdocs build --strict
+      # GitHub Pages serves one site, replaced whole on every deploy, so the
+      # apt repository is rebuilt here each time from the newest releases.
+      - name: apt repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APT_SIGNING_KEY: ${{ secrets.APT_SIGNING_KEY }}
+        run: |
+          if [ -z "$APT_SIGNING_KEY" ]; then
+            echo "::notice::APT_SIGNING_KEY is not set; the site has no apt repository"
+            exit 0
+          fi
+          export GNUPGHOME="$(mktemp -d)"
+          printf '%s\n' "$APT_SIGNING_KEY" | gpg --batch --quiet --import
+          deploy/apt/build-repo.sh site/apt
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:

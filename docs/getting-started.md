@@ -50,6 +50,30 @@ On a running host, `vigil-agent version -verify` and `vigil-server version
 The Debian packages install to `/usr/bin` and do not enable the service; add
 the configuration first.
 
+### With apt (Debian and Ubuntu)
+
+```sh
+curl -fsSL https://akquisio-dev.github.io/vigil/apt/vigil-archive-keyring.gpg -o /usr/share/keyrings/vigil-archive-keyring.gpg
+gpg --show-keys /usr/share/keyrings/vigil-archive-keyring.gpg   # fingerprint below
+echo "deb [signed-by=/usr/share/keyrings/vigil-archive-keyring.gpg] https://akquisio-dev.github.io/vigil/apt stable main" > /etc/apt/sources.list.d/vigil.list
+apt update
+apt install vigil-agent   # or vigil-server
+```
+
+The repository key has the fingerprint
+
+```
+9296 F127 C574 D1B1 9F16  F529 D493 FE1D DD6B 70D8
+```
+
+and is also in the source tree as `deploy/apt/vigil-archive-keyring.asc`;
+compare the two before trusting it. It expires on 2029-10-17. The repository
+holds the packages of the newest five releases, each taken only after the
+release's Sigstore signature was checked. The packages do not start or
+restart the service: after `apt upgrade`, run `systemctl restart vigil-agent`
+(with a maintenance window, see [Operations](operations.md#upgrading)).
+Agents installed this way are updated with apt, not from the dashboard.
+
 ### From source
 
 vigil needs Go 1.25 or newer.

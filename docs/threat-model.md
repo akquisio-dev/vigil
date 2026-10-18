@@ -131,6 +131,11 @@ to the newest release, which they would also get by hand, and nothing else.
 
 ## Known weak spots
 
+- **The apt repository is signed with a long-lived key.** Releases are signed
+  keylessly, but apt needs a fixed key. It is a GitHub Actions secret of the
+  repository, used only after the packages passed the release signature
+  check. Whoever can read that secret can sign a repository that apt trusts;
+  `install.sh` and dashboard updates do not depend on it.
 - Enrollment tokens are bearer secrets valid for one hour and one use. Hand
   them over on a trusted channel.
 - Behind a CDN or a second proxy, make sure the address the dashboard sees

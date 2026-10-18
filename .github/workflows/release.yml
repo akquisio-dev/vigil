@@ -7,6 +7,7 @@ on:
 permissions:
   contents: write # create the release
   id-token: write # keyless signing with Sigstore
+  actions: write # start the pages workflow
 
 jobs:
   release:
@@ -47,3 +48,10 @@ jobs:
             echo "Rebuild and compare: \`git checkout ${GITHUB_REF_NAME} && deploy/release/build.sh ${GITHUB_REF_NAME}\`"
           } > notes.md
           gh release create "$GITHUB_REF_NAME" dist/* --title "$GITHUB_REF_NAME" --notes-file notes.md --verify-tag
+      # A release made with the workflow token starts no other workflow by
+      # itself; workflow_dispatch is the exception. The site (docs and apt
+      # repository) is deployed from main.
+      - name: Rebuild the site with the new packages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run docs.yml --ref main
