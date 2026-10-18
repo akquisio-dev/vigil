@@ -1,0 +1,42 @@
+[Unit]
+Description=vigil server backup
+# Runs from vigil-server-backup.timer. Needs "backup": {"recipient": ...}
+# in server.json (vigil-server backup keygen). Backups are sealed for that
+# key and land in backup.dir; copy them off this machine.
+After=vigil-server.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/vigil-server backup -config /etc/vigil/server.json
+User=vigil
+Group=vigil
+StateDirectory=vigil-backups
+StateDirectoryMode=0700
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+PrivateNetwork=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictRealtime=yes
+RestrictNamespaces=yes
+RestrictSUIDSGID=yes
+RestrictAddressFamilies=AF_UNIX
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+CapabilityBoundingSet=
+AmbientCapabilities=
+UMask=0077
+MemoryMax=128M
+CPUQuota=50%
+Nice=10
+IOSchedulingClass=idle

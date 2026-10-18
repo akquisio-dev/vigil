@@ -31,6 +31,8 @@ type Server struct {
 	store *Store
 	key   ed25519.PrivateKey
 
+	started time.Time // when Run began
+
 	mu    sync.Mutex // guards state
 	state *State
 
@@ -135,6 +137,13 @@ func (s *Server) Run(ctx context.Context) error {
 	if os.Getenv("GOMEMLIMIT") == "" {
 		debug.SetMemoryLimit(160 << 20)
 	}
+	// A restore must never swap the data directory under a running server.
+	unlock, err := lockDataDir(s.cfg.DataDir)
+	if err != nil {
+		return err
+	}
+	defer unlock()
+	s.started = time.Now()
 	if !s.store.ChainOK {
 		s.chainBroken(s.store.ChainError)
 	}
@@ -239,6 +248,12 @@ func (s *Server) loop(ctx context.Context) {
 			}
 		case <-hourly.C:
 			s.daily()
+			s.mu.Lock()
+			if fresh := s.checkBackupAge(time.Now()); len(fresh) > 0 {
+				s.saveLocked()
+				s.notifyAlerts(fresh)
+			}
+			s.mu.Unlock()
 			go s.refreshIntel()
 			go s.refreshGeo()
 			go s.attacks.persist()
@@ -471,6 +486,13 @@ func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 	a.LastSeen = time.Now().UTC()
 	a.LastIP = ip
 	a.AckedVersion = b.ConfigVersion
+	// The agent holds a newer config than this server ever sent: the
+	// server's state is older than the agent's, as after a restore from a
+	// backup. Jump past it, so the agent takes the server's view again
+	// instead of ignoring every config until the counter catches up.
+	if b.ConfigVersion > a.ConfigVersion {
+		a.ConfigVersion = b.ConfigVersion + 1
+	}
 	back := a.Silent
 	a.Silent = false
 	s.mu.Unlock()

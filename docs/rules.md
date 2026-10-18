@@ -2,7 +2,7 @@
 
 # Detection rules
 
-vigil ships 96 rules. Every alert carries the rule id, so an alert can be looked up here.
+vigil ships 97 rules. Every alert carries the rule id, so an alert can be looked up here.
 
 Severity decides who is woken up: each notifier has a `min_severity`, `high` by default.
 
@@ -84,6 +84,7 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 | [`process.decode_exec`](#process-decode_exec) | medium | [T1140](https://attack.mitre.org/techniques/T1140/) |
 | [`process.rare_child`](#process-rare_child) | medium | [T1059](https://attack.mitre.org/techniques/T1059/) |
 | [`process.tmp_exec`](#process-tmp_exec) | medium | [T1204.002](https://attack.mitre.org/techniques/T1204/002/) |
+| [`server.backup_stale`](#server-backup_stale) | medium | [T1490](https://attack.mitre.org/techniques/T1490/) |
 | [`ssh.new_source`](#ssh-new_source) | medium | [T1078](https://attack.mitre.org/techniques/T1078/) |
 | [`tls.expiring`](#tls-expiring) | medium |  |
 | [`updates.security_pending`](#updates-security_pending) | medium |  |
@@ -1272,6 +1273,18 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 **Known false positives:** Hosts without internet access to GitHub; vigil-agent-update.path not enabled.
 
 **What to do:** Read the error. A failed signature check means the download was not the published release: find out why before trying again.
+
+### `server.backup_stale` {#server-backup_stale}
+
+**Severity:** medium · **ATT&CK:** [T1490](https://attack.mitre.org/techniques/T1490/)
+
+**Alert:** `No new backup in {dir} for {age}`
+
+**Fires when:** The newest backup in `backup.dir` is older than `backup.max_age_hours` (default 36), or there is none once the server has run that long. It resolves itself with the next backup.
+
+**Known false positives:** The backup timer was stopped on purpose, or the machine was off.
+
+**What to do:** Run `systemctl status vigil-server-backup.service` and `journalctl -u vigil-server-backup`. A full disk, a changed data directory or a broken `backup.recipient` are the usual causes. Without a fresh backup, losing this machine loses the alerts, incidents and accounts since the last one.
 
 ### `agent.dropped` {#agent-dropped}
 

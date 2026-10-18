@@ -487,6 +487,11 @@ var ruleDocs = map[string]ruleDoc{
 		"A watch list without the cron directories, the process collector turned off, an agent older than the self test feature.",
 		"The alert names the step that went missing. Check the agent log (`journalctl -u vigil-agent`) for collector warnings, then run the test again from the host page. A sensor that stopped working silently, for example after a kernel update, is exactly what this catches.",
 	},
+	"server.backup_stale": {
+		"The newest backup in `backup.dir` is older than `backup.max_age_hours` (default 36), or there is none once the server has run that long. It resolves itself with the next backup.",
+		"The backup timer was stopped on purpose, or the machine was off.",
+		"Run `systemctl status vigil-server-backup.service` and `journalctl -u vigil-server-backup`. A full disk, a changed data directory or a broken `backup.recipient` are the usual causes. Without a fresh backup, losing this machine loses the alerts, incidents and accounts since the last one.",
+	},
 	"notify.failed": {
 		"A notifier could not deliver a message after three attempts. The alert goes out through all other notifiers, whatever their `min_severity`, and resolves itself with the next successful delivery.",
 		"Short outages of the chat or mail service.",

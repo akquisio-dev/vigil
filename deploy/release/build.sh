@@ -21,6 +21,7 @@ for arch in amd64 arm64; do
   deploy/release/deb.sh "$VERSION" "$arch"
 done
 cp deploy/systemd/vigil-agent.service deploy/systemd/vigil-agent-update.service deploy/systemd/vigil-agent-update.path \
-  deploy/systemd/vigil-server.service deploy/install.sh dist/
+  deploy/systemd/vigil-server.service deploy/systemd/vigil-server-backup.service deploy/systemd/vigil-server-backup.timer \
+  deploy/install.sh dist/
 (cd dist && sha256sum -- * > SHA256SUMS)
 cat dist/SHA256SUMS

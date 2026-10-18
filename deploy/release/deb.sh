@@ -10,6 +10,10 @@ for cmd in vigil-agent vigil-server; do
   mkdir -p "$root/DEBIAN" "$root/usr/bin" "$root/lib/systemd/system" "$root/usr/share/doc/$cmd"
   install -m 0755 "dist/${cmd}_${VERSION}_linux_${ARCH}" "$root/usr/bin/$cmd"
   sed 's#/usr/local/bin/#/usr/bin/#' "deploy/systemd/$cmd.service" > "$root/lib/systemd/system/$cmd.service"
+  if [ "$cmd" = vigil-server ]; then
+    sed 's#/usr/local/bin/#/usr/bin/#' deploy/systemd/vigil-server-backup.service > "$root/lib/systemd/system/vigil-server-backup.service"
+    install -m 0644 deploy/systemd/vigil-server-backup.timer "$root/lib/systemd/system/vigil-server-backup.timer"
+  fi
   example=agent.json
   [ "$cmd" = vigil-server ] && example=server.json
   install -m 0644 "deploy/examples/$example" "$root/usr/share/doc/$cmd/$example.example"

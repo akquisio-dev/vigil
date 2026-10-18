@@ -49,6 +49,11 @@ if [ "$WHAT" = agent ]; then
   for u in vigil-agent-update.service vigil-agent-update.path; do
     if curl -fsSLO "$BASE/$u"; then UNITS="$UNITS $u"; fi
   done
+else
+  # the units for daily backups, part of releases since v0.20.0
+  for u in vigil-server-backup.service vigil-server-backup.timer; do
+    if curl -fsSLO "$BASE/$u"; then UNITS="$UNITS $u"; fi
+  done
 fi
 
 if command -v cosign >/dev/null 2>&1; then
@@ -87,5 +92,8 @@ if [ "$WHAT" = agent ] && [ -n "$SERVER" ] && [ -n "$TOKEN" ]; then
   echo "agent enrolled and started"
   echo "updates from the dashboard: set \"self_update\": true in /etc/vigil/agent.json, then: systemctl enable --now vigil-agent-update.path"
 else
+  if [ "$WHAT" = server ]; then
+    echo "backups: run vigil-server backup keygen -out KEYFILE on another machine, put the public key into server.json, then: systemctl enable --now vigil-server-backup.timer"
+  fi
   echo "next: write /etc/vigil/$WHAT.json (see https://akquisio-dev.github.io/vigil/configuration/) and run: systemctl enable --now vigil-$WHAT"
 fi

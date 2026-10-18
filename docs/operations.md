@@ -381,9 +381,73 @@ line.
 
 ## Backups
 
-Back up `/var/lib/vigil` on the server. It holds the event log, the state,
-dashboard users and the server key. Agents pinned that key at enrollment; if it
-is lost, every agent has to be enrolled again.
+`/var/lib/vigil` on the server holds the event log, the state, alerts,
+incidents, dashboard users and the server key. Agents pinned that key at
+enrollment; if it is lost, every agent has to be enrolled again. `vigil-server
+backup` copies all of it, plus the config file and the files it names (logo,
+YARA, Sigma and custom rules), and leaves out what the server downloads again
+(block lists, geo and vulnerability data).
+
+A backup holds the server key, password hashes and TOTP secrets, so it is
+sealed for a public key (X25519, AES-256-GCM in authenticated chunks). The
+server only gets the public key. Make the key pair on another machine, and
+keep a second copy of the secret key offline; without it no backup opens:
+
+```sh
+vigil-server backup keygen -out /root/vigil-backup.key   # not on the server
+```
+
+```json
+"backup": {"recipient": "vigil-backup-1:...", "dir": "/var/lib/vigil-backups", "keep": 14}
+```
+
+```sh
+systemctl enable --now vigil-server-backup.timer   # daily at 03:30
+```
+
+The timer's unit runs as `vigil` without network and writes to
+`/var/lib/vigil-backups`; only complete backups appear there, under a name
+with the time, and the oldest beyond `keep` are removed. The server raises
+`server.backup_stale` when the newest is older than `max_age_hours` (36).
+Backups are safe while the server runs: the event logs are copied after the
+state, up to their last complete line, and the copy's hash chain is checked
+before it is written.
+
+A backup on the same machine does not survive the machine. Fetch them from
+elsewhere, for example from a host with SSH access:
+
+```sh
+scp server:/var/lib/vigil-backups/$(ssh server ls /var/lib/vigil-backups | tail -1) /srv/backups/vigil/
+vigil-server backup check -key /root/vigil-backup.key /srv/backups/vigil/vigil-backup-*.vbak
+```
+
+`backup check` reads the whole file and checks every file against the
+manifest and the event chain; a cut off, altered or foreign file fails. It
+writes nothing.
+
+### Restoring
+
+On the old or a new machine, with vigil-server installed and stopped:
+
+```sh
+systemctl stop vigil-server
+vigil-server restore -key vigil-backup.key -config-out /root/restored vigil-backup-....vbak
+systemctl start vigil-server
+```
+
+Restore unpacks into a new directory next to the data directory, checks it
+completely, and only then swaps it in. The previous data directory is kept as
+`/var/lib/vigil.before-restore-<time>`, never deleted. It refuses while a
+server holds the data directory, and refuses a backup of a newer vigil unless
+`-force`. Config files go below `-config-out` (with their full path) for you
+to compare and copy; restore never writes `/etc/vigil` itself. Run as root,
+the files are handed to the owner of the old data directory, else to `vigil`.
+
+Agents reconnect with their keys; nothing is enrolled again. Whatever
+happened after the backup is missing on the server: alerts and events of
+that time, and canaries placed since then, which the agents remove at their
+next batch. The agents' queues (`max_queue`) still hold what they could not
+send while the server was down.
 
 On hosts, `/var/lib/vigil-agent` holds the agent key and its last known state.
 After restoring an old copy, the agent reports every change since that copy as

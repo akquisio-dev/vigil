@@ -27,6 +27,10 @@ const usage = `usage:
   vigil-server user list   [-config ...]
   vigil-server verify      [-config ...]
   vigil-server notify test [-config ...] [-name NOTIFIER]
+  vigil-server backup       [-config ...] [-out FILE|-] [-to PUBLIC_KEY | -plain]
+  vigil-server backup keygen -out SECRET_KEY_FILE
+  vigil-server backup check  [-key SECRET_KEY_FILE] FILE
+  vigil-server restore     [-config ...|-data-dir DIR] -key SECRET_KEY_FILE [-config-out DIR] [-force] FILE
   vigil-server rules check DIR
   vigil-server rules test  FILE EVENTS.jsonl
   vigil-server version     [-verify]`
@@ -40,8 +44,15 @@ func main() {
 	cmd := args[0]
 	args = args[1:]
 	sub := ""
-	if cmd == "rules" {
+	switch cmd {
+	case "rules":
 		rulesCmd(args)
+		return
+	case "backup":
+		backupCmd(args)
+		return
+	case "restore":
+		restoreCmd(args)
 		return
 	}
 	if cmd == "user" || cmd == "notify" {

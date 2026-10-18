@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/akquisio-dev/vigil/internal/backup"
 	"github.com/akquisio-dev/vigil/internal/notify"
 )
 
@@ -18,6 +19,18 @@ type BrandConfig struct {
 	Logo string `json:"logo"`
 	// Icon is an SVG file used as the browser tab icon.
 	Icon string `json:"icon,omitempty"`
+}
+
+type BackupConfig struct {
+	// Recipient is the public key from `vigil-server backup keygen`. The
+	// secret key stays off this machine.
+	Recipient string `json:"recipient"`
+	// Dir holds the sealed backups (default /var/lib/vigil-backups).
+	Dir string `json:"dir,omitempty"`
+	// Keep is how many backups stay in Dir (default 14).
+	Keep int `json:"keep,omitempty"`
+	// MaxAgeHours raises server.backup_stale when the newest is older (default 36).
+	MaxAgeHours int `json:"max_age_hours,omitempty"`
 }
 
 type Config struct {
@@ -45,6 +58,10 @@ type Config struct {
 	DeadmanSeconds int `json:"deadman_seconds"`
 	RecentEvents   int `json:"recent_events"`
 	SessionHours   int `json:"session_hours"`
+
+	// Backup is where `vigil-server backup` seals the server's data. The
+	// server raises server.backup_stale when the newest backup there gets old.
+	Backup *BackupConfig `json:"backup,omitempty"`
 
 	// Brand replaces the vigil name and logo in the dashboard, for teams
 	// that run vigil under their own name.
@@ -124,6 +141,20 @@ func LoadConfig(path string) (*Config, error) {
 	}
 	if c.Listen == "" {
 		c.Listen = "127.0.0.1:8470"
+	}
+	if b := c.Backup; b != nil {
+		if _, err := backup.ParsePublic(b.Recipient); err != nil {
+			return nil, fmt.Errorf("backup.recipient: %w", err)
+		}
+		if b.Dir == "" {
+			b.Dir = "/var/lib/vigil-backups"
+		}
+		if b.Keep <= 0 {
+			b.Keep = 14
+		}
+		if b.MaxAgeHours <= 0 {
+			b.MaxAgeHours = 36
+		}
 	}
 	if c.DataDir == "" {
 		c.DataDir = "/var/lib/vigil"

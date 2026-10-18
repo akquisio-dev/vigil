@@ -119,6 +119,7 @@ var rules = map[string]ruleDef{
 	"forward.failed":             {"high", "", "Forwarding {forwarder} ({type}) has failed for 10 minutes: {error}", "Weiterleitung {forwarder} ({type}) scheitert seit 10 Minuten: {error}"},
 	"chain.broken":               {"critical", "T1565.001", "Event chain broken: {error}", "Ereigniskette gebrochen: {error}"},
 	"selftest.failed":            {"high", "T1562.001", "Self test on {host} failed: {missing}", "Selbsttest auf {host} fehlgeschlagen: {missing}"},
+	"server.backup_stale":        {"medium", "T1490", "No new backup in {dir} for {age}", "Keine neue Sicherung in {dir} seit {age}"},
 	"notify.failed":              {"high", "", "Notifier {notifier} ({type}) failed: {error}", "Benachrichtigung {notifier} ({type}) fehlgeschlagen: {error}"},
 }
 
