@@ -55,6 +55,9 @@ type Config struct {
 	Outbound *bool `json:"outbound,omitempty"`
 	// Response allows response actions from the dashboard. Off by default.
 	Response *ResponseConfig `json:"response,omitempty"`
+	// SelfUpdate lets the server ask for a newer signed release, which the
+	// vigil-agent-update units install. Off by default.
+	SelfUpdate bool `json:"self_update,omitempty"`
 	// SelfTest lets the server ask for a self test: a comment-only file in
 	// /etc/cron.d, a copy of `sleep` started from /tmp and an sshd-tagged log
 	// line, all removed right away. On by default.

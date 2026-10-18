@@ -1,0 +1,22 @@
+[Unit]
+Description=vigil agent update (checks and installs a downloaded release)
+# Started by vigil-agent-update.path. The agent itself cannot write
+# /usr/local/bin; this unit can, and does nothing but run the installed
+# binary, which checks the release signature again before installing it.
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/vigil-agent update -config /etc/vigil/agent.json
+User=root
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/usr/local/bin /var/lib/vigil-agent
+ProtectHome=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_UNIX
+LockPersonality=yes
+SystemCallArchitectures=native
+TimeoutStartSec=5min

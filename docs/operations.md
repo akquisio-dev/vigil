@@ -329,11 +329,37 @@ The first port snapshot of a host is its baseline. Afterwards:
 
 ## Upgrading
 
+### Agents from the dashboard
+
+Turn it on once per host:
+
+```sh
+# in /etc/vigil/agent.json: "self_update": true
+systemctl restart vigil-agent
+systemctl enable --now vigil-agent-update.path
+```
+
+`install.sh` puts `vigil-agent-update.path` and `vigil-agent-update.service`
+in place (releases from v0.19.0 on) but does not enable them. Then the host
+page has **Update agent**: the server looks up the newest release on GitHub,
+and after you confirm, the agent downloads it, checks its signature (see the
+[threat model](threat-model.md)), and the update unit installs it. The old
+binary stays as `/usr/local/bin/vigil-agent.prev`. If the new agent does not
+run for 15 seconds without restarting, the old one is put back and
+`agent.update_failed` is raised.
+
+The restart raises no `agent.stopped` or `agent.restarted`, but only during an
+update an admin started and only when the agent comes back with exactly the
+version asked for. Coming back with another version, not coming back within
+three minutes, or no result within 30 minutes is reported. Hosts need to reach
+github.com. Agents installed from the Debian package refuse and say to use
+apt.
+
+### By hand
+
 Start a maintenance window for the host first, or the restart raises an
 alert. Then install the new release (`sh install.sh agent -version vX.Y.Z`,
-the `.deb`, or the binary by hand) and restart the service. Agents do not
-update themselves; a compromised server must not be able to push code to
-every host.
+the `.deb`, or the binary by hand) and restart the service.
 
 ```sh
 install -m 0755 dist/vigil-agent /usr/local/bin/

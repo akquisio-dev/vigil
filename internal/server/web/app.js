@@ -23,6 +23,9 @@ const T = {
     rename: "Rename", deleteHost: "Remove host", confirmDelete: "Remove this host and its canaries?",
     confirmCanary: "Remove this canary? The agent deletes the file.",
     enroll: "Enroll a host", newToken: "Create token", validUntil: "valid until", notifyTest: "Send test notification",
+    updateAgent: "Update agent", upToDate: "Up to date", confirmUpdate: "Update this agent to {v}? It downloads the release, checks its signature and restarts.",
+    upd_asked: "update to {v} asked", upd_staged: "{v} downloaded, installing", upd_done: "updated from {f}", upd_failed: "update to {v} failed",
+    selfUpdateOff: "Updates from the dashboard are off for this agent (self_update in agent.json).",
     selftest: "Self test", runSelftest: "Run self test", noSelftests: "No self test yet.", selftestOff: "This agent does not offer self tests (older version, or selftest off in agent.json).",
     st_pending: "waiting for the agent", st_running: "running", st_passed: "passed", st_warning: "passed with warnings", st_failed: "failed",
     st_waiting: "waiting", st_ok: "detected", st_suppressed: "suppressed", st_skipped: "skipped", st_missing: "not detected", notifiedTo: "Sent to",
@@ -133,6 +136,9 @@ const T = {
     rename: "Umbenennen", deleteHost: "Host entfernen", confirmDelete: "Diesen Host und seine Köder entfernen?",
     confirmCanary: "Köder entfernen? Der Agent löscht die Datei.",
     enroll: "Host einschreiben", newToken: "Token erzeugen", validUntil: "gültig bis", notifyTest: "Testnachricht senden",
+    updateAgent: "Agent aktualisieren", upToDate: "Aktuell", confirmUpdate: "Diesen Agent auf {v} aktualisieren? Er lädt das Release, prüft die Signatur und startet neu.",
+    upd_asked: "Update auf {v} angefragt", upd_staged: "{v} geladen, wird installiert", upd_done: "aktualisiert von {f}", upd_failed: "Update auf {v} fehlgeschlagen",
+    selfUpdateOff: "Updates aus dem Dashboard sind für diesen Agent aus (self_update in agent.json).",
     selftest: "Selbsttest", runSelftest: "Selbsttest starten", noSelftests: "Noch kein Selbsttest.", selftestOff: "Dieser Agent bietet keinen Selbsttest an (ältere Version oder selftest in agent.json aus).",
     st_pending: "wartet auf den Agenten", st_running: "läuft", st_passed: "bestanden", st_warning: "bestanden mit Hinweisen", st_failed: "fehlgeschlagen",
     st_waiting: "ausstehend", st_ok: "erkannt", st_suppressed: "unterdrückt", st_skipped: "übersprungen", st_missing: "nicht erkannt", notifiedTo: "Gesendet an",
@@ -267,6 +273,15 @@ async function api(path, opts = {}) {
 }
 
 const post = (path, body = {}) => api(path, { method: "POST", body });
+
+// newerVersion compares release tags like v0.19.0; anything else is never newer.
+function newerVersion(a, b) {
+  const p = (v) => /^v(\d+)\.(\d+)\.(\d+)$/.exec(v || "");
+  const x = p(a), y = p(b);
+  if (!x || !y) return false;
+  for (let i = 1; i <= 3; i++) if (Number(x[i]) !== Number(y[i])) return Number(x[i]) > Number(y[i]);
+  return false;
+}
 const RANK = { viewer: 1, analyst: 2, admin: 3 };
 const can = (role) => me && (RANK[me.role] || 3) >= RANK[role];
 const fromB64u = (s) => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0));
@@ -876,6 +891,21 @@ async function hostView(id) {
     h("td", null, r.event.data.method),
     h("td", { class: "mono" }, r.event.data.key_comment || r.event.data.fingerprint || "")));
   const renameInput = h("input", { value: a.name, maxlength: 100 });
+  const updErr = h("div", { class: "err" });
+  const u = a.update;
+  const updText = u ? t("upd_" + u.status).replace("{v}", u.version).replace("{f}", u.from || "?") + (u.error ? ": " + u.error : "") : "";
+  const updButton = !can("admin") ? null : !a.self_update ? h("div", { class: "muted mt" }, t("selfUpdateOff"))
+    : h("div", { class: "actions" }, h("button", { class: "btn ghost", onclick: async () => {
+      updErr.textContent = "";
+      try {
+        const r = await api("/api/ui/release/latest");
+        if (r.error) throw new Error(r.error);
+        if (!newerVersion(r.version, a.version)) { updErr.textContent = t("upToDate") + ": " + r.version; return; }
+        if (!confirm(t("confirmUpdate").replace("{v}", r.version))) return;
+        await post("/api/ui/agents/" + a.id + "/update", { version: r.version });
+        render();
+      } catch (x) { updErr.textContent = x.message; }
+    } }, t("updateAgent")), updErr);
   const minutesSel = h("select", null, [30, 60, 120, 240].map((m) => h("option", { value: m }, m + " " + t("minutes"))));
 
   mount(shell("overview",
@@ -888,7 +918,7 @@ async function hostView(id) {
           h("dt", null, "Hostname"), h("dd", null, a.hostname),
           h("dt", null, t("lastSeen")), h("dd", null, timeEl(a.last_seen)),
           h("dt", null, t("lastIP")), h("dd", { class: "mono" }, a.last_ip),
-          h("dt", null, t("version")), h("dd", null, a.version || "·"),
+          h("dt", null, t("version")), h("dd", null, (a.version || "·") + (updText ? "  ·  " + updText : "")),
           h("dt", null, t("enrolled")), h("dd", null, abs(a.enrolled)),
           h("dt", null, t("canaryRoots")), h("dd", { class: "mono" }, (a.canary_roots || []).join("  ") || t("none")),
           h("dt", null, t("configSync")), h("dd", null, t(a.config_sync ? "synced" : "waiting")))),
@@ -900,6 +930,7 @@ async function hostView(id) {
             h("button", { class: "btn small ghost", onclick: action("maintenance", { minutes: 0 }) }, t("end")))
           : h("form", { class: "inline mt", onsubmit: async (e) => { e.preventDefault(); await post("/api/ui/agents/" + a.id + "/maintenance", { minutes: Number(minutesSel.value) }); render(); } },
             h("label", null, t("maintenance"), minutesSel), h("button", { class: "btn ghost", type: "submit" }, t("start"))),
+        updButton,
         h("div", { class: "actions" },
           h("a", { class: "btn ghost", href: "#/events?agent=" + a.id }, t("events")),
           h("a", { class: "btn ghost", href: tlHref(a.id, new Date().toISOString(), { minutes: 60 }) }, t("timeline")),

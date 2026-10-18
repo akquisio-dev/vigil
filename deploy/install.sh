@@ -43,6 +43,13 @@ echo "vigil $WHAT $VERSION ($ARCH)"
 for f in "$BIN" SHA256SUMS SHA256SUMS.sigstore.json "vigil-$WHAT.service"; do
   curl -fsSLO "$BASE/$f"
 done
+UNITS="vigil-$WHAT.service"
+if [ "$WHAT" = agent ]; then
+  # the units for updates from the dashboard, part of releases since v0.19.0
+  for u in vigil-agent-update.service vigil-agent-update.path; do
+    if curl -fsSLO "$BASE/$u"; then UNITS="$UNITS $u"; fi
+  done
+fi
 
 if command -v cosign >/dev/null 2>&1; then
   cosign verify-blob SHA256SUMS --bundle SHA256SUMS.sigstore.json \
@@ -56,10 +63,14 @@ else
   exit 1
 fi
 grep " $BIN\$" SHA256SUMS | sha256sum -c -
-grep " vigil-$WHAT.service\$" SHA256SUMS | sha256sum -c -
+for u in $UNITS; do
+  grep " $u\$" SHA256SUMS | sha256sum -c -
+done
 
 install -m 0755 "$BIN" "/usr/local/bin/vigil-$WHAT"
-install -m 0644 "vigil-$WHAT.service" "/etc/systemd/system/vigil-$WHAT.service"
+for u in $UNITS; do
+  install -m 0644 "$u" "/etc/systemd/system/$u"
+done
 install -d -m 0750 /etc/vigil
 if [ "$WHAT" = server ]; then
   getent passwd vigil >/dev/null || useradd --system --home-dir /var/lib/vigil --shell /usr/sbin/nologin vigil
@@ -74,6 +85,7 @@ if [ "$WHAT" = agent ] && [ -n "$SERVER" ] && [ -n "$TOKEN" ]; then
   /usr/local/bin/vigil-agent enroll -config /etc/vigil/agent.json -server "$SERVER" -token "$TOKEN"
   systemctl enable --now vigil-agent
   echo "agent enrolled and started"
+  echo "updates from the dashboard: set \"self_update\": true in /etc/vigil/agent.json, then: systemctl enable --now vigil-agent-update.path"
 else
   echo "next: write /etc/vigil/$WHAT.json (see https://akquisio-dev.github.io/vigil/configuration/) and run: systemctl enable --now vigil-$WHAT"
 fi

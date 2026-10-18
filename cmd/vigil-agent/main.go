@@ -17,7 +17,8 @@ import (
 const usage = `usage:
   vigil-agent run    [-config /etc/vigil/agent.json]
   vigil-agent enroll [-config /etc/vigil/agent.json] -server URL -token TOKEN
-  vigil-agent version [-verify]`
+  vigil-agent version [-verify]
+  vigil-agent update [-config /etc/vigil/agent.json] [-unit vigil-agent.service]   (run by vigil-agent-update.service)`
 
 func main() {
 	log.SetFlags(0)
@@ -29,6 +30,7 @@ func main() {
 	cfgPath := fs.String("config", "/etc/vigil/agent.json", "agent config file")
 	server := fs.String("server", "", "server URL (enroll)")
 	token := fs.String("token", "", "enrollment token from the dashboard (enroll)")
+	unit := fs.String("unit", "vigil-agent.service", "update: the agent's systemd unit")
 	verify := fs.Bool("verify", false, "version: compare this binary with the published release")
 	fs.Parse(os.Args[2:])
 
@@ -41,6 +43,10 @@ func main() {
 				log.Fatal(err)
 			}
 			fmt.Println(msg)
+		}
+	case "update":
+		if err := agent.ApplyUpdate(mustConfig(*cfgPath), *unit); err != nil {
+			log.Fatal(err)
 		}
 	case "enroll":
 		cfg := mustConfig(*cfgPath)

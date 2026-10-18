@@ -115,6 +115,20 @@ removed; actions expire after ten minutes and run at most once; and none of
 them runs arbitrary commands. Hosts where this risk is not acceptable leave
 `response` off.
 
+**Updates from the dashboard run only published releases.** With
+`self_update` on in its own `agent.json`, an agent accepts a version number
+from the server, nothing more. It builds the download address for the
+official repository itself, accepts only a release newer than its own (old
+releases are signed too, so this stops a rollback to a known weak version),
+and checks the Sigstore signature of `SHA256SUMS` itself: the certificate must
+chain to the Fulcio root at the time the transparency log recorded it, be
+issued to this repository's release workflow for exactly that tag, the
+signature must match, and Rekor's signed entry timestamp must be about this
+file, this signature and this certificate. The installer
+(`vigil-agent-update.service`) is the installed binary and checks everything
+again before it replaces itself. A compromised server can make hosts update
+to the newest release, which they would also get by hand, and nothing else.
+
 ## Known weak spots
 
 - Enrollment tokens are bearer secrets valid for one hour and one use. Hand

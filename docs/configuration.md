@@ -54,6 +54,7 @@ the defaults below.
 | `packages` | true | send the installed package list to the server for `vuln_lookup` |
 | `web_logs` | none | access logs to watch, see below |
 | `response` | off | allow response actions from the dashboard, see below |
+| `self_update` | false | let admins update this agent from the dashboard to a newer signed release, see [Operations](operations.md#agents-from-the-dashboard) |
 | `selftest` | true | accept self tests from the server, see [Operations](operations.md#self-test) |
 | `max_queue` | 5000 | events kept while the server is unreachable |
 

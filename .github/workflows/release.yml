@@ -22,8 +22,14 @@ jobs:
       - name: Build binaries and packages
         run: deploy/release/build.sh "$GITHUB_REF_NAME"
       - uses: sigstore/cosign-installer@v3
+        with:
+          # Agents check this bundle format themselves (internal/release);
+          # a cosign that writes another format would break their updates.
+          cosign-release: v2.4.1
       - name: Sign SHA256SUMS
         run: cosign sign-blob --yes --bundle dist/SHA256SUMS.sigstore.json dist/SHA256SUMS
+      - name: Agents can check the signature
+        run: go run ./tools/verifysums dist/SHA256SUMS dist/SHA256SUMS.sigstore.json "$GITHUB_REF_NAME"
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}

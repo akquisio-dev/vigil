@@ -1,0 +1,8 @@
+[Unit]
+Description=vigil agent update, waits for a release the agent downloaded
+
+[Path]
+PathExists=/var/lib/vigil-agent/update/ready
+
+[Install]
+WantedBy=multi-user.target

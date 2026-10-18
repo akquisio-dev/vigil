@@ -27,6 +27,10 @@ type AgentRec struct {
 	// the agent itself never lowers anything, because the host announcing
 	// it may be the one under attack.
 	MaintenanceUntil time.Time `json:"maintenance_until,omitempty"`
+	// Update is the last update an admin asked for.
+	Update *AgentUpdate `json:"update,omitempty"`
+	// SelfUpdate: the agent's own agent.json allows updates.
+	SelfUpdate bool `json:"self_update,omitempty"`
 
 	prevSeen time.Time // LastSeen before the batch being evaluated
 

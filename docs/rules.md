@@ -2,7 +2,7 @@
 
 # Detection rules
 
-vigil ships 95 rules. Every alert carries the rule id, so an alert can be looked up here.
+vigil ships 96 rules. Every alert carries the rule id, so an alert can be looked up here.
 
 Severity decides who is woken up: each notifier has a `min_severity`, `high` by default.
 
@@ -65,6 +65,7 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 | [`vuln.severe`](#vuln-severe) | high |  |
 | [`web.exploit_success`](#web-exploit_success) | high | [T1190](https://attack.mitre.org/techniques/T1190/) |
 | [`web.shell_access`](#web-shell_access) | high | [T1505.003](https://attack.mitre.org/techniques/T1505/003/) |
+| [`agent.update_failed`](#agent-update_failed) | medium |  |
 | [`backup.small`](#backup-small) | medium | [T1490](https://attack.mitre.org/techniques/T1490/) |
 | [`canary.overflow`](#canary-overflow) | medium |  |
 | [`canary.remove_failed`](#canary-remove_failed) | medium |  |
@@ -1259,6 +1260,18 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 **Known false positives:** A watch list without the cron directories, the process collector turned off, an agent older than the self test feature.
 
 **What to do:** The alert names the step that went missing. Check the agent log (`journalctl -u vigil-agent`) for collector warnings, then run the test again from the host page. A sensor that stopped working silently, for example after a kernel update, is exactly what this catches.
+
+### `agent.update_failed` {#agent-update_failed}
+
+**Severity:** medium
+
+**Alert:** `Update of agent {host} to {version} failed: {error}`
+
+**Fires when:** An update an admin started from the dashboard did not finish: the agent refused it (self_update off, installed from a Debian package), the download or its signature check failed, the new version did not stay up and the old one was put back, or nothing happened for 30 minutes.
+
+**Known false positives:** Hosts without internet access to GitHub; vigil-agent-update.path not enabled.
+
+**What to do:** Read the error. A failed signature check means the download was not the published release: find out why before trying again.
 
 ### `agent.dropped` {#agent-dropped}
 

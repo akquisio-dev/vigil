@@ -83,6 +83,15 @@ type AgentConfig struct {
 	Snapshots []SnapshotRequest `json:"snapshots,omitempty"`
 	// Yara are detection rules for programs. They only ever raise findings.
 	Yara *YaraRules `json:"yara,omitempty"`
+	// Update asks the agent to install a release. The agent only does so
+	// when its own agent.json allows it, only for a newer release, and only
+	// after checking the release signature itself.
+	Update *UpdateRequest `json:"update,omitempty"`
+}
+
+type UpdateRequest struct {
+	ID      string `json:"id"`
+	Version string `json:"version"`
 }
 
 // YaraRules are the server's YARA rules, sent whole; Hash names the version.

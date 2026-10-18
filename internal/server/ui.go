@@ -152,6 +152,7 @@ func (s *Server) uiHandler() http.Handler {
 	mux.HandleFunc("POST /api/ui/agents/{id}/snapshot", s.analyst(s.handleSnapshotRequest))
 	mux.HandleFunc("GET /api/ui/agents/{id}", s.auth(s.handleAgent))
 	mux.HandleFunc("POST /api/ui/agents/{id}/{action}", s.adminOnly(s.handleAgentAction))
+	mux.HandleFunc("GET /api/ui/release/latest", s.adminOnly(s.handleLatestRelease))
 	mux.HandleFunc("POST /api/ui/tokens", s.adminOnly(s.handleToken))
 	mux.HandleFunc("GET /api/ui/canaries", s.auth(s.handleCanaries))
 	mux.HandleFunc("POST /api/ui/canaries", s.adminOnly(s.handleCanaryCreate))
@@ -292,6 +293,8 @@ type agentView struct {
 	ResponseTypes []string       `json:"response_types"`
 	Vulns         *VulnSummary   `json:"vulns,omitempty"`
 	SelfTest      bool           `json:"selftest"`
+	SelfUpdate    bool           `json:"self_update"`
+	Update        *AgentUpdate   `json:"update,omitempty"`
 }
 
 func (s *Server) viewAgent(a *AgentRec) agentView {
@@ -306,7 +309,7 @@ func (s *Server) viewAgent(a *AgentRec) agentView {
 	}
 	v := agentView{ID: a.ID, Name: a.Name, Hostname: a.Hostname, Version: a.Version, Status: status,
 		LastSeen: a.LastSeen, LastIP: a.LastIP, Enrolled: a.Enrolled, Ports: len(a.Ports),
-		CanaryRoots: a.CanaryRoots, ConfigSync: a.AckedVersion >= a.ConfigVersion, OpenBySev: map[string]int{}, Updates: a.Updates, Posture: a.Posture, Contain: a.Contain, ResponseTypes: append([]string{}, a.ResponseTypes...), Vulns: a.Vulns, SelfTest: a.SelfTest}
+		CanaryRoots: a.CanaryRoots, ConfigSync: a.AckedVersion >= a.ConfigVersion, OpenBySev: map[string]int{}, Updates: a.Updates, Posture: a.Posture, Contain: a.Contain, ResponseTypes: append([]string{}, a.ResponseTypes...), Vulns: a.Vulns, SelfTest: a.SelfTest, SelfUpdate: a.SelfUpdate, Update: a.Update}
 	if time.Now().Before(a.MaintenanceUntil) {
 		until := a.MaintenanceUntil
 		v.Maintenance = &until
@@ -495,6 +498,7 @@ func (s *Server) handleAgentAction(w http.ResponseWriter, r *http.Request, sess 
 		Name    string `json:"name"`
 		Key     string `json:"key"`
 		Minutes int    `json:"minutes"`
+		Version string `json:"version"`
 	}
 	if !decode(r, w, &req) {
 		return
@@ -563,6 +567,13 @@ func (s *Server) handleAgentAction(w http.ResponseWriter, r *http.Request, sess 
 			return
 		}
 		data["selftest"] = t.ID
+	case "update":
+		if err := s.askUpdate(a, req.Version, sess.User); err != nil {
+			s.mu.Unlock()
+			http.Error(w, err.Error(), http.StatusConflict)
+			return
+		}
+		data["version"], data["from"] = req.Version, a.Version
 	case "forget-port":
 		delete(a.Baseline, req.Key)
 		data["key"] = req.Key

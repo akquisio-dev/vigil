@@ -73,6 +73,7 @@ var rules = map[string]ruleDef{
 	"agent.silent":               {"high", "T1562.001", "Agent {host} silent", "Agent {host} meldet sich nicht"},
 	"agent.stopped":              {"high", "T1562.001", "Agent {host} was stopped", "Agent {host} wurde beendet"},
 	"agent.restarted":            {"high", "T1562.001", "Agent {host} restarted after {gap} without monitoring", "Agent {host} neu gestartet nach {gap} ohne Überwachung"},
+	"agent.update_failed":        {"medium", "", "Update of agent {host} to {version} failed: {error}", "Update von Agent {host} auf {version} fehlgeschlagen: {error}"},
 	"agent.config_rejected":      {"high", "T1557", "Agent {host} rejected a configuration ({reason})", "Agent {host} hat eine Konfiguration abgelehnt ({reason})"},
 	"log.spoofed":                {"high", "T1070", "Fake {identifier} log entry written by {comm} (uid {uid})", "Gefälschter {identifier}-Logeintrag von {comm} (uid {uid})"},
 	"agent.dropped":              {"low", "", "Agent {host} dropped {count} events", "Agent {host} hat {count} Ereignisse verworfen"},
@@ -329,7 +330,9 @@ func (s *Server) evaluate(a *AgentRec, r *Record) []finding {
 	case "canary.overflow":
 		add("canary.overflow", "", nil)
 	case "agent.started":
-		if a.StartedOnce {
+		// An update an admin asked for, back with the right version, is no
+		// restart to report.
+		if updated := s.updatedStart(a, str(d, "version")); a.StartedOnce && !updated {
 			gap := "?"
 			if !a.prevSeen.IsZero() {
 				gap = r.Event.TS.Sub(a.prevSeen).Round(time.Second).String()
@@ -343,6 +346,7 @@ func (s *Server) evaluate(a *AgentRec, r *Record) []finding {
 		}
 		a.ResponseTypes = strSlice(d["response"])
 		a.SelfTest, _ = d["selftest"].(bool)
+		a.SelfUpdate, _ = d["self_update"].(bool)
 		a.Forensics, _ = d["forensics"].(bool)
 		a.CanaryRoots = a.CanaryRoots[:0]
 		if roots, ok := d["canary_roots"].([]any); ok {
@@ -354,7 +358,11 @@ func (s *Server) evaluate(a *AgentRec, r *Record) []finding {
 		}
 	case "agent.stopping":
 		a.Stopped = true
-		add("agent.stopped", "", nil)
+		if !s.heldStop(a, r.Event.TS) {
+			add("agent.stopped", "", nil)
+		}
+	case "agent.update":
+		s.updateEvent(a, d, add)
 	case "agent.config_rejected":
 		add("agent.config_rejected", str(d, "reason"), map[string]string{"reason": str(d, "reason")})
 	case "process.exec":

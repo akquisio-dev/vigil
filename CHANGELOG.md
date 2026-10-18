@@ -3,6 +3,8 @@
 ## Unreleased
 
 - One message per incident: the first alert and every more severe one are sent at once, the other alerts of the incident come as one update every `notify_group_minutes` (default 10; `-1` sends every alert on its own).
+- Agent updates from the dashboard: with `self_update` in `agent.json` and `vigil-agent-update.path` enabled, **Update agent** on the host page installs the newest release. The agent checks the Sigstore signature itself (Fulcio chain, workflow identity for the exact tag, Rekor entry), takes only newer releases, keeps `.prev` and puts it back if the new agent does not stay up. The planned restart raises no alert when the agent comes back with the version asked for. New rule `agent.update_failed`.
+- The release workflow checks its own signature with the agents' code before publishing, and pins cosign.
 - Daily summary (`summary_time`): alerts, open incidents, silent hosts, failed self tests, vulnerabilities, attackers and notifier problems in one message a day, to every notifier unless it sets `"summary": false`. Preview and send it from Settings.
 
 ## v0.18.0

@@ -56,6 +56,7 @@ type Server struct {
 	nh           notifierHealth
 	incNotes     map[string]*incidentNote // guarded by mu
 	groupDelay   time.Duration            // tests only; see groupWindow
+	latest       latestCache
 
 	beatWarned string // last reason the heartbeat was withheld, loop goroutine only
 }
@@ -224,9 +225,11 @@ func (s *Server) loop(ctx context.Context) {
 			s.checkDeadman()
 			s.mu.Lock()
 			finished, started := s.checkSelfTests(), s.scheduleSelfTests()
-			if finished || started {
+			upd := s.checkUpdates(time.Now())
+			if finished || started || len(upd) > 0 {
 				s.saveLocked()
 			}
+			s.notifyAlerts(upd)
 			s.mu.Unlock()
 		case <-beat.C:
 			s.expireSuppressions()
@@ -544,7 +547,7 @@ func (s *Server) forgedRequest(a *AgentRec, ip, reason string) {
 
 // agentConfig builds and signs the canary set for one agent. Caller holds s.mu.
 func (s *Server) agentConfig(a *AgentRec) (json.RawMessage, string) {
-	cfg := proto.AgentConfig{AgentID: a.ID, Version: a.ConfigVersion, Canaries: []proto.Canary{}, Actions: s.pendingActions(a.ID), SelfTest: s.pendingSelfTest(a.ID), Snapshots: s.pendingSnapshots(a.ID), Yara: s.yaraConfig()}
+	cfg := proto.AgentConfig{AgentID: a.ID, Version: a.ConfigVersion, Canaries: []proto.Canary{}, Actions: s.pendingActions(a.ID), SelfTest: s.pendingSelfTest(a.ID), Snapshots: s.pendingSnapshots(a.ID), Yara: s.yaraConfig(), Update: s.pendingUpdate(a)}
 	for _, c := range s.state.Canaries {
 		if c.AgentID == a.ID {
 			cfg.Canaries = append(cfg.Canaries, proto.Canary{ID: c.ID, Type: c.Type, Path: c.Path, Params: c.Params})

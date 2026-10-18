@@ -267,6 +267,11 @@ var ruleDocs = map[string]ruleDoc{
 		"Reboots and updates outside a maintenance window.",
 		"Review what happened on the host during the gap; SSH and sudo entries from the gap are reported after the restart, canary opens are not.",
 	},
+	"agent.update_failed": {
+		"An update an admin started from the dashboard did not finish: the agent refused it (self_update off, installed from a Debian package), the download or its signature check failed, the new version did not stay up and the old one was put back, or nothing happened for 30 minutes.",
+		"Hosts without internet access to GitHub; vigil-agent-update.path not enabled.",
+		"Read the error. A failed signature check means the download was not the published release: find out why before trying again.",
+	},
 	"agent.config_rejected": {
 		"An agent rejected a configuration because its signature or content did not match.",
 		"None known.",
