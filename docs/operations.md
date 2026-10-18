@@ -114,6 +114,37 @@ started before (`process.rare_child`). The server learns when each user
 logs in (`ssh.rare_time`) and how much each host sends per hour
 (`net.volume_spike`).
 
+### Attackers
+
+The attackers page shows who attacked the hosts over the last 24 hours, 7 or
+30 days: failed SSH logins (also on accounts that exist, which sshd only logs
+as a closed connection when password login is off) and flagged web requests,
+by country and network on a world map (with `geoip`), the user names and
+paths tried, the time of day and the day. Each address is put in one class:
+
+| Class | Meaning |
+|---|---|
+| successful | it logged in over SSH after failing, or an attack request was answered with 2xx or reached a web shell |
+| aimed | it tried an account the host really has that is in no word list, or a name from the host names or the brand |
+| persistent | it came back on three or more days with 20 or more attempts |
+| noise | mass scanning every server on the internet gets |
+
+Campaigns group addresses that try the same list: three or more names or
+paths, at least 60 % of them shared. A botnet working through one list from
+hundreds of addresses becomes one entry. Networks are marked as data centre or
+cloud by their name; the free data has no network type, so it is an estimate.
+The pivot page of an address shows the same for it over 30 days.
+
+A login from an address that failed three or more SSH logins in the week
+before raises `ssh.attacker_login`.
+
+The report button saves the page as Markdown or opens it for printing as PDF
+(analysts and admins, recorded in the audit log).
+
+The statistics are kept per day in `data_dir/attacks` (a few hundred KB per
+day), so 30 days never mean rereading the log. On the first start they are
+built from the log.
+
 ## Response actions
 
 On an alert, admins can contain an attack on the host directly, if the host's

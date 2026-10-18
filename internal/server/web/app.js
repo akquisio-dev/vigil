@@ -99,6 +99,19 @@ const T = {
     activeRules: "rules active", otherSources: "for log sources without vigil events", notConfigured: "not set up", hashLists: "Malware hashes",
     forwarding: "Forwarding", sentShort: "sent", droppedShort: "dropped", queuedShort: "waiting",
     filesDuring: "changed while the session was open", partialScan: "stopped after 20 s, shorten the period",
+    attacks: "Attackers", attacksSub: "Who attacks the hosts, from where and with what", day1: "24 hours",
+    attemptsN: "attempts", countries: "Countries", networks: "Networks", successTile: "Successful", targetedTile: "Aimed at us",
+    campaigns: "Campaigns", worldMap: "Origin of the attacks", byCountry: "Countries", byNetwork: "Networks", netKind: "Type of network",
+    net_hosting: "data centre or cloud (estimate)", net_tor: "Tor", net_other: "other networks", triedUsers: "Most tried user names",
+    accountExists: "account exists", webAttacks: "Web attacks", attackPaths: "Most requested attack paths", hourOfDay: "Time of day",
+    perDay: "Per day", addressesTitle: "Addresses", cls_all: "All", cls_success: "Successful", cls_targeted: "Aimed",
+    cls_persistent: "Persistent", cls_noise: "Noise", r_login: "logged in after failing", r_web_ok: "attack answered with 2xx",
+    r_own_account: "tried an account that exists here", r_own_name: "tried a name of these hosts", r_persistent: "came back on several days",
+    r_listed: "on a threat list", r_tor: "Tor exit", r_campaign: "part of a campaign", r_wordlist: "only word list names",
+    campaignN: "Campaign {n}", addressesN: "{n} addresses", signature: "Tries", geoOff: "Origin data is off. Set \"geoip\": true in server.json to see countries and networks.",
+    geoAttr: "IP Geolocation by DB-IP", noAttacks: "No attacks in this period", building: "The statistics are being built from the log",
+    origin: "Origin", network: "Network", classLabel: "Class", country: "Country", activity30: "Activity, 30 days",
+    attackReport: "Report (Markdown)", attackPrint: "Report to print / PDF", loggedInAs: "logged in as", unknown: "unknown", timezoneLocal: "local time",
   },
   de: {
     overview: "Lage", alerts: "Alarme", events: "Ereignisse", canaries: "Köder", settings: "Einstellungen",
@@ -195,6 +208,19 @@ const T = {
     activeRules: "Regeln aktiv", otherSources: "für Quellen ohne vigil-Ereignisse", notConfigured: "nicht eingerichtet", hashLists: "Schadsoftware-Hashes",
     forwarding: "Weiterleitung", sentShort: "gesendet", droppedShort: "verworfen", queuedShort: "wartend",
     filesDuring: "geändert, während die Sitzung offen war", partialScan: "nach 20 s abgebrochen, Zeitraum verkürzen",
+    attacks: "Angreifer", attacksSub: "Wer die Hosts angreift, von wo und womit", day1: "24 Stunden",
+    attemptsN: "Versuche", countries: "Länder", networks: "Netze", successTile: "Erfolgreich", targetedTile: "Gezielt auf uns",
+    campaigns: "Kampagnen", worldMap: "Herkunft der Angriffe", byCountry: "Länder", byNetwork: "Netze", netKind: "Art des Netzes",
+    net_hosting: "Rechenzentrum oder Cloud (geschätzt)", net_tor: "Tor", net_other: "sonstige Netze", triedUsers: "Meistversuchte Benutzernamen",
+    accountExists: "Konto existiert", webAttacks: "Web-Angriffe", attackPaths: "Meistabgefragte Angriffspfade", hourOfDay: "Tageszeit",
+    perDay: "Pro Tag", addressesTitle: "Adressen", cls_all: "Alle", cls_success: "Erfolgreich", cls_targeted: "Gezielt",
+    cls_persistent: "Hartnäckig", cls_noise: "Rauschen", r_login: "nach Fehlversuchen angemeldet", r_web_ok: "Angriff mit 2xx beantwortet",
+    r_own_account: "hat ein hier existierendes Konto versucht", r_own_name: "hat einen Namen dieser Hosts versucht", r_persistent: "an mehreren Tagen wiedergekommen",
+    r_listed: "auf einer Bedrohungsliste", r_tor: "Tor-Ausgang", r_campaign: "Teil einer Kampagne", r_wordlist: "nur Namen aus Wortlisten",
+    campaignN: "Kampagne {n}", addressesN: "{n} Adressen", signature: "Versucht", geoOff: "Herkunftsdaten sind aus. Mit \"geoip\": true in server.json erscheinen Länder und Netze.",
+    geoAttr: "IP Geolocation by DB-IP", noAttacks: "Keine Angriffe in diesem Zeitraum", building: "Die Statistik wird gerade aus dem Log aufgebaut",
+    origin: "Herkunft", network: "Netz", classLabel: "Einstufung", country: "Land", activity30: "Aktivität, 30 Tage",
+    attackReport: "Bericht (Markdown)", attackPrint: "Bericht drucken / PDF", loggedInAs: "angemeldet als", unknown: "unbekannt", timezoneLocal: "Ortszeit",
   },
 };
 
@@ -286,7 +312,7 @@ function summary(data) {
 }
 
 // Tabler Icons (MIT, https://tabler.io/icons), outline paths.
-const ICONS = {"terminal-2": ["M8 9l3 3l-3 3", "M13 15l3 0", "M3 4m0 2a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2z"], "radar": ["M21 12h-8a1 1 0 1 0 -1 1v8a9 9 0 0 0 9 -9", "M16 9a5 5 0 1 0 -7 7", "M20.486 9a9 9 0 1 0 -11.482 11.495"], "key": ["M16.555 3.843l3.602 3.602a2.877 2.877 0 0 1 0 4.069l-2.643 2.643a2.877 2.877 0 0 1 -4.069 0l-.301 -.301l-6.558 6.558a2 2 0 0 1 -1.239 .578l-.175 .008h-1.172a1 1 0 0 1 -.993 -.883l-.007 -.117v-1.172a2 2 0 0 1 .467 -1.284l.119 -.13l.414 -.414h2v-2h2v-2l2.144 -2.144l-.301 -.301a2.877 2.877 0 0 1 0 -4.069l2.643 -2.643a2.877 2.877 0 0 1 4.069 0z", "M15 9h.01"], "book": ["M3 19a9 9 0 0 1 9 0a9 9 0 0 1 9 0", "M3 6a9 9 0 0 1 9 0a9 9 0 0 1 9 0", "M3 6l0 13", "M12 6l0 13", "M21 6l0 13"], "stack-2": ["M12 4l-8 4l8 4l8 -4l-8 -4", "M4 12l8 4l8 -4", "M4 16l8 4l8 -4"], "bell-off": ["M9.346 5.353c.21 -.129 .428 -.246 .654 -.353a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3m-1 3h-13a4 4 0 0 0 2 -3v-3a6.996 6.996 0 0 1 1.273 -3.707", "M9 17v1a3 3 0 0 0 6 0v-1", "M3 3l18 18"], "clock": ["M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0", "M12 7v5l3 3"], "user-x": ["M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0", "M6 21v-2a4 4 0 0 1 4 -4h3.5", "M22 22l-5 -5", "M17 22l5 -5"], "plus": ["M12 5l0 14", "M5 12l14 0"], "alert-triangle": ["M12 9v4", "M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z", "M12 16h.01"], "fish-hook": ["M16 9v6a5 5 0 0 1 -10 0v-4l3 3", "M16 7m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0", "M16 5v-2"], "layout-dashboard": ["M5 4h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1", "M5 16h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1", "M15 12h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1", "M15 4h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1"], "list-details": ["M13 5h8", "M13 9h5", "M13 15h8", "M13 19h5", "M3 4m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z", "M3 14m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z"], "logout": ["M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2", "M9 12h12l-3 -3", "M18 15l3 -3"], "server": ["M3 4m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z", "M3 12m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z", "M7 8l0 .01", "M7 16l0 .01"], "settings": ["M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z", "M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"], "shield-check": ["M11.46 20.846a12 12 0 0 1 -7.96 -14.846a12 12 0 0 0 8.5 -3a12 12 0 0 0 8.5 3a12 12 0 0 1 -.09 7.06", "M15 19l2 2l4 -4"]};
+const ICONS = {"world": ["M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0", "M3.6 9h16.8", "M3.6 15h16.8", "M11.5 3a17 17 0 0 0 0 18", "M12.5 3a17 17 0 0 1 0 18"], "terminal-2": ["M8 9l3 3l-3 3", "M13 15l3 0", "M3 4m0 2a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2z"], "radar": ["M21 12h-8a1 1 0 1 0 -1 1v8a9 9 0 0 0 9 -9", "M16 9a5 5 0 1 0 -7 7", "M20.486 9a9 9 0 1 0 -11.482 11.495"], "key": ["M16.555 3.843l3.602 3.602a2.877 2.877 0 0 1 0 4.069l-2.643 2.643a2.877 2.877 0 0 1 -4.069 0l-.301 -.301l-6.558 6.558a2 2 0 0 1 -1.239 .578l-.175 .008h-1.172a1 1 0 0 1 -.993 -.883l-.007 -.117v-1.172a2 2 0 0 1 .467 -1.284l.119 -.13l.414 -.414h2v-2h2v-2l2.144 -2.144l-.301 -.301a2.877 2.877 0 0 1 0 -4.069l2.643 -2.643a2.877 2.877 0 0 1 4.069 0z", "M15 9h.01"], "book": ["M3 19a9 9 0 0 1 9 0a9 9 0 0 1 9 0", "M3 6a9 9 0 0 1 9 0a9 9 0 0 1 9 0", "M3 6l0 13", "M12 6l0 13", "M21 6l0 13"], "stack-2": ["M12 4l-8 4l8 4l8 -4l-8 -4", "M4 12l8 4l8 -4", "M4 16l8 4l8 -4"], "bell-off": ["M9.346 5.353c.21 -.129 .428 -.246 .654 -.353a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3m-1 3h-13a4 4 0 0 0 2 -3v-3a6.996 6.996 0 0 1 1.273 -3.707", "M9 17v1a3 3 0 0 0 6 0v-1", "M3 3l18 18"], "clock": ["M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0", "M12 7v5l3 3"], "user-x": ["M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0", "M6 21v-2a4 4 0 0 1 4 -4h3.5", "M22 22l-5 -5", "M17 22l5 -5"], "plus": ["M12 5l0 14", "M5 12l14 0"], "alert-triangle": ["M12 9v4", "M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z", "M12 16h.01"], "fish-hook": ["M16 9v6a5 5 0 0 1 -10 0v-4l3 3", "M16 7m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0", "M16 5v-2"], "layout-dashboard": ["M5 4h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1", "M5 16h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1", "M15 12h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1", "M15 4h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1"], "list-details": ["M13 5h8", "M13 9h5", "M13 15h8", "M13 19h5", "M3 4m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z", "M3 14m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z"], "logout": ["M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2", "M9 12h12l-3 -3", "M18 15l3 -3"], "server": ["M3 4m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z", "M3 12m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z", "M7 8l0 .01", "M7 16l0 .01"], "settings": ["M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z", "M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"], "shield-check": ["M11.46 20.846a12 12 0 0 1 -7.96 -14.846a12 12 0 0 0 8.5 -3a12 12 0 0 0 8.5 3a12 12 0 0 1 -.09 7.06", "M15 19l2 2l4 -4"]};
 
 const SVG = "http://www.w3.org/2000/svg";
 function icon(name, viewBox = "0 0 24 24", paths = ICONS[name]) {
@@ -321,7 +347,7 @@ function logo() {
 
 const sections = [
   ["sectionOverview", [["overview", "#/", "layout-dashboard"]]],
-  ["sectionDetect", [["incidents", "#/incidents", "stack-2"], ["alerts", "#/alerts", "alert-triangle"], ["events", "#/events", "list-details"], ["sessions", "#/sessions", "terminal-2"], ["hunt", "#/hunt", "radar"], ["canaries", "#/canaries", "fish-hook"],
+  ["sectionDetect", [["incidents", "#/incidents", "stack-2"], ["alerts", "#/alerts", "alert-triangle"], ["events", "#/events", "list-details"], ["sessions", "#/sessions", "terminal-2"], ["hunt", "#/hunt", "radar"], ["attacks", "#/attacks", "world"], ["canaries", "#/canaries", "fish-hook"],
     ["suppressions", "#/suppressions", "bell-off"]]],
   ["sectionSystem", [["rules", "#/rules", "book"], ["settings", "#/settings", "settings"]]],
 ];
@@ -1498,6 +1524,220 @@ async function timelineView(params) {
   draw();
 }
 
+// ---------- attackers ----------
+
+let worldLoad = null;
+// The country outlines (about 100 KB) load with the first map.
+function loadWorld() {
+  if (window.VIGIL_WORLD) return Promise.resolve(window.VIGIL_WORLD);
+  if (!worldLoad) {
+    const own = document.querySelector('script[src^="app.js"]');
+    const v = own ? (own.getAttribute("src").split("?v=")[1] || "") : "";
+    worldLoad = new Promise((ok, fail) => {
+      const el = document.createElement("script");
+      el.src = "world.js" + (v ? "?v=" + v : "");
+      el.onload = () => ok(window.VIGIL_WORLD);
+      el.onerror = () => { worldLoad = null; fail(new Error("world.js")); };
+      document.head.append(el);
+    });
+  }
+  return worldLoad;
+}
+
+let regionNames = null;
+function countryName(cc) {
+  if (!cc || cc === "??") return t("unknown");
+  try {
+    if (!regionNames || regionNames.lang !== lang) regionNames = { lang, dn: new Intl.DisplayNames([lang], { type: "region" }) };
+    return regionNames.dn.of(cc) || cc;
+  } catch { return cc; }
+}
+
+// worldMap colours each country by its attempts (log scale) and puts a dot
+// on countries too small to see.
+function worldMap(countries, onPick) {
+  const box = h("div", { class: "worldmap" }, h("div", { class: "empty small" }, "…"));
+  loadWorld().then((w) => {
+    const svg = document.createElementNS(SVG, "svg");
+    svg.setAttribute("viewBox", "0 0 " + w.w + " " + w.h);
+    svg.setAttribute("role", "img");
+    svg.setAttribute("aria-label", t("worldMap"));
+    const by = {};
+    countries.forEach((c) => { by[c.key] = c; });
+    const max = Math.max(1, ...countries.map((c) => c.count));
+    const level = (n) => n ? 0.18 + 0.82 * Math.log(1 + n) / Math.log(1 + max) : 0;
+    const label = (cc) => { const c = by[cc]; return countryName(cc) + (c ? "  ·  " + c.ips + " " + t("addresses") + ", " + c.count.toLocaleString(lang) + " " + t("attemptsN") : ""); };
+    const hook = (el, cc) => {
+      el.addEventListener("mousemove", (e) => tip(e, label(cc)));
+      el.addEventListener("mouseleave", (e) => tip(e, null));
+      if (by[cc] && onPick) { el.addEventListener("click", () => onPick(cc)); el.setAttribute("class", el.getAttribute("class") + " pick"); }
+    };
+    for (const [cc, d] of Object.entries(w.paths)) {
+      const p = document.createElementNS(SVG, "path");
+      p.setAttribute("d", d);
+      p.setAttribute("class", "land" + (by[cc] ? " hit" : ""));
+      if (by[cc]) p.style.fillOpacity = level(by[cc].count);
+      hook(p, cc);
+      svg.append(p);
+    }
+    for (const c of countries) {
+      const at = w.dots[c.key];
+      if (!at || w.paths[c.key] && w.paths[c.key].length > 160) continue;
+      const dot = document.createElementNS(SVG, "circle");
+      dot.setAttribute("cx", at[0]);
+      dot.setAttribute("cy", at[1]);
+      dot.setAttribute("r", 3 + 5 * level(c.count));
+      dot.setAttribute("class", "dot-hit");
+      hook(dot, c.key);
+      svg.append(dot);
+    }
+    box.replaceChildren(svg);
+  }).catch(() => box.replaceChildren(h("div", { class: "empty small" }, t("worldMap"))));
+  return box;
+}
+
+// columns per hour of the local day (the server counts in UTC)
+function hourChart(utc) {
+  const off = -new Date().getTimezoneOffset() / 60;
+  const local = Array.from({ length: 24 }, (_, i) => utc[((i - Math.round(off)) % 24 + 24) % 24]);
+  const max = Math.max(1, ...local);
+  const chart = h("div", { class: "chart alt" });
+  local.forEach((v, i) => {
+    const bar = h("div", { class: "bar" });
+    bar.style.height = (v / max * 100) + "%";
+    chart.append(h("div", { class: "slot", onmousemove: (e) => tip(e, String(i).padStart(2, "0") + ":00  ·  " + v.toLocaleString(lang)), onmouseleave: (e) => tip(e, null) }, bar));
+  });
+  return h("div", null, chart, h("div", { class: "axis" }, ["00", "06", "12", "18", "23"].map((x) => h("span", null, x))));
+}
+
+function dayChart(days) {
+  const max = Math.max(1, ...days.map((d) => d.ssh + d.web));
+  const chart = h("div", { class: "chart stacked" });
+  days.forEach((d) => {
+    const col = h("div", { class: "stack" });
+    for (const [k, cls] of [["web", "high"], ["ssh", "critical"]]) {
+      if (!d[k]) continue;
+      const seg = h("div", { class: "seg " + cls });
+      seg.style.height = (d[k] / max * 100) + "%";
+      col.append(seg);
+    }
+    const day = new Date(d.day + "T12:00:00Z").toLocaleDateString(lang, { weekday: "short", day: "numeric", month: "numeric" });
+    chart.append(h("div", { class: "slot", onmousemove: (e) => tip(e, day + "  ·  SSH " + d.ssh.toLocaleString(lang) + ", Web " + d.web.toLocaleString(lang) + ", " + d.ips + " " + t("addresses")), onmouseleave: (e) => tip(e, null) }, col));
+  });
+  const fmt = (d) => new Date(d.day + "T12:00:00Z").toLocaleDateString(lang, { day: "numeric", month: "numeric" });
+  return h("div", null, chart,
+    h("div", { class: "axis" }, h("span", null, fmt(days[0])), h("span", null, fmt(days[days.length - 1]))),
+    h("div", { class: "legend" }, h("span", null, h("span", { class: "dot critical" }), "SSH"), h("span", null, h("span", { class: "dot high" }), "Web")));
+}
+
+const CLASS_DOT = { success: "critical", targeted: "high", persistent: "medium", noise: "low" };
+const classChip = (c) => h("span", { class: "chip" }, h("span", { class: "dot " + CLASS_DOT[c] }), t("cls_" + c));
+const netLabel = (a) => a.asn ? "AS" + a.asn + " " + (a.org || "") : "";
+const geoAttr = (geo) => geo && geo.enabled ? h("div", { class: "attr" }, h("a", { href: geo.attribution_url, target: "_blank", rel: "noopener" }, t("geoAttr"))) : null;
+
+let attackClass = "all";
+async function attacksView(params) {
+  const days = params.get("days") || "7";
+  const cc = params.get("country") || "";
+  const v = await api("/api/ui/attacks?days=" + encodeURIComponent(days));
+  const href = (extra) => "#/attacks?" + new URLSearchParams({ days, ...extra });
+  const T_ = v.totals;
+  const tiles = h("div", { class: "grid metrics six" },
+    metric(null, "world", t("addressesTitle"), T_.ips.toLocaleString(lang), null, (T_.ssh + T_.web).toLocaleString(lang) + " " + t("attemptsN")),
+    metric(null, "user-x", "SSH", T_.ssh.toLocaleString(lang), null, "Web " + T_.web.toLocaleString(lang)),
+    metric(null, "world", t("countries"), v.geo.enabled ? T_.countries : "·", null, v.geo.enabled ? T_.networks + " " + t("networks") : t("notConfigured")),
+    metric(null, "alert-triangle", t("successTile"), T_.success, T_.success ? "bad" : "good", t("r_login") + ", " + t("r_web_ok")),
+    metric(null, "radar", t("targetedTile"), T_.targeted, T_.targeted ? "bad" : null, T_.persistent + " " + t("cls_persistent").toLowerCase()),
+    metric(null, "stack-2", t("campaigns"), T_.campaigns, null, T_.noise + " " + t("cls_noise").toLowerCase()));
+  const daySel = h("div", { class: "tabs" }, [["1", t("day1")], ["7", t("days7")], ["30", t("days30").replace("{n}", 30)]].map(([k, l]) =>
+    h("button", { class: k === String(v.days) ? "on" : null, onclick: () => { location.hash = "#/attacks?" + new URLSearchParams(cc ? { days: k, country: cc } : { days: k }); } }, l)));
+  const reports = can("analyst") ? h("div", { class: "flex" },
+    h("a", { class: "btn ghost", href: "/api/ui/attacks/report?" + new URLSearchParams({ days: v.days, lang, format: "md" }) }, t("attackReport")),
+    h("a", { class: "btn ghost", href: "/api/ui/attacks/report?" + new URLSearchParams({ days: v.days, lang, format: "html" }), target: "_blank", rel: "noopener" }, t("attackPrint"))) : null;
+
+  let list = v.addresses;
+  if (cc) list = list.filter((a) => (a.country || "??") === cc);
+  if (attackClass !== "all") list = list.filter((a) => a.class === attackClass);
+  const counts = { all: v.addresses.length };
+  v.addresses.forEach((a) => { counts[a.class] = (counts[a.class] || 0) + 1; });
+  const clsTabs = h("div", { class: "tabs" }, ["all", "success", "targeted", "persistent", "noise"].map((k) =>
+    h("button", { class: k === attackClass ? "on" : null, onclick: () => { attackClass = k; render(); } }, t("cls_" + k) + " " + (counts[k] || 0))));
+  const table = list.length ? h("div", { class: "tablewrap" }, h("table", { class: "evtable attackers" },
+    h("thead", null, h("tr", null, [t("ip"), t("origin"), t("classLabel"), "SSH", "Web", t("details"), t("lastSeenShort")].map((x) => h("th", null, x)))),
+    h("tbody", null, list.slice(0, 150).map((a) => h("tr", null,
+      h("td", { class: "mono nowrap" }, h("a", { href: pivotHref("ip", a.ip) }, a.ip)),
+      h("td", null, h("div", null, a.country ? countryName(a.country) : "·"), h("div", { class: "muted small" }, [netLabel(a), a.net ? t("net_" + a.net).split(" (")[0] : ""].filter(Boolean).join("  ·  "))),
+      h("td", null, classChip(a.class), h("div", { class: "muted small" }, (a.reasons || []).filter((r) => r !== "wordlist" || a.class === "noise").map((r) => t("r_" + r)).join(", "))),
+      h("td", { class: "num-sm" }, a.ssh ? a.ssh.toLocaleString(lang) : "·"),
+      h("td", { class: "num-sm" }, a.web ? a.web.toLocaleString(lang) : "·"),
+      h("td", { class: "mono small" }, [...(a.users || []).slice(0, 5), ...(a.paths || []).slice(0, 3)].join(", ") + (a.campaign >= 0 ? "  ·  " + t("campaignN").replace("{n}", a.campaign + 1) : "")),
+      h("td", { class: "nowrap" }, timeEl(a.last))))))) : h("div", { class: "card empty" }, t("noAttacks"));
+
+  const campaigns = v.campaigns.length ? h("div", { class: "grid cards" }, v.campaigns.slice(0, 8).map((c) => h("div", { class: "card" },
+    h("div", { class: "chart-head" }, h("h3", null, t("campaignN").replace("{n}", c.id + 1)), h("span", { class: "chip" }, c.kind.toUpperCase())),
+    h("div", { class: "metric-sub" }, t("addressesN").replace("{n}", c.size) + ", " + c.attempts.toLocaleString(lang) + " " + t("attemptsN") + ", " + c.networks + " " + t("networks")),
+    h("dl", { class: "kv" },
+      h("dt", null, t("signature")), h("dd", { class: "mono" }, c.signature.map((x) => x.slice(2)).join(", ")),
+      h("dt", null, t("countries")), h("dd", null, c.countries.map((x) => (x.key === "??" ? "?" : x.key) + " " + x.ips).join(", ")),
+      h("dt", null, t("firstSeen")), h("dd", null, abs(c.first)),
+      h("dt", null, t("lastSeenShort")), h("dd", null, abs(c.last)),
+      h("dt", null, t("addressesTitle")), h("dd", { class: "mono" }, c.members.slice(0, 6).map((ip) => h("a", { href: pivotHref("ip", ip) }, ip + " ")), c.members.length > 6 ? "…" : ""))))) : h("div", { class: "card empty small" }, t("none"));
+
+  const kinds = ["hosting", "tor", "other"].map((k) => ({ key: k, count: v.net_kinds[k] || 0 }));
+  mount(shell("attacks",
+    h("h1", null, t("attacks")),
+    h("div", { class: "crumbs" }, t("attacksSub")),
+    h("div", { class: "flex toolbar" }, daySel, h("span", { class: "right" }, reports)),
+    v.ready ? null : h("div", { class: "card note" }, t("building")),
+    tiles,
+    v.geo.enabled ? h("div", { class: "grid dash-a" },
+      panel(t("worldMap"), cc ? h("a", { href: href({}) }, countryName(cc) + "  ×") : null,
+        worldMap(v.countries, (k) => { location.hash = href({ country: k }); }), geoAttr(v.geo)),
+      panel(t("byCountry"), null, rankList(v.countries.slice(0, 10).map((c) => ({ key: c.key, count: c.count, extra: c.ips + " " + t("addresses") })),
+        { tone: "red", label: (i) => countryName(i.key), href: (i) => href({ country: i.key }), empty: t("noAttacks") })))
+      : h("div", { class: "card note" }, t("geoOff")),
+    h("div", { class: "grid dash-b mt" },
+      panel(t("byNetwork"), null, rankList(v.networks.slice(0, 8).map((n) => ({ key: "AS" + n.asn + " " + n.org, count: n.ips,
+        extra: [countryName(n.country), n.net ? t("net_" + n.net) : "", n.count.toLocaleString(lang) + " " + t("attemptsN")].filter(Boolean).join("  ·  ") })),
+        { empty: v.geo.enabled ? t("noAttacks") : t("notConfigured") })),
+      panel(t("triedUsers"), null, rankList(v.users.slice(0, 10).map((u) => ({ key: u.user, count: u.ips, extra: u.existing ? t("accountExists") : "" })),
+        { mono: true, tone: "red", empty: t("noAttacks") })),
+      panel(t("netKind"), null, rankList(kinds.map((k) => ({ key: t("net_" + k.key), count: k.count })), { empty: t("noAttacks") }))),
+    h("div", { class: "grid dash-b mt" },
+      panel(t("perDay"), null, dayChart(v.per_day)),
+      panel(t("hourOfDay"), t("timezoneLocal"), hourChart(v.hours)),
+      panel(t("webAttacks"), null, v.web_kinds.length || v.paths.length ? [
+        rankList(v.web_kinds.map((k) => ({ key: k.key, count: k.ips })), { mono: true }),
+        h("div", { class: "rank-gap" }), rankList(v.paths.slice(0, 6).map((k) => ({ key: k.key, count: k.ips })), { mono: true })] : h("div", { class: "empty small" }, t("noAttacks")))),
+    h("h2", null, t("campaigns")), campaigns,
+    h("h2", null, t("addressesTitle") + (cc ? ": " + countryName(cc) : "")), clsTabs, table));
+}
+
+// originCard: what the attack statistics know about an address.
+function originCard(o) {
+  if (!o) return null;
+  const g = o.geo || {};
+  const a = o.attack;
+  const rows = [];
+  if (g.country) rows.push(h("dt", null, t("country")), h("dd", null, countryName(g.country)));
+  if (g.asn) rows.push(h("dt", null, t("network")), h("dd", null, netLabel(g) + (g.net ? "  ·  " + t("net_" + g.net) : "")));
+  if (a) {
+    rows.push(h("dt", null, t("classLabel")), h("dd", { class: "flex" }, classChip(a.class), (a.reasons || []).map((r) => t("r_" + r)).join(", ")));
+    if (a.users && a.users.length) rows.push(h("dt", null, t("triedUsers")), h("dd", { class: "mono" }, a.users.map((u) => (a.existing || []).includes(u) ? u + " (" + t("accountExists") + ")" : u).join(", ")));
+    if (a.paths && a.paths.length) rows.push(h("dt", null, t("attackPaths")), h("dd", { class: "mono" }, a.paths.join(", ")));
+    if (a.logins) rows.push(h("dt", null, t("loggedInAs")), h("dd", { class: "mono" }, (a.login_as || []).join(", ")));
+    if (a.user_agent) rows.push(h("dt", null, "User-Agent"), h("dd", { class: "mono small" }, a.user_agent));
+  }
+  if (o.campaign) rows.push(h("dt", null, t("campaigns")), h("dd", null, h("a", { href: "#/attacks?days=30" }, t("campaignN").replace("{n}", o.campaign.id + 1)),
+    "  ·  " + t("addressesN").replace("{n}", o.campaign.size) + ", " + o.campaign.signature.map((x) => x.slice(2)).join(", ")));
+  if (!rows.length && !a) return null;
+  return h("div", { class: "card mt" },
+    h("div", { class: "chart-head" }, h("h3", null, t("origin")), a ? h("span", { class: "total" }, (a.ssh + a.web).toLocaleString(lang)) : null),
+    h("dl", { class: "kv" }, rows),
+    a ? h("div", { class: "mini" }, h("div", { class: "metric-sub mt" }, t("activity30")), dayChart(o.per_day)) : null,
+    o.geoip ? h("div", { class: "attr" }, h("a", { href: o.attribution_url, target: "_blank", rel: "noopener" }, t("geoAttr"))) : null);
+}
+
 async function pivotView(kind, value, params) {
   const days = params.get("days") || "30";
   const d = await api("/api/ui/pivot?" + new URLSearchParams({ kind, value, days }));
@@ -1519,6 +1759,7 @@ async function pivotView(kind, value, params) {
         h("dt", null, t("lastSeenShort")), h("dd", null, d.last ? abs(d.last) : "·"),
         h("dt", null, t("seenOn")), h("dd", { class: "flex" }, counts(d.hosts)),
         h("dt", null, t("eventTypes")), h("dd", { class: "flex" }, counts(d.types)))),
+    kind === "ip" ? originCard(d.origin) : null,
     d.alerts.length ? [h("h2", null, t("alerts")), h("div", { class: "list" }, d.alerts.map(alertRow))] : null,
     h("h2", null, t("events")),
     d.records.length ? h("div", { class: "tablewrap" }, h("table", { class: "evtable" },
@@ -1648,6 +1889,7 @@ async function render() {
     else if (parts[0] === "sessions") await sessionsView(params);
     else if (parts[0] === "session") await sessionView(params);
     else if (parts[0] === "hunt") await huntView();
+    else if (parts[0] === "attacks") await attacksView(params);
     else if (parts[0] === "pivot" && parts[2]) await pivotView(parts[1], decodeURIComponent(parts.slice(2).join("/")), params);
     else if (parts[0] === "snapshot" && parts[1]) await snapshotView(parts[1], params);
     else if (parts[0] === "canaries") await canariesView();

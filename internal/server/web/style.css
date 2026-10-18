@@ -186,11 +186,12 @@ svg.ic.logo-mark { width: 28px; height: 28px; stroke-width: 3.2; }
   .app { flex-direction: column-reverse; height: auto; min-height: 100vh; }
   .sidebar, .sidebar:hover, .sidebar:focus-within {
     width: 100%; flex-direction: row; border-right: 0; border-top: 1px solid var(--border);
-    position: fixed; bottom: 0; left: 0; height: 56px;
+    position: fixed; bottom: 0; left: 0; height: 56px; overflow: hidden;
   }
   .sidebar-logo, .sidebar-footer, .nav-section, .nav-label, .nav-count { display: none; }
-  .nav { flex-direction: row; justify-content: space-around; align-items: center; padding: 6px 8px; }
-  .nav-item { padding: 9px 12px; margin: 0; }
+  .nav { flex-direction: row; justify-content: space-between; align-items: center; padding: 6px 8px; overflow-x: auto; scrollbar-width: none; flex: 1; min-width: 0; width: 100%; }
+  .nav::-webkit-scrollbar { display: none; }
+  .nav-item { padding: 9px 10px; margin: 0; flex-shrink: 0; }
   .main { min-height: 100vh; padding-bottom: 56px; }
   .topbar { padding: 0 16px; position: sticky; top: 0; z-index: 50; }
   .content { padding: 16px 16px 32px; overflow: visible; }
@@ -490,3 +491,19 @@ textarea.mono { width: 100%; font-size: 12px; }
   table.evtable td:nth-child(4) { grid-column: 1 / -1; }
 }
 .danger-card { border-color: var(--red); box-shadow: 0 0 0 1px var(--red) inset; }
+
+/* attackers */
+.toolbar { margin-bottom: 12px; flex-wrap: wrap; gap: 10px; }
+.worldmap svg { display: block; width: 100%; height: auto; }
+.worldmap .land { fill: var(--bar-muted); stroke: var(--surface); stroke-width: 0.4; }
+.worldmap .land.hit { fill: var(--sev-critical); }
+.worldmap .dot-hit { fill: var(--sev-critical); fill-opacity: 0.75; stroke: var(--surface); stroke-width: 1; }
+.worldmap .pick { cursor: pointer; }
+.worldmap .land.hit:hover, .worldmap .dot-hit:hover { fill-opacity: 1 !important; stroke: var(--text-primary); }
+.attr { font-size: 10px; color: var(--text-tertiary); margin-top: 8px; }
+.attr a { color: inherit; }
+.rank-gap { height: 14px; }
+.grid > *, .rank > *, .panel > * { min-width: 0; }
+.mini .chart.stacked { height: 64px; gap: 2px; }
+.attackers td { vertical-align: top; }
+.attackers td .small { font-size: 11px; margin-top: 2px; }

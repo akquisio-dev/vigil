@@ -44,6 +44,8 @@ type Server struct {
 	users      userCache
 	challenges challenges
 	intel      intelSet
+	geodb      geoState
+	attacks    attackRollup
 	vdb        vulnDB
 	hashes     hashSet
 	fwd        []*forwarder
@@ -135,12 +137,14 @@ func (s *Server) Run(ctx context.Context) error {
 	}
 	s.record("server", "", "", proto.NewEvent("server.started", map[string]any{"version": Version}))
 	go s.refreshIntel()
+	go s.refreshGeo()
 	s.loadPackages()
 	go s.refreshVulns()
 	s.loadYara()
 	go s.refreshHashes()
 	LoadSigma(s.cfg.SigmaDir)
 	s.startForwarders()
+	s.startAttacks()
 	for _, pb := range s.cfg.Playbooks {
 		if err := validatePlaybook(pb); err != nil {
 			log.Printf("playbook: %v (not used)", err)
@@ -230,6 +234,8 @@ func (s *Server) loop(ctx context.Context) {
 		case <-hourly.C:
 			s.daily()
 			go s.refreshIntel()
+			go s.refreshGeo()
+			go s.attacks.persist()
 			go s.refreshVulns()
 			go s.refreshHashes()
 			s.loadYara()

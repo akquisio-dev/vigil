@@ -2,7 +2,7 @@
 
 # Detection rules
 
-vigil ships 94 rules. Every alert carries the rule id, so an alert can be looked up here.
+vigil ships 95 rules. Every alert carries the rule id, so an alert can be looked up here.
 
 Severity decides who is woken up: each notifier has a `min_severity`, `high` by default.
 
@@ -56,6 +56,7 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 | [`process.service_shell`](#process-service_shell) | high | [T1505.003](https://attack.mitre.org/techniques/T1505/003/) |
 | [`secret.exposed`](#secret-exposed) | high | [T1552.001](https://attack.mitre.org/techniques/T1552/001/) |
 | [`selftest.failed`](#selftest-failed) | high | [T1562.001](https://attack.mitre.org/techniques/T1562/001/) |
+| [`ssh.attacker_login`](#ssh-attacker_login) | high | [T1110](https://attack.mitre.org/techniques/T1110/) |
 | [`ssh.key_added`](#ssh-key_added) | high | [T1098.004](https://attack.mitre.org/techniques/T1098/004/) |
 | [`ssh.password_login`](#ssh-password_login) | high | [T1078](https://attack.mitre.org/techniques/T1078/) |
 | [`ssh.unknown_key`](#ssh-unknown_key) | high | [T1098.004](https://attack.mitre.org/techniques/T1098/004/) |
@@ -104,6 +105,18 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 | [`user.removed`](#user-removed) | low | [T1531](https://attack.mitre.org/techniques/T1531/) |
 
 ## SSH access
+
+### `ssh.attacker_login` {#ssh-attacker_login}
+
+**Severity:** high · **ATT&CK:** [T1110](https://attack.mitre.org/techniques/T1110/)
+
+**Alert:** `{user} logged in from {ip}, which failed {failed} SSH logins in the last 7 days`
+
+**Fires when:** A successful SSH login from an address that failed 3 or more SSH logins in the 7 days before (on any host).
+
+**Known false positives:** A teammate whose key was missing at first, or who mistyped a user name; people behind one company or mobile network address.
+
+**What to do:** Treat as a successful brute force until the person confirms the login. Look at the session's commands, lock the account and block the address if nobody does.
 
 ### `ssh.key_added` {#ssh-key_added}
 

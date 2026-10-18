@@ -146,7 +146,7 @@ func (s *Server) startForwarders() {
 		go s.runForwarder(f)
 	}
 	if len(s.fwd) > 0 {
-		s.store.onAppend = s.forwardRecords
+		s.store.hooks = append(s.store.hooks, s.forwardRecords)
 	}
 }
 

@@ -7,6 +7,7 @@ import (
 	"log"
 	"os/exec"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -15,9 +16,12 @@ import (
 )
 
 var (
-	reAccepted   = regexp.MustCompile(`^Accepted (\S+) for (\S+) from (\S+) port (\d+)(?: ssh2)?(?:: (\S+) (\S+))?`)
-	reFailed     = regexp.MustCompile(`^Failed (\S+) for (?:invalid user )?(\S*) from (\S+) port`)
-	reInvalid    = regexp.MustCompile(`^Invalid user (\S*) from (\S+)`)
+	reAccepted = regexp.MustCompile(`^Accepted (\S+) for (\S+) from (\S+) port (\d+)(?: ssh2)?(?:: (\S+) (\S+))?`)
+	reFailed   = regexp.MustCompile(`^Failed (\S+) for (invalid user )?(\S*) from (\S+) port (\d+)`)
+	reInvalid  = regexp.MustCompile(`^Invalid user (\S*) from (\S+)(?: port (\d+))?`)
+	// With password logins off, attempts on existing accounts leave only
+	// this line when the client gives up (no "Failed" line at all).
+	reAuthClosed = regexp.MustCompile(`^(?:Connection closed by|Disconnected from|Connection reset by) authenticating user (\S+) (\S+) port (\d+)`)
 	reDisconnect = regexp.MustCompile(`^Disconnected from user (\S+) (\S+) port (\d+)`)
 	reSudo       = regexp.MustCompile(`^\s*(\S+) : .*?(?:TTY=(\S+) ; )?PWD=(\S+) ; USER=(\S+) ; COMMAND=(.*)$`)
 )
@@ -36,7 +40,17 @@ func clip(s string) string {
 type failures struct {
 	count int
 	users map[string]bool
+	// existing are the tried users the server has an account for (sshd
+	// says "invalid user" for the others).
+	existing map[string]bool
 }
+
+// Connection states for counting attempts: each connection counts once
+// for its first line, and every further failed password once more.
+const (
+	connInvalid = 1 // "Invalid user" seen, its first password try is the same attempt
+	connCounted = 2
+)
 
 func (a *Agent) runSSH(ctx context.Context) {
 	journalctl, err := exec.LookPath("journalctl")
@@ -150,25 +164,53 @@ func (a *Agent) handleSSH(msg, pid string, ts time.Time) {
 		}
 		return
 	}
-	var user, ip string
+	var user, ip, port string
+	var exists bool
+	kind := 0
 	if m := reFailed.FindStringSubmatch(msg); m != nil {
-		user, ip = m[2], m[3]
+		user, ip, port, exists, kind = m[3], m[4], m[5], m[2] == "", 1
 	} else if m := reInvalid.FindStringSubmatch(msg); m != nil {
-		user, ip = m[1], m[2]
+		user, ip, port, kind = m[1], m[2], m[3], 2
+	} else if m := reAuthClosed.FindStringSubmatch(msg); m != nil {
+		user, ip, port, exists, kind = m[1], m[2], m[3], true, 3
 	} else {
 		return
 	}
 	a.mu.Lock()
+	defer a.mu.Unlock()
+	conn := ip + " " + port
+	st := a.sshConns[conn]
+	count := false
+	switch kind {
+	case 1: // Failed password: every try counts, but the one "Invalid user" announced
+		count = st != connInvalid
+		st = connCounted
+	case 2: // Invalid user: the connection's first line
+		count = st == 0
+		if st == 0 {
+			st = connInvalid
+		}
+	case 3: // the client gave up on an existing account
+		count = st == 0
+		st = connCounted
+	}
+	if port != "" && len(a.sshConns) < 20000 {
+		a.sshConns[conn] = st
+	}
 	f := a.sshFails[ip]
 	if f == nil {
-		f = &failures{users: map[string]bool{}}
+		f = &failures{users: map[string]bool{}, existing: map[string]bool{}}
 		a.sshFails[ip] = f
 	}
-	f.count++
-	if len(f.users) < 10 {
-		f.users[user] = true
+	if count {
+		f.count++
 	}
-	a.mu.Unlock()
+	if len(f.users) < 10 || f.users[user] {
+		f.users[user] = true
+		if exists {
+			f.existing[user] = true
+		}
+	}
 }
 
 // flushSSHFailures is called right before each batch is sent.
@@ -176,13 +218,27 @@ func (a *Agent) flushSSHFailures() {
 	a.mu.Lock()
 	fails := a.sshFails
 	a.sshFails = map[string]*failures{}
+	a.sshConns = map[string]int{}
 	a.mu.Unlock()
 	for ip, f := range fails {
+		if f.count == 0 {
+			continue
+		}
 		users := make([]string, 0, len(f.users))
 		for u := range f.users {
 			users = append(users, u)
 		}
-		a.emit(proto.NewEvent("ssh.failed", map[string]any{"ip": ip, "count": f.count, "users": users}))
+		sort.Strings(users)
+		d := map[string]any{"ip": ip, "count": f.count, "users": users}
+		if len(f.existing) > 0 {
+			ex := make([]string, 0, len(f.existing))
+			for u := range f.existing {
+				ex = append(ex, u)
+			}
+			sort.Strings(ex)
+			d["existing_users"] = ex
+		}
+		a.emit(proto.NewEvent("ssh.failed", d))
 	}
 }
 

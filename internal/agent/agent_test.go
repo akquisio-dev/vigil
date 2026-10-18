@@ -75,11 +75,50 @@ func TestSSHRegexes(t *testing.T) {
 	if m := reAccepted.FindStringSubmatch("Accepted password for alice from 198.51.100.2 port 22 ssh2"); m == nil || m[1] != "password" {
 		t.Fatalf("password: %q", m)
 	}
-	if m := reFailed.FindStringSubmatch("Failed password for invalid user admin from 198.51.100.9 port 4242 ssh2"); m == nil || m[2] != "admin" {
+	if m := reFailed.FindStringSubmatch("Failed password for invalid user admin from 198.51.100.9 port 4242 ssh2"); m == nil || m[3] != "admin" || m[2] == "" {
 		t.Fatalf("failed: %q", m)
 	}
 	if m := reSudo.FindStringSubmatch("    alice : TTY=pts/0 ; PWD=/home/alice ; USER=root ; COMMAND=/usr/bin/id"); m == nil || m[1] != "alice" || m[5] != "/usr/bin/id" {
 		t.Fatalf("sudo: %q", m)
+	}
+}
+
+// Attempts count once per connection plus once per further password try,
+// and attempts on existing accounts are seen without any "Failed" line.
+func TestSSHFailureCounting(t *testing.T) {
+	a := &Agent{cfg: &Config{MaxQueue: 100}, sshFails: map[string]*failures{}, sshConns: map[string]int{}}
+	ts := time.Now()
+	for _, line := range []string{
+		// password logins off: only the close line for root
+		"Connection closed by authenticating user root 192.0.2.1 port 1001 [preauth]",
+		"Disconnected from authenticating user deploy 192.0.2.1 port 1002 [preauth]",
+		// invalid user, no password try
+		"Invalid user oracle from 192.0.2.1 port 1003",
+		"Connection closed by invalid user oracle 192.0.2.1 port 1003 [preauth]",
+		// invalid user with two password tries: 2 attempts
+		"Invalid user test from 192.0.2.1 port 1004",
+		"Failed password for invalid user test from 192.0.2.1 port 1004 ssh2",
+		"Failed password for invalid user test from 192.0.2.1 port 1004 ssh2",
+		// existing user, password on: 1 attempt, the close line is the same connection
+		"Failed password for root from 192.0.2.1 port 1005 ssh2",
+		"Connection closed by authenticating user root 192.0.2.1 port 1005 [preauth]",
+	} {
+		a.handleSSH(line, "1", ts)
+	}
+	f := a.sshFails["192.0.2.1"]
+	if f == nil || f.count != 6 {
+		t.Fatalf("count: %+v", f)
+	}
+	if !f.existing["root"] || !f.existing["deploy"] || f.existing["oracle"] || f.existing["test"] || len(f.users) != 4 {
+		t.Fatalf("users %v existing %v", f.users, f.existing)
+	}
+	a.flushSSHFailures()
+	if len(a.queue) != 1 {
+		t.Fatalf("events: %d", len(a.queue))
+	}
+	d := a.queue[0].Data
+	if ex, _ := d["existing_users"].([]string); len(ex) != 2 || ex[0] != "deploy" || ex[1] != "root" {
+		t.Fatalf("existing_users: %v", d["existing_users"])
 	}
 }
 

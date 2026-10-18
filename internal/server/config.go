@@ -73,6 +73,10 @@ type Config struct {
 	SigmaDir string `json:"sigma_dir,omitempty"`
 	// Forward sends events and alerts to syslog, HTTP or a file.
 	Forward []ForwardConfig `json:"forward,omitempty"`
+	// GeoIP downloads the free DB-IP Lite country and AS databases (CC BY
+	// 4.0, about 12 MB) once a month to show where attacking addresses come
+	// from. Lookups stay on the server.
+	GeoIP bool `json:"geoip,omitempty"`
 	// FourEyes lists response action types that a second admin must approve
 	// (with a fresh TOTP code) before they reach the agent; "*" means all.
 	FourEyes []string `json:"four_eyes,omitempty"`

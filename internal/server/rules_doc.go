@@ -142,6 +142,11 @@ var ruleDocs = map[string]ruleDoc{
 		"Every server on the internet sees this. It is informational on its own.",
 		"Nothing, if password login is off. Correlate with a later `ssh.new_source` from the same address.",
 	},
+	"ssh.attacker_login": {
+		"A successful SSH login from an address that failed 3 or more SSH logins in the 7 days before (on any host).",
+		"A teammate whose key was missing at first, or who mistyped a user name; people behind one company or mobile network address.",
+		"Treat as a successful brute force until the person confirms the login. Look at the session's commands, lock the account and block the address if nobody does.",
+	},
 	"ssh.key_added": {
 		"A key appeared in a watched `authorized_keys` file.",
 		"Onboarding a teammate or a deploy key.",

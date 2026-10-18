@@ -145,6 +145,8 @@ func (s *Server) uiHandler() http.Handler {
 	mux.HandleFunc("POST /api/ui/searches", s.analyst(s.handleSearchSave))
 	mux.HandleFunc("POST /api/ui/searches/{id}/delete", s.analyst(s.handleSearchDelete))
 	mux.HandleFunc("POST /api/ui/hunt", s.analyst(s.handleHunt))
+	mux.HandleFunc("GET /api/ui/attacks", s.auth(s.handleAttacks))
+	mux.HandleFunc("GET /api/ui/attacks/report", s.analyst(s.handleAttackReport))
 	mux.HandleFunc("GET /api/ui/sessions", s.auth(s.handleSessions))
 	mux.HandleFunc("GET /api/ui/session", s.auth(s.handleSession))
 	mux.HandleFunc("POST /api/ui/agents/{id}/snapshot", s.analyst(s.handleSnapshotRequest))
@@ -211,7 +213,7 @@ func (s *Server) uiHandler() http.Handler {
 // the embedded assets.
 func versionedIndex(static fs.FS) ([]byte, string) {
 	h := sha256.New()
-	for _, name := range []string{"app.js", "theme.js", "style.css", "favicon.svg"} {
+	for _, name := range []string{"app.js", "theme.js", "style.css", "favicon.svg", "world.js"} {
 		b, _ := fs.ReadFile(static, name)
 		h.Write(b)
 	}

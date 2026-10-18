@@ -43,6 +43,7 @@ var rules = map[string]ruleDef{
 	"ssh.new_source":           {"medium", "T1078", "{user} logged in from new address {ip}", "{user} hat sich von neuer Adresse {ip} angemeldet"},
 	"ssh.unknown_key":          {"high", "T1098.004", "Login as {user} with a key not in authorized_keys ({fingerprint})", "Anmeldung als {user} mit Schlüssel außerhalb von authorized_keys ({fingerprint})"},
 	"ssh.bruteforce":           {"low", "T1110", "{count} failed SSH logins from {ip}", "{count} fehlgeschlagene SSH-Anmeldungen von {ip}"},
+	"ssh.attacker_login":       {"high", "T1110", "{user} logged in from {ip}, which failed {failed} SSH logins in the last 7 days", "{user} hat sich von {ip} angemeldet, das in den letzten 7 Tagen {failed} SSH-Anmeldungen nicht geschafft hat"},
 	"ssh.key_added":            {"high", "T1098.004", "SSH key added to {file}: {comment}", "SSH-Schlüssel hinzugefügt in {file}: {comment}"},
 	"ssh.key_removed":          {"low", "", "SSH key removed from {file}: {comment}", "SSH-Schlüssel entfernt aus {file}: {comment}"},
 
@@ -214,6 +215,10 @@ func (s *Server) evaluate(a *AgentRec, r *Record) []finding {
 		if hour, total, rare := s.loginHour(user, recordTime(*r)); rare {
 			p2 := map[string]string{"user": user, "ip": ip, "hour": fmt.Sprintf("%02d", hour), "logins": fmt.Sprint(total)}
 			add("ssh.rare_time", user+"|"+recordTime(*r).Format("2006-01-02T15"), p2)
+		}
+		if n := s.failedBefore(ip, 7); n >= 3 {
+			p2 := map[string]string{"user": user, "ip": ip, "failed": fmt.Sprint(n), "method": str(d, "method")}
+			add("ssh.attacker_login", k, p2)
 		}
 		s.state.KnownLogins[k] = r.Event.TS
 	case "ssh.failed":

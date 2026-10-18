@@ -415,6 +415,7 @@ func (s *Server) handlePivot(w http.ResponseWriter, r *http.Request, sess *sessi
 		if list, ok := s.intel.lookup(value); ok {
 			out["intel"] = list
 		}
+		out["origin"] = s.attackProfile(value)
 	}
 	writeJSON(w, out)
 }

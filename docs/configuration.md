@@ -179,6 +179,7 @@ it came from the proxy.
 | `four_eyes` | none | response action types a second admin must approve, `"*"` for all, see [Operations](operations.md#four-eyes) |
 | `playbooks` | none | response actions started on their own by alerts, see [Operations](operations.md#playbooks) |
 | `forward` | none | send events and alerts to syslog, HTTP or a file, see below |
+| `geoip` | false | show the country and network of attacking addresses: the free DB-IP Lite country and AS databases (CC BY 4.0, about 12 MB) are downloaded once a month and looked up on the server, about 16 MB in memory. Enabling it accepts the [DB-IP Lite licence](https://db-ip.com/db/lite.php); the dashboard and reports link to DB-IP as it asks. For servers without internet access, place `country.csv.gz` and `asn.csv.gz` from DB-IP in `data_dir/geo` |
 | `threat_intel` | false | download public block lists (abuse.ch Feodo Tracker and ThreatFox, Spamhaus DROP, Tor exits) twice a day and match outbound connections against them. Only plain downloads, nothing about this installation is sent |
 
 Only enable `trust_proxy` when the dashboard listener is reachable through the

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -321,16 +322,21 @@ func (rd *reportData) markdown() string {
 }
 
 // printable wraps the Markdown in a minimal HTML page for printing to PDF.
-// The Markdown is shown as preformatted text sections, escaped.
 func (rd *reportData) printable() string {
-	md := rd.markdown()
+	return mdPage("Incident "+rd.Incident.ID, rd.markdown())
+}
+
+// mdPage renders the Markdown subset the reports use (headings, tables,
+// lists, code) as a page to print or save as PDF. Everything is escaped.
+func mdPage(title, md string) string {
 	var b strings.Builder
-	b.WriteString(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Incident ` +
-		html.EscapeString(rd.Incident.ID) + `</title><style>
+	b.WriteString(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>` +
+		html.EscapeString(title) + `</title><style>
 body{font:13px/1.5 -apple-system,Segoe UI,sans-serif;margin:24px auto;max-width:960px;padding:0 16px;color:#1c1c1a;background:#fff}
 h1{font-size:20px}h2{font-size:15px;margin-top:28px;border-bottom:1px solid #ddd;padding-bottom:4px}
 table{border-collapse:collapse;width:100%;font-size:11.5px;margin:6px 0}td,th{border:1px solid #e3e3e0;padding:4px 6px;text-align:left;vertical-align:top;overflow-wrap:anywhere}
 th{background:#f6f6f4}code,pre{font:11px ui-monospace,Menlo,monospace}pre{background:#f6f6f4;padding:8px;white-space:pre-wrap;overflow-wrap:anywhere}
+a{color:inherit}
 @media print{body{margin:0}h2{break-after:avoid}tr{break-inside:avoid}}
 </style></head><body>`)
 	inTable := false
@@ -412,7 +418,9 @@ func splitMDRow(line string) []string {
 	return append(cells, strings.TrimSpace(cur.String()))
 }
 
-// inlineMD escapes and renders `code` and **bold**.
+var mdLink = regexp.MustCompile(`\[([^\]]+)\]\((https://[^)\s"<>]+)\)`)
+
+// inlineMD escapes and renders `code`, **bold** and [links](https://...).
 func inlineMD(s string) string {
 	s = html.EscapeString(s)
 	var b strings.Builder
@@ -434,7 +442,7 @@ func inlineMD(s string) string {
 		out = strings.Replace(out, "**", "<strong>", 1)
 		out = strings.Replace(out, "**", "</strong>", 1)
 	}
-	return out
+	return mdLink.ReplaceAllString(out, `<a href="$2" rel="noreferrer">$1</a>`)
 }
 
 // GET /api/ui/incidents/{id}/report?format=md|html

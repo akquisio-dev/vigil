@@ -60,8 +60,9 @@ type Store struct {
 
 	appendErr string // last failed write, cleared by the next good one
 
-	// onAppend is told about records after they are written (forwarding).
-	onAppend func([]*Record)
+	// hooks are told about records after they are written (forwarding,
+	// attack statistics). They are set before the server starts.
+	hooks []func([]*Record)
 }
 
 // Health reports whether the log is intact and writable.
@@ -175,10 +176,12 @@ func (s *Store) Append(recs ...*Record) error {
 	if err != nil {
 		s.appendErr = err.Error()
 	}
-	cb := s.onAppend
+	hooks := s.hooks
 	s.mu.Unlock()
-	if err == nil && cb != nil {
-		cb(recs)
+	if err == nil {
+		for _, h := range hooks {
+			h(recs)
+		}
 	}
 	return err
 }

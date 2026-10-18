@@ -38,6 +38,7 @@ type Agent struct {
 	dropped       int
 	keyNames      map[string]keyRef
 	sshFails      map[string]*failures
+	sshConns      map[string]int // "ip port" -> connection state, per batch
 	canaryPaths   map[string]string
 	portsSent     bool
 	lastSeq       int64
@@ -75,6 +76,7 @@ func New(cfg *Config) (*Agent, error) {
 		http:        &http.Client{Timeout: 15 * time.Second},
 		keyNames:    map[string]keyRef{},
 		sshFails:    map[string]*failures{},
+		sshConns:    map[string]int{},
 		canaryPaths: map[string]string{},
 		flushNow:    make(chan struct{}, 1),
 		cursor:      st.JournalCursor,
