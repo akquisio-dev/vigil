@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.22.0
 
 - Containers: with `docker` on (the default) the agent asks the Docker API, with GET requests only, which containers run. Process, malware and connection findings from inside a container name it (`[container NAME]` in the alert). The agent sends an overview when it changes (`container.snapshot`), and the host page lists the containers. New rules `container.privileged` and `container.docker_socket` (high, a container that can take over the host), `container.new_image` (medium, an image never seen on the host, after a baseline) and `container.docker_group` (medium, users other than root in the docker group).
 
