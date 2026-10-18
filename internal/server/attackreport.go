@@ -189,7 +189,7 @@ func (s *Server) attackMarkdown(v *attackView, lg, by string) string {
 		p("| %s | %d | %d | %d |\n", d.Day, d.IPs, d.SSH, d.Web)
 	}
 	if s.cfg.GeoIP {
-		p("\n%s: [%s](%s)\n", tx["geo"], GeoAttribution, GeoAttributionURL)
+		p("\n%s: %s (%s)\n", tx["geo"], GeoAttribution, GeoAttributionURL)
 	} else {
 		p("\n%s\n", tx["nogeo"])
 	}
@@ -210,7 +210,12 @@ func (s *Server) handleAttackReport(w http.ResponseWriter, r *http.Request, sess
 	if r.URL.Query().Get("format") == "html" {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.Header().Set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'")
-		w.Write([]byte(mdPage(name, md)))
+		footer := ""
+		if s.cfg.GeoIP {
+			// the licence asks for a link on pages that show its results
+			footer = `<p style="font-size:11px;color:#6b6b67"><a href="` + GeoAttributionURL + `">` + GeoAttribution + `</a></p>`
+		}
+		w.Write([]byte(mdPage(name, md, footer)))
 		return
 	}
 	w.Header().Set("Content-Type", "text/markdown; charset=utf-8")

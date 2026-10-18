@@ -124,7 +124,7 @@ paths tried, the time of day and the day. Each address is put in one class:
 
 | Class | Meaning |
 |---|---|
-| successful | it logged in over SSH after failing, or an attack request was answered with 2xx or reached a web shell |
+| successful | it logged in over SSH after failing with other user names or with a password, or an attack request was answered with 2xx or reached a web shell (sites that answer every path with their start page also count here) |
 | aimed | it tried an account the host really has that is in no word list, or a name from the host names or the brand |
 | persistent | it came back on three or more days with 20 or more attempts |
 | noise | mass scanning every server on the internet gets |
@@ -136,7 +136,10 @@ cloud by their name; the free data has no network type, so it is an estimate.
 The pivot page of an address shows the same for it over 30 days.
 
 A login from an address that failed three or more SSH logins in the week
-before raises `ssh.attacker_login`.
+before raises `ssh.attacker_login` when it tried other user names or logged
+in with a password. Addresses that failed only as the user they then logged
+in as with a key are the team (an SSH client offers its keys one after the
+other) and are left out of the statistics.
 
 The report button saves the page as Markdown or opens it for printing as PDF
 (analysts and admins, recorded in the audit log).

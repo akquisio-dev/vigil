@@ -60,14 +60,18 @@ func TestAttackStats(t *testing.T) {
 	fail(now.Add(-30*time.Minute), "203.0.113.60", 3, []string{"jsmith2"}, "jsmith2")
 	fail(now.Add(-30*time.Minute), "203.0.113.61", 2, []string{"zypo"})
 	fail(now.Add(-20*time.Minute), "203.0.113.70", 5, []string{"root"}, "root")
+	fail(now.Add(-25*time.Minute), "203.0.113.70", 1, []string{"admin"})
 	login := appendAt(t, s, "a2", now.Add(-10*time.Minute), "ssh.login", map[string]any{"ip": "203.0.113.70", "user": "root", "method": "publickey"})
+	// A teammate whose client offered the wrong key first: failed as root, then in as root.
+	fail(now.Add(-9*time.Minute), "192.0.2.9", 4, []string{"root"}, "root")
+	team := appendAt(t, s, "a2", now.Add(-8*time.Minute), "ssh.login", map[string]any{"ip": "192.0.2.9", "user": "root", "method": "publickey"})
 	appendAt(t, s, "a1", now.Add(-5*time.Minute), "web.activity", map[string]any{"ip": "203.0.113.90", "requests": 50.0, "probes": 8.0,
-		"exploits_ok": 1.0, "exploit_kinds": anyList("lfi"), "samples": anyList("GET /.env?x=1", "GET /wp-login.php"), "user_agent": "zgrab"})
+		"exploits_ok": 1.0, "exploit_kinds": anyList("lfi"), "samples": anyList("GET /.env?x=1", "GET /[Login](https://evil.example)"), "user_agent": "zgrab"})
 	// An admin's ordinary login is no attack.
 	appendAt(t, s, "a1", now.Add(-5*time.Minute), "ssh.login", map[string]any{"ip": "192.0.2.5", "user": "joey", "method": "publickey"})
 
 	v := s.attackStats(7)
-	if v.Totals.IPs != 11 || v.Totals.SSH != 5*4+30+2+3+2+5 || v.Totals.Web != 50 {
+	if v.Totals.IPs != 11 || v.Totals.SSH != 5*4+30+2+3+2+5+1 || v.Totals.Web != 50 {
 		t.Fatalf("totals %+v", v.Totals)
 	}
 	class := map[string]string{}
@@ -100,10 +104,18 @@ func TestAttackStats(t *testing.T) {
 	fs := s.evaluate(s.state.Agents["a2"], login)
 	found := false
 	for _, f := range fs {
-		found = found || f.Rule == "ssh.attacker_login" && f.Params["failed"] == "5"
+		found = found || f.Rule == "ssh.attacker_login" && f.Params["failed"] == "6"
 	}
 	if !found {
 		t.Errorf("no ssh.attacker_login: %+v", fs)
+	}
+	for _, f := range s.evaluate(s.state.Agents["a2"], team) {
+		if f.Rule == "ssh.attacker_login" {
+			t.Error("a client offering the wrong key first flagged")
+		}
+	}
+	if _, listed := v.all["192.0.2.9"]; listed {
+		t.Error("the team's address listed as an attacker")
 	}
 	admin := &Record{Agent: "a1", Event: login.Event}
 	admin.Event.Data = map[string]any{"ip": "192.0.2.5", "user": "joey", "method": "publickey"}
@@ -137,8 +149,8 @@ func TestAttackStats(t *testing.T) {
 			t.Errorf("report lacks %q", want)
 		}
 	}
-	page := mdPage("x", s.attackMarkdown(v, "en", "<b>"))
-	if strings.Contains(page, "<b>") || !strings.Contains(page, "<h2>Needs attention</h2>") {
+	page := mdPage("x", s.attackMarkdown(v, "en", "<b>"), "")
+	if strings.Contains(page, "<b>") || strings.Contains(page, "<a") || !strings.Contains(page, "<h2>Needs attention</h2>") {
 		t.Error("report page not escaped or incomplete")
 	}
 	if strings.Contains(md+page, "—") || strings.Contains(md+page, " – ") {
@@ -159,5 +171,27 @@ func TestCampaignsNeedSharedLists(t *testing.T) {
 	}
 	if c := findCampaigns(list, merged); len(c) != 0 {
 		t.Fatalf("common names alone made campaigns: %+v", c)
+	}
+}
+
+// The statistics hold addresses and user names; they follow retention_days.
+func TestAttackStatsRetention(t *testing.T) {
+	s := forensicServer(t)
+	s.cfg.RetentionDays = 2
+	now := time.Now().UTC()
+	for d := 0; d <= 5; d++ {
+		appendAt(t, s, "a2", now.AddDate(0, 0, -d), "ssh.failed", map[string]any{"ip": fmt.Sprintf("198.51.100.%d", d+1), "count": 1.0, "users": anyList("root")})
+	}
+	os.MkdirAll(filepath.Join(s.cfg.DataDir, "attacks"), 0o700)
+	old := filepath.Join(s.cfg.DataDir, "attacks", now.AddDate(0, 0, -5).Format("2006-01-02")+".json")
+	os.WriteFile(old, []byte(`{"day":"x"}`), 0o600)
+	s.startAttacks()
+	waitAttacks(t, s)
+	if v := s.attackStats(30); v.Totals.IPs != 3 {
+		t.Fatalf("addresses beyond retention: %+v", v.Totals)
+	}
+	s.attacks.persist()
+	if _, err := os.Stat(old); err == nil {
+		t.Error("old day file kept")
 	}
 }

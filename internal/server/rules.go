@@ -216,7 +216,16 @@ func (s *Server) evaluate(a *AgentRec, r *Record) []finding {
 			p2 := map[string]string{"user": user, "ip": ip, "hour": fmt.Sprintf("%02d", hour), "logins": fmt.Sprint(total)}
 			add("ssh.rare_time", user+"|"+recordTime(*r).Format("2006-01-02T15"), p2)
 		}
-		if n := s.failedBefore(ip, 7); n >= 3 {
+		// A client offering the wrong key first fails as the same user it then
+		// logs in as; that is the team. An attacker tried other names or
+		// guessed a password.
+		n, tried := s.failedBefore(ip, 7)
+		other := false
+		for _, u := range tried {
+			other = other || u != user
+		}
+		pw := str(d, "method") == "password" || str(d, "method") == "keyboard-interactive/pam"
+		if n >= 3 && (other || pw) {
 			p2 := map[string]string{"user": user, "ip": ip, "failed": fmt.Sprint(n), "method": str(d, "method")}
 			add("ssh.attacker_login", k, p2)
 		}

@@ -112,9 +112,9 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 
 **Alert:** `{user} logged in from {ip}, which failed {failed} SSH logins in the last 7 days`
 
-**Fires when:** A successful SSH login from an address that failed 3 or more SSH logins in the 7 days before (on any host).
+**Fires when:** A successful SSH login from an address that failed 3 or more SSH logins in the 7 days before (on any host), and either tried other user names or logged in with a password. Failures as the same user that then logs in with a key are a client offering the wrong key first and do not count.
 
-**Known false positives:** A teammate whose key was missing at first, or who mistyped a user name; people behind one company or mobile network address.
+**Known false positives:** A teammate who mistyped a user name before; people behind one company or mobile network address.
 
 **What to do:** Treat as a successful brute force until the person confirms the login. Look at the session's commands, lock the account and block the address if nobody does.
 

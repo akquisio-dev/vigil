@@ -4,7 +4,7 @@
 
 - Attackers page: who attacked the hosts over 24 hours, 7 or 30 days, by country and network on a world map (`geoip`: DB-IP Lite, looked up on the server), user names and paths tried, time of day, campaigns of addresses trying the same lists, and a class per address (successful, aimed, persistent, noise) with the reasons. The pivot page of an address shows its origin and class.
 - Attack report as Markdown or as a page to print or save as PDF.
-- `ssh.attacker_login`: a login from an address that failed three or more SSH logins in the week before.
+- `ssh.attacker_login`: a login from an address that failed three or more SSH logins in the week before, with other user names or a password. A client offering the wrong key first is not an attacker.
 - The agent counts attempts on existing accounts: with password login off, sshd only logs them as closed connections, which were not counted before. `ssh.failed` names the tried users that exist (`existing_users`). Each connection counts once, plus each further password try.
 - The phone layout scrolls the bottom bar instead of the page.
 

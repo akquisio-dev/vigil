@@ -227,7 +227,7 @@ func (s *Server) attackStats(days int) *attackView {
 	netCC := map[uint32]map[string]int{} // a network's addresses per country
 	var list []*addrView
 	for ip, x := range merged {
-		if x.attempts() == 0 {
+		if x.attempts() == 0 || x.own() {
 			continue
 		}
 		for _, u := range x.Users {
@@ -678,24 +678,28 @@ func (s *Server) attackProfile(ip string) map[string]any {
 }
 
 // failedBefore counts the failed SSH logins of an address over the last
-// days (for ssh.attacker_login).
-func (s *Server) failedBefore(ip string, days int) int {
+// days and returns the users it tried (for ssh.attacker_login).
+func (s *Server) failedBefore(ip string, days int) (int, []string) {
 	r := &s.attacks
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.days == nil {
-		return 0
+		return 0, nil
 	}
 	n := 0
+	var users []string
 	now := time.Now().UTC()
 	for i := 0; i < days; i++ {
 		if d := r.days[now.AddDate(0, 0, -i).Format("2006-01-02")]; d != nil {
 			if x := d.IPs[ip]; x != nil {
 				n += x.SSH
+				for _, u := range x.Users {
+					users = addUnique(users, u, 50)
+				}
 			}
 		}
 	}
-	return n
+	return n, users
 }
 
 // GET /api/ui/attacks?days=1|7|30

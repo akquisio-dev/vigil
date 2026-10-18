@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -323,12 +322,13 @@ func (rd *reportData) markdown() string {
 
 // printable wraps the Markdown in a minimal HTML page for printing to PDF.
 func (rd *reportData) printable() string {
-	return mdPage("Incident "+rd.Incident.ID, rd.markdown())
+	return mdPage("Incident "+rd.Incident.ID, rd.markdown(), "")
 }
 
 // mdPage renders the Markdown subset the reports use (headings, tables,
-// lists, code) as a page to print or save as PDF. Everything is escaped.
-func mdPage(title, md string) string {
+// lists, code) as a page to print or save as PDF. Everything is escaped;
+// footer is fixed HTML from the caller, never data.
+func mdPage(title, md, footer string) string {
 	var b strings.Builder
 	b.WriteString(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>` +
 		html.EscapeString(title) + `</title><style>
@@ -393,7 +393,7 @@ a{color:inherit}
 	if inTable {
 		b.WriteString("</table>")
 	}
-	b.WriteString("</body></html>")
+	b.WriteString(footer + "</body></html>")
 	return b.String()
 }
 
@@ -418,9 +418,8 @@ func splitMDRow(line string) []string {
 	return append(cells, strings.TrimSpace(cur.String()))
 }
 
-var mdLink = regexp.MustCompile(`\[([^\]]+)\]\((https://[^)\s"<>]+)\)`)
-
-// inlineMD escapes and renders `code`, **bold** and [links](https://...).
+// inlineMD escapes and renders `code` and **bold**. Links are not
+// rendered: cells hold text attackers chose.
 func inlineMD(s string) string {
 	s = html.EscapeString(s)
 	var b strings.Builder
@@ -442,7 +441,7 @@ func inlineMD(s string) string {
 		out = strings.Replace(out, "**", "<strong>", 1)
 		out = strings.Replace(out, "**", "</strong>", 1)
 	}
-	return mdLink.ReplaceAllString(out, `<a href="$2" rel="noreferrer">$1</a>`)
+	return out
 }
 
 // GET /api/ui/incidents/{id}/report?format=md|html

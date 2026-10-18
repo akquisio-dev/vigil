@@ -35,6 +35,7 @@ type atkIP struct {
 	Shells     int       `json:"sh,omitempty"` // requests to web shells
 	WebLogins  int       `json:"wl,omitempty"` // login form posts
 	Logins     int       `json:"l,omitempty"`  // successful SSH logins
+	PwLogins   int       `json:"pl,omitempty"` // of them with a password
 	LoginUsers []string  `json:"lu,omitempty"`
 	Users      []string  `json:"u,omitempty"` // tried SSH users
 	Existing   []string  `json:"e,omitempty"` // tried users the host has an account for
@@ -47,6 +48,25 @@ type atkIP struct {
 }
 
 func (x *atkIP) attempts() int { return x.SSH + x.Web }
+
+// own tells the team's addresses apart: they failed only as the users they
+// then logged in as with a key (a client offering the wrong key first).
+// They are no attackers.
+func (x *atkIP) own() bool {
+	if x.Logins == 0 || x.PwLogins > 0 || x.Web > 0 {
+		return false
+	}
+	for _, u := range x.Users {
+		found := false
+		for _, l := range x.LoginUsers {
+			found = found || u == l
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
+}
 
 type atkDay struct {
 	Day      string            `json:"day"`
@@ -61,6 +81,7 @@ type attackRollup struct {
 	dir   string
 	days  map[string]*atkDay
 	upTo  uint64 // records up to this seq are counted by the build at start
+	keep  int    // days kept: 30, or retention_days when shorter
 	ready bool
 	cache map[int]attackCache
 }
@@ -96,7 +117,7 @@ func (r *attackRollup) add(rec Record) {
 	ip = a.Unmap().String()
 	t := recordTime(rec).UTC()
 	day := t.Format("2006-01-02")
-	if time.Since(t) > (attackDaysMax+1)*24*time.Hour || t.After(time.Now().Add(time.Hour)) {
+	if time.Since(t) > time.Duration(r.keep+1)*24*time.Hour || t.After(time.Now().Add(time.Hour)) {
 		return
 	}
 	d := r.days[day]
@@ -160,6 +181,9 @@ func (r *attackRollup) add(rec Record) {
 		}
 	case "ssh.login":
 		x.Logins++
+		if m := str(dd, "method"); m == "password" || m == "keyboard-interactive/pam" {
+			x.PwLogins++
+		}
 		x.LoginUsers = addUnique(x.LoginUsers, str(dd, "user"), 10)
 	}
 }
@@ -192,16 +216,17 @@ func (s *Server) startAttacks() {
 	r.mu.Lock()
 	r.days = map[string]*atkDay{}
 	r.upTo, _ = s.store.Head()
+	r.keep = attackDaysMax
+	if s.cfg.RetentionDays > 0 && s.cfg.RetentionDays < r.keep {
+		r.keep = s.cfg.RetentionDays
+	}
 	r.mu.Unlock()
 	s.store.hooks = append(s.store.hooks, r.onRecords)
 	go func() {
 		start := time.Now()
 		now := time.Now().UTC()
 		today := now.Format("2006-01-02")
-		days := attackDaysMax
-		if s.cfg.RetentionDays > 0 && s.cfg.RetentionDays < days {
-			days = s.cfg.RetentionDays
-		}
+		days := r.keep
 		missing := map[string]bool{}
 		var from time.Time
 		for i := days; i >= 0; i-- {
@@ -270,6 +295,7 @@ func mergeIP(into, x *atkIP) {
 	into.Shells += x.Shells
 	into.WebLogins += x.WebLogins
 	into.Logins += x.Logins
+	into.PwLogins += x.PwLogins
 	for _, l := range [][2]*[]string{{&into.LoginUsers, &x.LoginUsers}, {&into.Users, &x.Users}, {&into.Existing, &x.Existing},
 		{&into.Paths, &x.Paths}, {&into.Kinds, &x.Kinds}, {&into.Hosts, &x.Hosts}} {
 		max := attackUsersMax
@@ -315,7 +341,8 @@ func (r *attackRollup) persist() {
 		return
 	}
 	today := time.Now().UTC().Format("2006-01-02")
-	oldest := time.Now().UTC().AddDate(0, 0, -attackDaysMax).Format("2006-01-02")
+	// The statistics hold addresses and user names: they go with the log.
+	oldest := time.Now().UTC().AddDate(0, 0, -r.keep).Format("2006-01-02")
 	var write []*atkDay
 	for day, d := range r.days {
 		if day < oldest {
