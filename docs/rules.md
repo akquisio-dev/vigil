@@ -56,6 +56,7 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 | [`process.service_shell`](#process-service_shell) | high | [T1505.003](https://attack.mitre.org/techniques/T1505/003/) |
 | [`secret.exposed`](#secret-exposed) | high | [T1552.001](https://attack.mitre.org/techniques/T1552/001/) |
 | [`selftest.failed`](#selftest-failed) | high | [T1562.001](https://attack.mitre.org/techniques/T1562/001/) |
+| [`server.backup_stale`](#server-backup_stale) | high | [T1490](https://attack.mitre.org/techniques/T1490/) |
 | [`ssh.attacker_login`](#ssh-attacker_login) | high | [T1110](https://attack.mitre.org/techniques/T1110/) |
 | [`ssh.key_added`](#ssh-key_added) | high | [T1098.004](https://attack.mitre.org/techniques/T1098/004/) |
 | [`ssh.password_login`](#ssh-password_login) | high | [T1078](https://attack.mitre.org/techniques/T1078/) |
@@ -84,7 +85,6 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 | [`process.decode_exec`](#process-decode_exec) | medium | [T1140](https://attack.mitre.org/techniques/T1140/) |
 | [`process.rare_child`](#process-rare_child) | medium | [T1059](https://attack.mitre.org/techniques/T1059/) |
 | [`process.tmp_exec`](#process-tmp_exec) | medium | [T1204.002](https://attack.mitre.org/techniques/T1204/002/) |
-| [`server.backup_stale`](#server-backup_stale) | medium | [T1490](https://attack.mitre.org/techniques/T1490/) |
 | [`ssh.new_source`](#ssh-new_source) | medium | [T1078](https://attack.mitre.org/techniques/T1078/) |
 | [`tls.expiring`](#tls-expiring) | medium |  |
 | [`updates.security_pending`](#updates-security_pending) | medium |  |
@@ -1262,6 +1262,18 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 
 **What to do:** The alert names the step that went missing. Check the agent log (`journalctl -u vigil-agent`) for collector warnings, then run the test again from the host page. A sensor that stopped working silently, for example after a kernel update, is exactly what this catches.
 
+### `server.backup_stale` {#server-backup_stale}
+
+**Severity:** high · **ATT&CK:** [T1490](https://attack.mitre.org/techniques/T1490/)
+
+**Alert:** `No new backup in {dir} for {age}`
+
+**Fires when:** The newest backup in `backup.dir` is older than `backup.max_age_hours` (default 36), or there is none once the server has run that long. It resolves itself with the next backup.
+
+**Known false positives:** The backup timer was stopped on purpose, or the machine was off.
+
+**What to do:** Run `systemctl status vigil-server-backup.service` and `journalctl -u vigil-server-backup`. A full disk, a changed data directory or a broken `backup.recipient` are the usual causes. Without a fresh backup, losing this machine loses the alerts, incidents and accounts since the last one.
+
 ### `agent.update_failed` {#agent-update_failed}
 
 **Severity:** medium
@@ -1273,18 +1285,6 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 **Known false positives:** Hosts without internet access to GitHub; vigil-agent-update.path not enabled.
 
 **What to do:** Read the error. A failed signature check means the download was not the published release: find out why before trying again.
-
-### `server.backup_stale` {#server-backup_stale}
-
-**Severity:** medium · **ATT&CK:** [T1490](https://attack.mitre.org/techniques/T1490/)
-
-**Alert:** `No new backup in {dir} for {age}`
-
-**Fires when:** The newest backup in `backup.dir` is older than `backup.max_age_hours` (default 36), or there is none once the server has run that long. It resolves itself with the next backup.
-
-**Known false positives:** The backup timer was stopped on purpose, or the machine was off.
-
-**What to do:** Run `systemctl status vigil-server-backup.service` and `journalctl -u vigil-server-backup`. A full disk, a changed data directory or a broken `backup.recipient` are the usual causes. Without a fresh backup, losing this machine loses the alerts, incidents and accounts since the last one.
 
 ### `agent.dropped` {#agent-dropped}
 

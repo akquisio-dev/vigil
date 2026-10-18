@@ -2,10 +2,10 @@
 
 ## v0.20.0
 
-- Backups of the server: `vigil-server backup` writes the data directory, the config file and the files it names into one file, sealed for a public key from `vigil-server backup keygen` (X25519, AES-256-GCM in authenticated chunks); the secret key stays off the server. `backup check` verifies a file completely, `restore` unpacks, checks and only then swaps the data directory, keeping the old one. New units `vigil-server-backup.service` and `.timer` (daily, as `vigil`, no network) and the rule `server.backup_stale`. Existing installations copy both units from the release.
+- Backups of the server: `vigil-server backup` writes the data directory, the config file and the files it names into one file, sealed for a public key from `vigil-server backup keygen` (X25519, AES-256-GCM in authenticated chunks); the secret key stays off the server. `backup check` verifies a file completely, `restore` unpacks, checks and only then swaps the data directory, keeping the old one. New units `vigil-server-backup.service` and `.timer` (daily, as `vigil`, no network) and the rule `server.backup_stale` (high). Existing installations copy both units from the release.
 - The server locks its data directory, so a second server or a restore cannot run on it at the same time.
 - An agent that holds a newer config than the server, as after a restore, gets the server's config again instead of ignoring it until the counter catches up.
-- Agent `fallback`: a notifier the agent uses itself when the server has not taken a batch for `fallback_minutes` (15), and again when it does. It covers a server machine that is gone, without an outside service.
+- Agent `fallback`: a notifier the agent uses itself when the server has not taken a batch for `fallback_minutes` (15), and again when it does; `vigil-agent fallback test` checks the channel. It covers a server machine that is gone, without an outside service.
 - The notifiers moved to `internal/notify`, shared by server and agent.
 
 ## v0.19.2

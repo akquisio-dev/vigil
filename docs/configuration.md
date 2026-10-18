@@ -363,6 +363,7 @@ not taken a batch for `fallback_minutes`, and one when it does again:
 "fallback_minutes": 15
 ```
 
+Check the channel right away with `vigil-agent fallback test`.
 `fallback` takes the same fields as a server notifier (`discord`, `slack`,
 `ntfy`, `telegram`, `webhook`, `smtp`). It covers a server machine that is
 off, a broken network path between host and server, and a server that refuses
