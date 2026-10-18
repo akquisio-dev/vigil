@@ -354,18 +354,25 @@ func roundUp(x float64) float64 {
 // index format: one line per package and entry. The zip is read entry by
 // entry from its local headers, so neither the 200 MB file nor its central
 // directory (one header per record) is ever held. A stream that ends before
-// the central directory is cut off and fails.
-func BuildIndex(r io.Reader, eco string, w io.Writer) (int, error) {
+// the central directory is cut off and fails. newest is the latest modified
+// time in the dump: the dump is a snapshot, often hours old, and changes
+// after it are to be fetched record by record.
+func BuildIndex(r io.Reader, eco string, w io.Writer) (n int, newest time.Time, err error) {
 	gz := gzip.NewWriter(w)
 	bw := bufio.NewWriter(gz)
-	n := 0
-	err := walkZip(r, func(name string, raw []byte) error {
+	err = walkZip(r, func(name string, raw []byte) error {
 		if !strings.HasSuffix(name, ".json") {
 			return nil
 		}
 		_, entries, withdrawn, err := Parse(raw, eco)
 		if err != nil || withdrawn {
 			return nil
+		}
+		for _, e := range entries {
+			if t, err := time.Parse(time.RFC3339Nano, e.Modified); err == nil && t.After(newest) {
+				newest = t
+			}
+			break
 		}
 		for pkg, e := range entries {
 			if err := writeLine(bw, pkg, e); err != nil {
@@ -376,12 +383,12 @@ func BuildIndex(r io.Reader, eco string, w io.Writer) (int, error) {
 		return nil
 	})
 	if err != nil {
-		return n, err
+		return n, newest, err
 	}
 	if err := bw.Flush(); err != nil {
-		return n, err
+		return n, newest, err
 	}
-	return n, gz.Close()
+	return n, newest, gz.Close()
 }
 
 const maxRecord = 8 << 20

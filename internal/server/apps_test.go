@@ -166,3 +166,60 @@ func TestOSVSync(t *testing.T) {
 		t.Fatalf("second sync: %+v %v", m2, err)
 	}
 }
+
+// The dump is a snapshot: a record changed after it but before the build
+// must come with the first sync.
+func TestOSVSyncAfterBuild(t *testing.T) {
+	changed := strings.Replace(osvRecords["npm/GHSA-r5fr-rjxr-66jc"], `"HIGH"`, `"CRITICAL"`, 1)
+	modified := time.Now().UTC().Add(-3 * time.Hour).Format(time.RFC3339)
+	osvDumps(t, map[string]string{
+		"npm/modified_id.csv":          modified + ",GHSA-r5fr-rjxr-66jc\n2026-10-18T02:00:13Z,MAL-2026-17907\n",
+		"npm/GHSA-r5fr-rjxr-66jc.json": changed,
+		"npm/MAL-2026-17907.json":      osvRecords["npm/MAL-2026-17907"], // within the hour to spare
+	})
+	s := &Server{cfg: &Config{VulnLookup: true, DataDir: t.TempDir()}, state: &State{Agents: map[string]*AgentRec{}}}
+	os.MkdirAll(s.vulnDir(), 0o700)
+	meta, err := s.buildOSV("npm")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "2026-10-18T01:00:13Z"; meta.Synced.Format(time.RFC3339) != want {
+		t.Fatalf("watermark %v, want %s (newest record of the dump, an hour to spare)", meta.Synced, want)
+	}
+	if _, err := s.syncOSV("npm", meta); err != nil {
+		t.Fatal(err)
+	}
+	if ov := s.loadOverlay("npm"); ov.Records["GHSA-r5fr-rjxr-66jc"]["lodash"] == nil || ov.Records["GHSA-r5fr-rjxr-66jc"]["lodash"].Severity != "critical" {
+		t.Fatalf("change after the snapshot missed: %+v", ov.Records)
+	}
+}
+
+// Without data for one ecosystem (a failed download), its open alerts stay
+// open and the other ecosystems still alert.
+func TestAppVulnMissingEcosystem(t *testing.T) {
+	osvDumps(t, nil)
+	s := &Server{cfg: &Config{VulnLookup: true, DataDir: t.TempDir()}, state: &State{Agents: map[string]*AgentRec{}, KnownLogins: map[string]time.Time{}}}
+	os.MkdirAll(s.vulnDir(), 0o700)
+	s.vdb.running.Store(true)
+	a := &AgentRec{ID: "a1", Name: "host", Baseline: map[string]bool{}, StartedOnce: true}
+	s.state.Agents[a.ID] = a
+	inv := &appInventory{Manifests: []appManifest{{Path: "/srv/x"}}, Packages: []appPackage{{"npm", "evil-pkg", "1.0.0", 0}, {"PyPI", "flask-cors", "3.0.8", 0}}}
+	s.apps = map[string]*appInventory{"a1": inv}
+	s.refreshOSV()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if fresh := s.raise(s.matchApps(a, inv), a.ID, 1); len(fresh) != 2 {
+		t.Fatalf("first: %d alerts", len(fresh))
+	}
+	delete(s.odb.idx, "npm")
+	inv.Packages = append(inv.Packages, appPackage{"npm", "lodash", "4.17.21", 0})
+	inv.Packages[1].Version = "3.0.9" // flask-cors updated
+	s.raise(s.matchApps(a, inv), a.ID, 1)
+	open := map[string]bool{}
+	for _, al := range s.state.Alerts {
+		open[al.Rule+" "+al.Status] = true
+	}
+	if !open["vuln.app_malicious open"] || !open["vuln.app_severe resolved"] || len(a.AppVulns.Missing) != 1 {
+		t.Fatalf("alerts: %v, missing %v", open, a.AppVulns.Missing)
+	}
+}

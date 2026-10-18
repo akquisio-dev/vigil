@@ -166,16 +166,16 @@ func TestIndexAndOverlay(t *testing.T) {
 
 	var idx bytes.Buffer
 	raw, _ := os.ReadFile(zp)
-	n, err := BuildIndex(bytes.NewReader(raw), NPM, &idx)
-	if err != nil || n != 3 {
-		t.Fatalf("BuildIndex: %d %v", n, err)
+	n, newest, err := BuildIndex(bytes.NewReader(raw), NPM, &idx)
+	if err != nil || n != 3 || newest.Format(time.RFC3339) != "2026-10-18T02:00:13Z" {
+		t.Fatalf("BuildIndex: %d %v %v", n, newest, err)
 	}
-	if _, err := BuildIndex(bytes.NewReader(raw[:len(raw)/2]), NPM, io.Discard); err == nil {
+	if _, _, err := BuildIndex(bytes.NewReader(raw[:len(raw)/2]), NPM, io.Discard); err == nil {
 		t.Fatal("a cut off dump was read")
 	}
 	bad := bytes.Clone(raw)
 	bad[60] ^= 0xff
-	if _, err := BuildIndex(bytes.NewReader(bad), NPM, io.Discard); err == nil {
+	if _, _, err := BuildIndex(bytes.NewReader(bad), NPM, io.Discard); err == nil {
 		t.Fatal("a damaged dump was read")
 	}
 	got, err := Scan(bytes.NewReader(idx.Bytes()), nil, map[string]bool{"lodash": true, "other": true})

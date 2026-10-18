@@ -72,9 +72,9 @@ func manifestEco(name string) string {
 }
 
 // findManifests walks the roots for lock files. It does not follow links,
-// stays on the root's filesystem and stops at the limits above.
-func findManifests(ctx context.Context, roots []string) ([]string, error) {
-	var out []string
+// stays on the root's filesystem and stops at the limits above, saying so
+// with capped.
+func findManifests(ctx context.Context, roots []string) (out []string, capped bool, err error) {
 	dirs := 0
 	for _, root := range roots {
 		var rst syscall.Stat_t
@@ -90,10 +90,11 @@ func findManifests(ctx context.Context, roots []string) ([]string, error) {
 			d := stack[len(stack)-1]
 			stack = stack[:len(stack)-1]
 			if dirs++; dirs > appMaxDirs || len(out) >= appMaxManifests {
-				return out, nil
+				sort.Strings(out)
+				return out, true, nil
 			}
 			if ctx.Err() != nil {
-				return out, ctx.Err()
+				return out, false, ctx.Err()
 			}
 			ents, err := os.ReadDir(d.path)
 			if err != nil {
@@ -118,7 +119,7 @@ func findManifests(ctx context.Context, roots []string) ([]string, error) {
 		}
 	}
 	sort.Strings(out)
-	return out, nil
+	return out, false, nil
 }
 
 // parseManifest reads one lock file.
@@ -397,7 +398,7 @@ func (a *Agent) runApps(ctx context.Context) {
 		case <-t.C:
 		}
 		t.Reset(appEvery)
-		paths, err := findManifests(ctx, a.appRoots())
+		paths, capped, err := findManifests(ctx, a.appRoots())
 		if ctx.Err() != nil {
 			return
 		}
@@ -426,6 +427,9 @@ func (a *Agent) runApps(ctx context.Context) {
 		}
 		cache = next
 		d, sum := appInventory(ms)
+		if capped {
+			d["truncated"] = true
+		}
 		if sum == lastHash && time.Since(lastSent) < 24*time.Hour {
 			continue
 		}

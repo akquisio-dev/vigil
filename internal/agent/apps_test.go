@@ -6,8 +6,11 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"runtime/debug"
+	"runtime/metrics"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestParseNpmLock(t *testing.T) {
@@ -68,8 +71,8 @@ func TestFindManifests(t *testing.T) {
 		os.WriteFile(filepath.Join(root, p), []byte("{}"), 0o644)
 	}
 	os.Symlink(filepath.Join(root, "a"), filepath.Join(root, "link"))
-	got, err := findManifests(context.Background(), []string{root})
-	if err != nil {
+	got, capped, err := findManifests(context.Background(), []string{root})
+	if err != nil || capped {
 		t.Fatal(err)
 	}
 	for i := range got {
@@ -117,15 +120,35 @@ func TestParseNpmLockStaysSmall(t *testing.T) {
 	os.WriteFile(path, []byte(b.String()), 0o644)
 	fi, _ := os.Stat(path)
 
-	var before, after runtime.MemStats
+	// Collect often, so the live heap shows what is held, and sample it
+	// while the file is read.
+	defer debug.SetGCPercent(debug.SetGCPercent(10))
 	runtime.GC()
-	runtime.ReadMemStats(&before)
-	pkgs, err := parseManifest(path)
-	runtime.ReadMemStats(&after)
+	sample := []metrics.Sample{{Name: "/memory/classes/heap/objects:bytes"}}
+	metrics.Read(sample)
+	base := sample[0].Value.Uint64()
+	done := make(chan struct{})
+	var pkgs []appPkg
+	var err error
+	go func() { pkgs, err = parseManifest(path); close(done) }()
+	var peak uint64
+	for running := true; running; {
+		select {
+		case <-done:
+			running = false
+		case <-time.After(200 * time.Microsecond):
+		}
+		metrics.Read(sample)
+		if v := sample[0].Value.Uint64(); v > base && v-base > peak {
+			peak = v - base
+		}
+	}
 	if err != nil || len(pkgs) != appMaxPackages {
 		t.Fatalf("%d packages, %v", len(pkgs), err)
 	}
-	if peak := after.HeapSys - before.HeapSys; peak > 16<<20 {
-		t.Fatalf("heap grew by %d MB for a %d MB file", peak>>20, fi.Size()>>20)
+	// Decoding the whole file into a map takes several times its size.
+	if peak > 8<<20 {
+		t.Fatalf("live heap rose by %d MB for a %d MB file", peak>>20, fi.Size()>>20)
 	}
+	t.Logf("live heap peak +%d KB for a %d KB file", peak>>10, fi.Size()>>10)
 }

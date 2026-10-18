@@ -288,8 +288,9 @@ func osvGet(c *http.Client, u string, hdr map[string]string) (*http.Response, er
 }
 
 // buildOSV reads the ecosystem's dump as it downloads into a new index.
-// The overlay starts empty; changes since an hour before the download are
-// picked up by the next sync.
+// The overlay starts empty. The dump is a snapshot of some hours ago, so
+// the next sync fetches what changed since its newest record (with an hour
+// to spare; a record fetched twice replaces itself).
 func (s *Server) buildOSV(eco string) (osvMeta, error) {
 	start := time.Now().UTC()
 	res, err := osvGet(&http.Client{Timeout: 30 * time.Minute}, osvBase+eco+"/all.zip", nil)
@@ -302,7 +303,7 @@ func (s *Server) buildOSV(eco string) (osvMeta, error) {
 		return s.loadOSVMeta(eco), err
 	}
 	defer os.Remove(tmp.Name())
-	n, err := osv.BuildIndex(io.LimitReader(res.Body, osvMaxZip), eco, tmp)
+	n, newest, err := osv.BuildIndex(io.LimitReader(res.Body, osvMaxZip), eco, tmp)
 	if cerr := tmp.Close(); err == nil {
 		err = cerr
 	}
@@ -313,7 +314,10 @@ func (s *Server) buildOSV(eco string) (osvMeta, error) {
 		return s.loadOSVMeta(eco), err
 	}
 	os.Remove(s.osvPath(eco, "overlay.json"))
-	m := osvMeta{Built: start, Synced: start.Add(-time.Hour), Checked: start, Lines: n}
+	if newest.IsZero() || newest.After(start) {
+		newest = start.Add(-48 * time.Hour)
+	}
+	m := osvMeta{Built: start, Synced: newest.Add(-time.Hour), Checked: start, Lines: n}
 	raw, _ := json.Marshal(m)
 	return m, writeAtomic(s.osvPath(eco, "meta.json"), raw)
 }
@@ -337,7 +341,14 @@ func (s *Server) syncOSV(eco string, meta osvMeta) (osvMeta, error) {
 		if err != nil {
 			return meta, err
 		}
-		whole := res.StatusCode == http.StatusOK || int64(len(b)) < size
+		// A 206 names the full length; a server that ignores Range sends
+		// it all, cut here at size+1.
+		whole := int64(len(b)) <= size
+		if res.StatusCode == http.StatusPartialContent {
+			_, total, _ := strings.Cut(res.Header.Get("Content-Range"), "/")
+			n, err := strconv.ParseInt(total, 10, 64)
+			whole = err == nil && n <= size
+		}
 		if !whole {
 			b = b[:strings.LastIndexByte(string(b), '\n')+1] // a cut last line
 		}
@@ -392,8 +403,12 @@ func (s *Server) syncOSV(eco string, meta osvMeta) (osvMeta, error) {
 // Caller holds s.mu.
 func (s *Server) matchApps(a *AgentRec, inv *appInventory) []finding {
 	sum := &AppVulnSummary{Checked: time.Now().UTC(), Manifests: len(inv.Manifests), Packages: len(inv.Packages), Truncated: inv.Truncated, Counts: map[string]int{}}
+	// refreshOSV replaces the inner maps but never changes one.
 	s.odb.mu.RLock()
-	idx := s.odb.idx
+	idx := make(map[string]map[string][]*osv.Entry, len(s.odb.idx))
+	for k, v := range s.odb.idx {
+		idx[k] = v
+	}
 	s.odb.mu.RUnlock()
 	s.vdb.mu.RLock()
 	kev := s.vdb.kev
@@ -516,9 +531,14 @@ func (s *Server) matchApps(a *AgentRec, inv *appInventory) []finding {
 	perPackage("vuln.app_severe", severe)
 	sort.Slice(conds, func(i, j int) bool { return conds[i].rule+conds[i].key < conds[j].rule+conds[j].key })
 	a.AppVulns = sum
-	if len(sum.Missing) > 0 {
-		// Data not loaded yet: keep what is open until it is.
-		return nil
+	// An ecosystem without data (a failed download) keeps its open
+	// conditions until its data is back.
+	for full := range a.Conditions["apps"] {
+		rule, rest, _ := strings.Cut(full, "|")
+		_, key, _ := strings.Cut(rest, "|")
+		if eco, _, _ := strings.Cut(key, "|"); missing[eco] {
+			conds = append(conds, condition{rule, key, nil})
+		}
 	}
 	return s.conditionFindings(a, "apps", conds)
 }
