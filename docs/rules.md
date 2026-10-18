@@ -1271,9 +1271,9 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 
 **Alert:** `Fake {identifier} log entry written by {comm} (uid {uid})`
 
-**Fires when:** A process other than sshd or sudo wrote a journal entry that claims to come from them.
+**Fires when:** A process other than sshd or sudo wrote a journal entry that claims to come from them: any sender that is not root, or root under another program name. A root sender whose name journald could not read (it had exited) counts as genuine; sshd often exits that fast for connections closed before authentication.
 
-**Known false positives:** None known. `logger -t sshd` in a test script would trigger it.
+**Known false positives:** `logger -t sshd` in a test script. Agents before v0.21.0 also raised it for the root sshd case above, with an empty program name.
 
 **What to do:** Someone is trying to plant fake log entries. Find the process named in the alert.
 

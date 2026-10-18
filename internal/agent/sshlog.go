@@ -117,7 +117,7 @@ func (a *Agent) followJournal(ctx context.Context, bin string) error {
 		// for anyone). _COMM and _UID are set by journald and cannot be faked.
 		comm, _ := entry["_COMM"].(string)
 		uid, _ := entry["_UID"].(string)
-		if uid != "0" || !trustedComm[comm] {
+		if spoofedLog(uid, comm) {
 			if ident != "" && trustedComm[ident] {
 				a.emit(proto.NewEvent("log.spoofed", map[string]any{"identifier": ident, "comm": clip(comm), "uid": uid, "message": clip(msg)}))
 			}
@@ -257,4 +257,14 @@ func (a *Agent) handleSudo(msg string, ts time.Time) {
 func atoi(s string) int {
 	n, _ := strconv.Atoi(s)
 	return n
+}
+
+// spoofedLog tells an entry under a trusted identifier that its sender
+// did not write. _UID comes with the message (socket credentials); _COMM is
+// read from /proc and is missing when the sender exited first, as an sshd
+// for a connection closed before authentication often has. Only root can
+// send as uid 0, and root could as well name its program sshd, so uid 0
+// with an unknown name counts as genuine.
+func spoofedLog(uid, comm string) bool {
+	return uid != "0" || (comm != "" && !trustedComm[comm])
 }
