@@ -162,6 +162,7 @@ them.
 | `canary_ignore_exe` | none | executables whose canary opens are ignored (backup tools) |
 | `ssh`, `ports`, `docker` | true | collectors on/off |
 | `response` | off | allow response actions (isolate, block, kill) from the dashboard |
+| `fallback` | none | a notifier the agent tells itself when the server is unreachable for `fallback_minutes` (15) |
 
 `server.json`
 
@@ -177,6 +178,7 @@ them.
 | `retention_days` | 90 | days of event log to keep |
 | `anchor_daily` | false | post the chain head to all notifiers once a day |
 | `heartbeat_url` | | fetched every minute, for an outside watchdog |
+| `backup` | | `recipient` public key, `dir`, `keep`: daily sealed backups with `vigil-server-backup.timer` |
 | `notifiers` | | `discord`, `slack`, `ntfy`, `telegram`, `webhook` or `smtp`, each with `min_severity` |
 | `summary_time` | | send a daily summary at this time, e.g. `"07:30"` |
 | `vuln_lookup` | false | known and exploited vulnerabilities in installed packages |

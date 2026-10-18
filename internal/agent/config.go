@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/akquisio-dev/vigil/internal/notify"
 )
 
 // Config is the local agent configuration (/etc/vigil/agent.json). Everything
@@ -58,6 +60,11 @@ type Config struct {
 	// SelfUpdate lets the server ask for a newer signed release, which the
 	// vigil-agent-update units install. Off by default.
 	SelfUpdate bool `json:"self_update,omitempty"`
+	// Fallback is a notifier the agent uses itself when the server has not
+	// taken a batch for FallbackMinutes (default 15), and again once it
+	// does. Same fields as a server notifier.
+	Fallback        *notify.Config `json:"fallback,omitempty"`
+	FallbackMinutes int            `json:"fallback_minutes,omitempty"`
 	// SelfTest lets the server ask for a self test: a comment-only file in
 	// /etc/cron.d, a copy of `sleep` started from /tmp and an sshd-tagged log
 	// line, all removed right away. On by default.
@@ -144,6 +151,21 @@ func LoadConfig(path string) (*Config, error) {
 	}
 	if c.MaxQueue <= 0 {
 		c.MaxQueue = 5000
+	}
+	if c.Fallback != nil {
+		if c.Fallback.Name == "" {
+			c.Fallback.Name = "fallback"
+		}
+		if err := c.Fallback.Check(); err != nil {
+			return nil, fmt.Errorf("fallback: %w", err)
+		}
+	}
+	// Shorter than a server update by hand, it would fire on every release.
+	if c.FallbackMinutes <= 0 {
+		c.FallbackMinutes = 15
+	}
+	if c.FallbackMinutes < 5 {
+		c.FallbackMinutes = 5
 	}
 	for i, r := range c.CanaryRoots {
 		r = filepath.Clean(r)

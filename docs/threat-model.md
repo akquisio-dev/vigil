@@ -180,6 +180,15 @@ to the newest release, which they would also get by hand, and nothing else.
 - Notifiers are the only way alerts leave the server on their own. If all of
   them fail, `notify.failed` is visible only in the dashboard; the outside
   heartbeat does not cover delivery.
+- A backup file is as sensitive as the data directory: server key, password
+  hashes, TOTP secrets, notifier URLs from the config. It is sealed for the
+  backup public key; whoever holds the secret key can read every backup, and
+  a backup made with `-plain` can be read by anyone with the file. The
+  server never sees the secret key, so a compromised server cannot open old
+  backups, but it can make new ones contain what it likes.
+- An agent's `fallback` notifier URL is stored on that host, readable by
+  root there. A webhook that can only post into one channel limits what it
+  gives away.
 - Vulnerability matching knows only what the distribution packaged. Software
   installed by hand, from language package managers (npm, pip, Go modules),
   in containers or snaps is not matched. The kernel counts by the newest

@@ -57,6 +57,7 @@ type Agent struct {
 	yara          yaraEngine
 	bg            sync.WaitGroup // background scans, waited for in tests
 	rare          *RareState
+	fallback      *fallbackWatch
 }
 
 func New(cfg *Config) (*Agent, error) {
@@ -80,6 +81,7 @@ func New(cfg *Config) (*Agent, error) {
 		canaryPaths: map[string]string{},
 		flushNow:    make(chan struct{}, 1),
 		cursor:      st.JournalCursor,
+		fallback:    newFallbackWatch(cfg),
 	}, nil
 }
 
@@ -282,6 +284,9 @@ func (a *Agent) send(ctx context.Context) {
 
 	b := proto.Batch{AgentID: a.id.AgentID, Seq: a.nextSeq(), SentAt: time.Now().UTC(), ConfigVersion: a.state.ConfigVersion, Events: events}
 	resp, err := a.post(ctx, "/api/agent/events", b)
+	if ctx.Err() == nil {
+		a.fallback.result(err, time.Now())
+	}
 	if err != nil {
 		log.Printf("send: %v", err)
 		a.mu.Lock()

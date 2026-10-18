@@ -57,6 +57,8 @@ the defaults below.
 | `self_update` | false | let admins update this agent from the dashboard to a newer signed release, see [Operations](operations.md#agents-from-the-dashboard) |
 | `selftest` | true | accept self tests from the server, see [Operations](operations.md#self-test) |
 | `max_queue` | 5000 | events kept while the server is unreachable |
+| `fallback` | none | a notifier the agent uses itself when it cannot reach the server, see [Watching the server from outside](#watching-the-server-from-outside) |
+| `fallback_minutes` | 15 | how long the server must be unreachable before `fallback` is told (at least 5) |
 
 Everything that limits what the server may ask of an agent lives in this file
 and only here. The dashboard cannot widen `canary_roots`.
@@ -170,6 +172,7 @@ it came from the proxy.
 | `anchor_daily` | false | post the head of the event chain to all notifiers once a day |
 | `selftest_days` | 7 | run a self test on every host this often and send the result to all notifiers; `-1` turns the schedule off |
 | `heartbeat_url` | | fetched every minute while the server is healthy, for an outside dead man's switch |
+| `backup` | none | sealed backups of the server, see [Operations](operations.md#backups) |
 | `notifiers` | none | see below |
 | `notify_group_minutes` | 10 | collect the follow-up alerts of an incident into one message this often; `-1` sends every alert on its own, see [below](#one-message-per-incident) |
 | `summary_time` | none | send a [daily summary](#daily-summary) at this time (`"07:30"`, the server's local time) |
@@ -350,6 +353,24 @@ switch service, which alerts you when the pings stop:
 Any service that accepts a periodic GET works: healthchecks.io (free tier,
 self-hostable), Uptime Kuma (push monitor), Better Stack, Cronitor. Set the
 expected period to one minute and a grace time of a few minutes.
+
+Without an outside service, let the agents watch the server. An agent with
+`fallback` sends one message straight to that channel when the server has
+not taken a batch for `fallback_minutes`, and one when it does again:
+
+```json
+"fallback": {"type": "discord", "url": "https://discord.com/api/webhooks/..."},
+"fallback_minutes": 15
+```
+
+`fallback` takes the same fields as a server notifier (`discord`, `slack`,
+`ntfy`, `telegram`, `webhook`, `smtp`). It covers a server machine that is
+off, a broken network path between host and server, and a server that refuses
+the agent. It does not cover a server that takes batches but is otherwise
+broken; `heartbeat_url` does. Put it on a host other than the server's own,
+and keep `fallback_minutes` longer than an update of the server by hand, or
+every release sends two messages. The webhook URL then lives on that host
+too; a webhook that may only post into one channel limits what it gives away.
 
 The server pings once a minute, and only while it is healthy. It stops pinging
 when the event chain fails verification, the event log or the data directory
