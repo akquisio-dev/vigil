@@ -18,7 +18,18 @@ jobs:
           go-version-file: go.mod
       - run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
       - run: go vet ./...
-      - run: go test ./...
+      - name: go test
+        # Failing tests also go out as an annotation, which can be read
+        # without signing in.
+        run: |
+          set +e
+          go test ./... 2>&1 | tee test.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            msg=$(grep -B2 -A20 -e '--- FAIL' -e '^panic:' test.log | head -100 | sed 's/%/%25/g' | awk 'BEGIN{ORS="%0A"}{print}')
+            echo "::error title=go test::$msg"
+          fi
+          exit $status
       - name: Rule catalogue is up to date
         run: go run ./tools/gendocs -check
       - run: make build
