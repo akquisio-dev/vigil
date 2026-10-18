@@ -14,6 +14,7 @@ internal/agent      collectors, canaries, sender
 internal/server     ingestion, event log, rules, alerts, notifiers, dashboard API
 internal/server/web dashboard (static HTML, CSS, JavaScript; no build step)
 tools/gendocs       generates the rule catalogue
+tools/worldmap      builds the dashboard's world map from Natural Earth
 ```
 
 Both binaries use only the Go standard library.
@@ -135,10 +136,28 @@ before they can reach a mail header.
 
 ### State
 
-`state.json` holds agents, alerts, canaries, enrollment tokens and known
-login sources. `users.json` holds dashboard users and is reread on every login,
+`state.json` holds agents, alerts, canaries, enrollment tokens, known
+login sources, incidents, suppressions, saved searches, response actions and
+self tests. `users.json` holds dashboard users and is reread on every login,
 so `vigil-server user add` works while the server runs. Both are written
 atomically.
+
+### Threat data
+
+With `vuln_lookup`, `hash_intel`, `threat_intel` and `geoip`, the server
+downloads public data (security trackers, malware hashes, block lists, DB-IP
+Lite) into `data_dir/vuln`, `intel` and `geo` and matches it locally. Nothing
+about the hosts leaves the server. Downloads are size-limited and replace
+the copy in memory only once they have been read without errors; when a
+download fails, the server keeps working with the copy it has and shows the
+error on the settings page.
+
+### Attack statistics
+
+The attackers page reads per-day summaries in `data_dir/attacks` instead of
+the whole log. Today is rebuilt from the log on start, past days are written
+once and kept for `retention_days`, at most 30. The summaries are derived
+data: deleting the directory loses nothing, they are rebuilt from the log.
 
 ### Dashboard
 

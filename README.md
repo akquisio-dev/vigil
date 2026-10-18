@@ -4,7 +4,7 @@ A small security operations center for small server fleets.
 
 vigil is for people who run one to a few dozen Linux servers and want real
 detection without running Elasticsearch next to their workload. One agent per
-host (a static binary, around 10 MB of memory), one central server, no
+host (a static binary, 10 to 20 MB of memory), one central server, no
 external dependencies.
 
 > Status: early. The pieces below work and are tested on Ubuntu 24.04, but
@@ -53,7 +53,7 @@ and an outside heartbeat stops when the server is down or unhealthy.
       \   VPN or HTTPS   /
        v                v
           vigil-server  ─── hash-chained event log
-               │        ─── rules → alerts → Discord / webhook / mail
+               │        ─── rules → alerts → chat / push / webhook / mail
                │        ─── daily chain anchor to the notifiers
            dashboard (localhost, behind your TLS proxy)
 ```
@@ -91,7 +91,17 @@ Full documentation, including the catalogue of all detection rules:
 
 ## Quick start
 
-Build (Go 1.25+):
+From a signed release (needs [cosign](https://docs.sigstore.dev/cosign/system_config/installation/)):
+
+```sh
+curl -fsSLO https://github.com/akquisio-dev/vigil/releases/latest/download/install.sh
+less install.sh
+sh install.sh server
+sh install.sh agent -server http://10.0.0.1:8471 -token vgl_...   # on each host
+```
+
+[Getting started](docs/getting-started.md) walks through it step by step. To
+build from source instead (Go 1.25+):
 
 ```sh
 make build        # dist/vigil-agent, dist/vigil-server
@@ -135,6 +145,9 @@ of a process (for programs that pick random ports on every start).
 
 ## Configuration
 
+The most used keys; [docs/configuration.md](docs/configuration.md) has all of
+them.
+
 `agent.json`
 
 | Key | Default | Meaning |
@@ -146,6 +159,7 @@ of a process (for programs that pick random ports on every start).
 | `canary_roots` | none | directories the dashboard may place canaries in; empty disables canaries |
 | `canary_ignore_exe` | none | executables whose canary opens are ignored (backup tools) |
 | `ssh`, `ports`, `docker` | true | collectors on/off |
+| `response` | off | allow response actions (isolate, block, kill) from the dashboard |
 
 `server.json`
 
@@ -161,7 +175,12 @@ of a process (for programs that pick random ports on every start).
 | `retention_days` | 90 | days of event log to keep |
 | `anchor_daily` | false | post the chain head to all notifiers once a day |
 | `heartbeat_url` | | fetched every minute, for an outside watchdog |
-| `notifiers` | | `discord`, `webhook` or `smtp`, each with `min_severity` |
+| `notifiers` | | `discord`, `slack`, `ntfy`, `telegram`, `webhook` or `smtp`, each with `min_severity` |
+| `vuln_lookup` | false | known and exploited vulnerabilities in installed packages |
+| `hash_intel` | false | match programs against known malware hashes |
+| `threat_intel` | false | match addresses against public block lists |
+| `geoip` | false | country and network of attacking addresses (DB-IP Lite) |
+| `forward` | | send events and alerts to syslog, HTTP or a file |
 
 ## Limitations
 

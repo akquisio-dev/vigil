@@ -45,14 +45,17 @@ it watches instead of needing a cluster of its own.
 | Processes and kernel | reverse shells, miners, programs from memory or `/tmp`, `LD_PRELOAD`, hidden kernel modules, eBPF hooks |
 | Tampered software | replaced packaged programs, PAM modules and libraries, new SUID programs |
 | Prevention | known and exploited vulnerabilities in installed packages, weak SSH and kernel settings, unsafe permissions, missing firewall, expiring certificates, stale backups, secrets every user can read |
+| Malware | programs matched against known malware hashes, YARA and Sigma rules |
 | Canaries | decoy credentials, `.env` files, SSH keys and SQL dumps |
+| Investigation | incident reports, SSH sessions with every command, search over the whole log, timelines, pivots, evidence snapshots |
+| Attackers | country and network of every address on a world map, campaigns, aimed attacks told apart from mass scanning |
 | vigil itself | agents that stop, restart or go silent, forged agent traffic, fake log lines, edits to the event log |
 
 ## Footprint
 
 | | Agent | Server |
 |---|---|---|
-| Memory | about 10 to 25 MB | about 10 MB plus the event window |
+| Memory | about 10 to 20 MB | about 15 MB plus the event window; about 100 MB with all threat data and `geoip` |
 | Network | outbound only | dashboard on loopback, agent API on a VPN address |
 | Dependencies | none (Go standard library) | none |
 
