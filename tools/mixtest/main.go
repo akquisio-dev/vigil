@@ -94,6 +94,10 @@ func main() {
 	if err != nil {
 		dumpLogs()
 		fmt.Fprintln(os.Stderr, "FAIL", err)
+		if os.Getenv("GITHUB_ACTIONS") == "true" {
+			// Annotations can be read without signing in, job logs cannot.
+			fmt.Printf("::error title=mixtest %s against %s::%s\n", old.version, cur.version, strings.ReplaceAll(err.Error(), "\n", " "))
+		}
 		os.Exit(1)
 	}
 	if !keep {
@@ -567,7 +571,7 @@ func (a *agent) enroll(s *server, v side) error {
 		"watch_files": []string{a.cfg},
 		"ssh":         off, "ports": off, "docker": off, "processes": off, "kernel": off, "suid": off,
 		"integrity": off, "bpf": off, "updates": off, "outbound": off, "posture": off, "secrets": off,
-		"packages": off, "forensics": off, "sessions": off, "rarity": off, "yara": off, "volume": off,
+		"packages": off, "apps": off, "forensics": off, "sessions": off, "rarity": off, "yara": off, "volume": off,
 		"selftest": selftest,
 	}
 	if selftest {
