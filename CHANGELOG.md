@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.21.0
 
 - `log.spoofed` no longer fires for sshd entries whose sender exited before journald read its name (an empty `comm` with uid 0, common for connections closed before authentication). Only root can send as uid 0.
 - Application dependencies: the agent finds `package-lock.json`, pinned `requirements.txt` and `go.mod` below `app_roots` (`/opt`, `/srv`, `/var/www`, `/home`, `/root`) and sends the packages in them (`system.apps`, option `apps`, default on). With `vuln_lookup` the server matches them against OSV.dev data for npm, PyPI and Go modules, downloaded as OSV's public dumps and kept current record by record, so no package name leaves the server. New rules `vuln.app_malicious` (critical, a package OSV lists as malicious), `vuln.app_exploited` (critical) and `vuln.app_severe` (high), one alert per package and version; the host page lists all findings.
