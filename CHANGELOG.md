@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.19.1
 
 - The host page offers **Update agent** for every agent from v0.19.0 on. The server also learns from the agent's answer whether `self_update` is on, so agents updated before the server no longer show it as off until their next restart.
 - Daily summary: the countries are those with the most addresses, as the line says.
