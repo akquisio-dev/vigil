@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.17.1
 
 - The server keeps only the vulnerability data of packages installed on its hosts in memory (about 5 % of a release's data, which is mostly kernel flavours nobody runs); the files on disk stay complete, and a newly installed package loads its data.
 
