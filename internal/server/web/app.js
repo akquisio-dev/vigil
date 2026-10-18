@@ -28,6 +28,7 @@ const T = {
     st_waiting: "waiting", st_ok: "detected", st_suppressed: "suppressed", st_skipped: "skipped", st_missing: "not detected", notifiedTo: "Sent to",
     notifiers: "Notifications", noNotifiers: "No notifier configured. Alerts only show up here.", delivered: "last delivered",
     neverDelivered: "nothing sent yet", failing: "failing", heartbeat: "Outside heartbeat", configured: "configured", notConfigured: "not configured",
+    summary: "Daily summary", summaryAt: "daily at", summaryPreview: "Preview summary", summarySend: "Send summary now", summarySent: "Summary sent",
     sent: "sent", loadMore: "Load more", filterType: "Type prefix", allHosts: "All hosts", time: "Time", details: "Details",
     params: "Parameters", logins: "SSH logins", ip: "IP", key: "Key", method: "Method", configSync: "Config",
     synced: "applied", waiting: "pending", alertsOpen: "open alerts", canariesOpened: "opened",
@@ -137,6 +138,7 @@ const T = {
     st_waiting: "ausstehend", st_ok: "erkannt", st_suppressed: "unterdrückt", st_skipped: "übersprungen", st_missing: "nicht erkannt", notifiedTo: "Gesendet an",
     notifiers: "Benachrichtigungen", noNotifiers: "Keine Benachrichtigung eingerichtet. Alarme erscheinen nur hier.", delivered: "zuletzt zugestellt",
     neverDelivered: "noch nichts gesendet", failing: "fehlerhaft", heartbeat: "Herzschlag nach außen", configured: "eingerichtet", notConfigured: "nicht eingerichtet",
+    summary: "Tagesbericht", summaryAt: "täglich um", summaryPreview: "Tagesbericht ansehen", summarySend: "Tagesbericht jetzt senden", summarySent: "Tagesbericht gesendet",
     sent: "gesendet", loadMore: "Mehr laden", filterType: "Typ-Präfix", allHosts: "Alle Hosts", time: "Zeit", details: "Details",
     params: "Parameter", logins: "SSH-Anmeldungen", ip: "IP", key: "Schlüssel", method: "Methode", configSync: "Konfiguration",
     synced: "übernommen", waiting: "ausstehend", alertsOpen: "offene Alarme", canariesOpened: "geöffnet",
@@ -1255,6 +1257,7 @@ async function settingsView() {
   const tokenBox = h("div");
   const notifyErr = h("div", { class: "err" });
   const notifyBox = h("div");
+  const summaryBox = h("div");
   const drawNotifiers = (list) => notifyBox.replaceChildren(list.length ? h("div", { class: "feed" }, list.map((n) => h("div", { class: "feed-row" },
     h("div", null, h("span", { class: "chip" }, h("span", { class: "dot " + (n.failures ? "broken" : n.last_ok && !n.last_ok.startsWith("0001") ? "ok" : "") }), h("span", { class: "strong" }, n.name)),
       " ", h("span", { class: "muted" }, n.type + ", " + t(n.min_severity) + "+")),
@@ -1392,11 +1395,20 @@ async function settingsView() {
         h("div", { class: "actions" },
           can("analyst") ? h("button", { class: "btn ghost", onclick: async () => drawChain(await post("/api/ui/chain/verify")) }, t("verify")) : null))),
     h("div", { class: "card mt" }, h("h3", null, t("notifiers")), notifyBox,
-      h("dl", { class: "kv mt" }, h("dt", null, t("heartbeat")), h("dd", null, t(notif.heartbeat ? "configured" : "notConfigured"))),
+      h("dl", { class: "kv mt" }, h("dt", null, t("heartbeat")), h("dd", null, t(notif.heartbeat ? "configured" : "notConfigured")),
+        h("dt", null, t("summary")), h("dd", null, notif.summary_time ? t("summaryAt") + " " + notif.summary_time : t("notConfigured") + " (summary_time)")),
       can("admin") && notif.notifiers.length ? h("div", { class: "actions" }, h("button", { class: "btn ghost", onclick: async () => {
         notifyErr.textContent = "";
         try { drawNotifiers((await post("/api/ui/notify/test")).notifiers); } catch (x) { notifyErr.textContent = x.message; }
-      } }, t("notifyTest"))) : null, notifyErr),
+      } }, t("notifyTest")),
+      h("button", { class: "btn ghost", onclick: async () => {
+        notifyErr.textContent = "";
+        try { summaryBox.replaceChildren(h("div", { class: "secret summary mt" }, (await api("/api/ui/summary")).text)); } catch (x) { notifyErr.textContent = x.message; }
+      } }, t("summaryPreview")),
+      h("button", { class: "btn ghost", onclick: async () => {
+        notifyErr.textContent = "";
+        try { await post("/api/ui/summary/send"); summaryBox.replaceChildren(h("div", { class: "muted mt" }, t("summarySent"))); } catch (x) { notifyErr.textContent = x.message; }
+      } }, t("summarySend"))) : null, summaryBox, notifyErr),
     h("div", { class: "card mt" }, h("h3", null, t("theme")), h("div", { class: "tabs" }, ["light", "dark", "system"].map((k) =>
       h("button", { class: k === theme() ? "on" : null, onclick: () => setTheme(k) }, t(k))))),
     h("div", { class: "card mt" }, h("h3", null, t("language")), h("div", { class: "flex" }, langTabs,

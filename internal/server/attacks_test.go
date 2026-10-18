@@ -74,6 +74,9 @@ func TestAttackStats(t *testing.T) {
 	if v.Totals.IPs != 11 || v.Totals.SSH != 5*4+30+2+3+2+5+1 || v.Totals.Web != 50 {
 		t.Fatalf("totals %+v", v.Totals)
 	}
+	if txt := s.summaryText(time.Now()); !strings.Contains(txt, "Attacks since yesterday 00:00 UTC: ") || !strings.Contains(txt, " web probes; ") {
+		t.Errorf("summary without attackers:\n%s", txt)
+	}
 	class := map[string]string{}
 	reasons := map[string]string{}
 	for _, a := range v.Addresses {

@@ -141,6 +141,7 @@ type State struct {
 	SelfTests    []*SelfTest    `json:"selftests,omitempty"`
 	Snapshots    []*SnapshotReq `json:"snapshot_requests,omitempty"`
 	LastAnchor   time.Time      `json:"last_anchor"`
+	LastSummary  time.Time      `json:"last_summary,omitempty"`
 }
 
 const maxAlerts = 5000

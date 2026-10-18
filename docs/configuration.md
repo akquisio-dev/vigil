@@ -170,6 +170,8 @@ it came from the proxy.
 | `selftest_days` | 7 | run a self test on every host this often and send the result to all notifiers; `-1` turns the schedule off |
 | `heartbeat_url` | | fetched every minute while the server is healthy, for an outside dead man's switch |
 | `notifiers` | none | see below |
+| `notify_group_minutes` | 10 | collect the follow-up alerts of an incident into one message this often; `-1` sends every alert on its own, see [below](#one-message-per-incident) |
+| `summary_time` | none | send a [daily summary](#daily-summary) at this time (`"07:30"`, the server's local time) |
 | `brand` | none | your own name and logo, see below |
 | `rules_dir` | none | directory with [custom rules](custom-rules.md) |
 | `vuln_lookup` | false | match the package lists of Debian and Ubuntu hosts with the distributions' security data (Canonical OVAL per release, about 10 MB; the Debian security tracker, about 14 MB) and CISA's catalogue of exploited vulnerabilities, daily and only when changed. Only plain downloads, nothing about the hosts is sent |
@@ -231,6 +233,35 @@ after the delay the service asks for.
 
 Notifier URLs and tokens are secrets. Errors in the log and the dashboard
 name only the host, never the URL.
+
+### One message per incident
+
+Alerts on one host that belong together form an
+[incident](operations.md#incidents). The first alert of an incident is sent at
+once, and so is every later alert that is more severe than anything sent for
+the incident so far, so a reverse shell after a suspicious login is never held
+back. The other alerts that join the incident are collected and sent as one
+message every `notify_group_minutes` (default 10), with the most frequent
+titles and a link to the incident. Alerts outside incidents, failed
+notifiers, self tests and chain anchors are always sent on their own.
+Forwarding to a SIEM is not grouped.
+
+The grouping is kept in memory; after a server restart, the next alert of an
+open incident is sent on its own again.
+
+### Daily summary
+
+With `summary_time`, vigil sends one message a day about the whole fleet:
+alerts of the last 24 hours by severity and the most frequent rules, open
+alerts and incidents, hosts that are not reporting, failed self tests,
+exploited and fixable vulnerabilities (with `vuln_lookup`), attackers since
+the day before with the countries most of them came from, notifiers that fail
+and problems with the event log. It goes to every notifier, whatever its
+`min_severity`; set `"summary": false` on a notifier to leave it out, for
+example a phone push channel. A summary that does not arrive is a sign that
+the server is down.
+
+Admins can preview the summary and send it at once from Settings.
 
 ### Discord
 

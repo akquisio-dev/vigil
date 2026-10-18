@@ -54,6 +54,8 @@ type Server struct {
 	yara         yaraSet
 	pkgs         map[string]*agentPackages // latest package list per agent, guarded by mu
 	nh           notifierHealth
+	incNotes     map[string]*incidentNote // guarded by mu
+	groupDelay   time.Duration            // tests only; see groupWindow
 
 	beatWarned string // last reason the heartbeat was withheld, loop goroutine only
 }
@@ -228,6 +230,7 @@ func (s *Server) loop(ctx context.Context) {
 			s.mu.Unlock()
 		case <-beat.C:
 			s.expireSuppressions()
+			s.checkSummary()
 			if s.cfg.HeartbeatURL != "" {
 				s.heartbeat()
 			}
@@ -357,7 +360,7 @@ func (s *Server) checkDeadman() {
 func (s *Server) notifyAlerts(fresh []*Alert) {
 	s.forwardAlerts(fresh)
 	for _, al := range fresh {
-		s.notify(s.alertMessage(al), false)
+		s.notifyGrouped(al)
 	}
 }
 

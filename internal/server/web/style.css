@@ -454,6 +454,7 @@ table.rules td:nth-child(4) { min-width: 300px; }
 .newuser { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; background: var(--bg); border-radius: var(--radius-sm); padding: 14px; }
 svg.qr { width: 180px; height: 180px; flex-shrink: 0; border-radius: 4px; }
 .secret-inline { user-select: all; }
+.secret.summary { white-space: pre-wrap; user-select: text; }
 .tablewrap.flat { box-shadow: none; }
 
 .row .title.steps { display: flex; flex-wrap: wrap; gap: 4px 16px; }

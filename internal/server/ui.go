@@ -190,7 +190,15 @@ func (s *Server) uiHandler() http.Handler {
 		writeJSON(w, out)
 	}))
 	mux.HandleFunc("GET /api/ui/notifiers", s.auth(func(w http.ResponseWriter, r *http.Request, sess *session) {
-		writeJSON(w, map[string]any{"notifiers": s.notifierStatus(), "heartbeat": s.cfg.HeartbeatURL != ""})
+		writeJSON(w, map[string]any{"notifiers": s.notifierStatus(), "heartbeat": s.cfg.HeartbeatURL != "", "summary_time": s.cfg.SummaryTime})
+	}))
+	mux.HandleFunc("GET /api/ui/summary", s.adminOnly(func(w http.ResponseWriter, r *http.Request, sess *session) {
+		writeJSON(w, map[string]any{"text": s.summaryText(time.Now()), "time": s.cfg.SummaryTime})
+	}))
+	mux.HandleFunc("POST /api/ui/summary/send", s.adminOnly(func(w http.ResponseWriter, r *http.Request, sess *session) {
+		s.audit(sess.User, "admin.summary_send", map[string]any{})
+		s.sendSummary(time.Now())
+		writeJSON(w, map[string]any{"ok": true})
 	}))
 	mux.HandleFunc("POST /api/ui/notify/test", s.adminOnly(func(w http.ResponseWriter, r *http.Request, sess *session) {
 		res := TestNotifiers(s.cfg, "", "vigil test notification from "+sess.User)

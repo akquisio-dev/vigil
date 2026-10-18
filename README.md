@@ -176,6 +176,7 @@ them.
 | `anchor_daily` | false | post the chain head to all notifiers once a day |
 | `heartbeat_url` | | fetched every minute, for an outside watchdog |
 | `notifiers` | | `discord`, `slack`, `ntfy`, `telegram`, `webhook` or `smtp`, each with `min_severity` |
+| `summary_time` | | send a daily summary at this time, e.g. `"07:30"` |
 | `vuln_lookup` | false | known and exploited vulnerabilities in installed packages |
 | `hash_intel` | false | match programs against known malware hashes |
 | `threat_intel` | false | match addresses against public block lists |

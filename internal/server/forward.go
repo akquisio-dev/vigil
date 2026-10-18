@@ -236,8 +236,8 @@ func (s *Server) runForwarder(f *forwarder) {
 			s.mu.Lock()
 			fresh := s.raise([]finding{{Rule: "forward.failed", Key: "forward.failed|" + f.cfg.Name,
 				Params: map[string]string{"forwarder": f.cfg.Name, "type": f.cfg.Type, "error": clip(fwdRedact(err), 200)}}}, "", 0)
-			s.mu.Unlock()
 			s.notifyAlerts(fresh)
+			s.mu.Unlock()
 			failedSince = time.Now()
 		}
 	}

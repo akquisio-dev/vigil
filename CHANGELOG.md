@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- One message per incident: the first alert and every more severe one are sent at once, the other alerts of the incident come as one update every `notify_group_minutes` (default 10; `-1` sends every alert on its own).
+- Daily summary (`summary_time`): alerts, open incidents, silent hosts, failed self tests, vulnerabilities, attackers and notifier problems in one message a day, to every notifier unless it sets `"summary": false`. Preview and send it from Settings.
+
 ## v0.18.0
 
 - Attackers page: who attacked the hosts over 24 hours, 7 or 30 days, by country and network on a world map (`geoip`: DB-IP Lite, looked up on the server), user names and paths tried, time of day, campaigns of addresses trying the same lists, and a class per address (successful, aimed, persistent, noise) with the reasons. The pivot page of an address shows its origin and class.

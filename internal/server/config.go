@@ -98,6 +98,13 @@ type Config struct {
 	// SelfTestDays runs a self test on every agent this often (default 7)
 	// and sends the result to all notifiers. -1 turns the schedule off.
 	SelfTestDays int `json:"selftest_days,omitempty"`
+	// NotifyGroupMinutes collects the follow-up alerts of an incident into
+	// one message this often (default 10). The first alert and every more
+	// severe one are sent at once. -1 sends every alert on its own.
+	NotifyGroupMinutes int `json:"notify_group_minutes,omitempty"`
+	// SummaryTime sends a daily summary of the fleet at this local time
+	// ("07:30") to every notifier, whatever its min_severity. Empty is off.
+	SummaryTime string `json:"summary_time,omitempty"`
 }
 
 type NotifierConfig struct {
@@ -112,6 +119,9 @@ type NotifierConfig struct {
 	// "@everyone".
 	Mention            string `json:"mention,omitempty"`
 	MentionMinSeverity string `json:"mention_min_severity,omitempty"`
+
+	// Summary false leaves this notifier out of the daily summary.
+	Summary *bool `json:"summary,omitempty"`
 
 	// Token is the ntfy access token or the Telegram bot token.
 	Token  string `json:"token,omitempty"`
@@ -162,6 +172,11 @@ func LoadConfig(path string) (*Config, error) {
 	}
 	if c.SessionHours <= 0 {
 		c.SessionHours = 12
+	}
+	if c.SummaryTime != "" {
+		if _, _, err := summaryAt(c.SummaryTime); err != nil {
+			return nil, err
+		}
 	}
 	names := map[string]bool{}
 	for i := range c.Notifiers {
