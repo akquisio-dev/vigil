@@ -83,7 +83,9 @@ func (s *Server) updateEvent(a *AgentRec, d map[string]any, add func(string, str
 
 // heldStop reports whether an announced stop is part of the update.
 func (s *Server) heldStop(a *AgentRec, at time.Time) bool {
-	if u := a.Update; u.running(time.Now()) && u.Status == "staged" {
+	// "asked" too: the stop may overtake the report that the download is
+	// ready. The alert still comes if the agent is not back in time.
+	if u := a.Update; u.running(time.Now()) {
 		u.Held = at
 		return true
 	}
@@ -93,7 +95,7 @@ func (s *Server) heldStop(a *AgentRec, at time.Time) bool {
 // updatedStart reports whether a start is the update coming back.
 func (s *Server) updatedStart(a *AgentRec, version string) bool {
 	u := a.Update
-	if u == nil || !u.running(time.Now()) || u.Status != "staged" {
+	if !u.running(time.Now()) {
 		return false
 	}
 	if version != u.Version {

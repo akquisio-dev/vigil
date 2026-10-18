@@ -52,10 +52,6 @@ func TestAgentUpdateRestartIsQuietOnlyWhenAskedAndRight(t *testing.T) {
 		t.Fatal("second update while one runs")
 	}
 
-	// Before the download is checked, a stop is still a stop.
-	if got := ev("agent.stopping", nil); len(got) != 1 {
-		t.Fatalf("stop before staging: %v", got)
-	}
 	ev("agent.update", map[string]any{"id": "other", "status": "staged"})
 	if a.Update.Status != "asked" {
 		t.Fatal("report with a foreign id was taken")

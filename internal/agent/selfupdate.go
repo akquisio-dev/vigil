@@ -87,6 +87,7 @@ func (a *Agent) selfUpdate(req *proto.UpdateRequest) {
 			return
 		}
 		report("staged", "")
+		a.flushSoon() // the installer starts at once; tell the server first
 	}()
 }
 

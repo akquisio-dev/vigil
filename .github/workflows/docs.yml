@@ -50,6 +50,7 @@ jobs:
             echo "::notice::APT_SIGNING_KEY is not set; the site has no apt repository"
             exit 0
           fi
+          command -v apt-ftparchive >/dev/null || sudo apt-get install -y --no-install-recommends apt-utils
           export GNUPGHOME="$(mktemp -d)"
           printf '%s\n' "$APT_SIGNING_KEY" | gpg --batch --quiet --import
           deploy/apt/build-repo.sh site/apt
