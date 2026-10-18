@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- The agent unit sets `MemoryHigh=64M`. On hosts with many files the scans filled the unit's 96 MB with reclaimable inode and dentry cache, and filesystem allocations that may not reclaim it got `journalctl` and then the whole unit OOM-killed, which raised `agent.restarted`. Existing installations: add `MemoryHigh=64M` in a drop-in or install the new unit file.
+- Agent updates run the new binary first under its final name, not from the update directory, where the agent's scan of unknown programs raised `malware.yara` (vigil contains the strings its own miner rules look for).
+
 ## v0.19.1
 
 - The host page offers **Update agent** for every agent from v0.19.0 on. The server also learns from the agent's answer whether `self_update` is on, so agents updated before the server no longer show it as off until their next restart.

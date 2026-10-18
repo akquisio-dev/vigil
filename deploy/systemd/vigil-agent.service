@@ -32,6 +32,10 @@ StateDirectoryMode=0700
 
 # Stay out of the way of the workloads on this host.
 MemoryMax=96M
+# The file scans fill the inode and dentry cache, which is charged to the
+# unit. Reclaim it from here; at MemoryMax, allocations that may not reclaim
+# it (filesystem code, journalctl's) OOM-kill the unit instead.
+MemoryHigh=64M
 CPUQuota=15%
 Nice=10
 IOSchedulingClass=idle

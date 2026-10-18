@@ -401,6 +401,6 @@ host reported.
 
 ## Resource limits
 
-The systemd units cap the agent at 96 MB of memory and 15 % CPU with idle I/O
-priority, and the server at 256 MB and 50 % CPU. Adjust them in a drop-in if a
+The systemd units cap the agent at 96 MB of memory (reclaiming caches from
+64 MB on) and 15 % CPU with idle I/O priority, and the server at 256 MB and 50 % CPU. Adjust them in a drop-in if a
 host needs more.

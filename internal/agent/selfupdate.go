@@ -188,19 +188,22 @@ func ApplyUpdate(cfg *Config, unit string) (err error) {
 	if pkg := dpkgOwner(exe); pkg != "" {
 		return fmt.Errorf("%s belongs to the Debian package %s; update it with apt", exe, pkg)
 	}
-	out, err := exec.Command(bin, "version").Output()
-	if err != nil {
-		return fmt.Errorf("the new binary does not run: %w", err)
-	}
-	if got := strings.TrimSpace(strings.SplitN(string(out), "\n", 2)[0]); got != version {
-		return fmt.Errorf("the new binary says it is %q, want %s", got, version)
-	}
-
 	if err := copyFile(exe, exe+".prev"); err != nil {
 		return err
 	}
 	if err := swapIn(bin, exe); err != nil {
 		return err
+	}
+	// The new binary is first run under its final name, never from the
+	// update directory: the agent scans programs it has not seen before,
+	// and vigil carries the very strings its miner rules look for.
+	out, err := exec.Command(exe, "version").Output()
+	if got := strings.TrimSpace(strings.SplitN(string(out), "\n", 2)[0]); err != nil || got != version {
+		res.Status = "rolled_back"
+		if rerr := swapIn(exe+".prev", exe); rerr != nil {
+			return fmt.Errorf("the new binary does not run (%v, %q); putting the old one back failed too: %v", err, got, rerr)
+		}
+		return fmt.Errorf("the new binary does not run as %s (%v, %q)", version, err, got)
 	}
 	if err := restartAndWatch(unit, exe); err != nil {
 		res.Status = "rolled_back"
