@@ -82,7 +82,8 @@ const T = {
     pkg: "Package", installed: "Installed", fixedIn: "Fixed in", noVulns: "No fixable vulnerability",
     vulnPending: "No data yet", proOnly: "Ubuntu Pro",
     appVulns: "Application dependencies", appFiles: "{n} lock files, {m} packages", appMalicious: "Known malicious packages",
-    appMissing: "No data yet for", appTruncated: "list cut short", unknownSev: "no rating", maliciousPkg: "malicious", vulnId: "Advisory", lockFile: "Lock file",
+    appMissing: "No data yet for", appTruncated: "list cut short", unknownSev: "no rating", maliciousPkg: "malicious",
+    containers: "Containers", ctrImage: "Image", ctrRisks: "Host access", dockerGroupLbl: "docker group (root equivalent)", vulnId: "Advisory", lockFile: "Lock file",
     timeline: "Timeline", window: "Window", earlier: "Earlier", later: "Later", anchor: "moment of the alert",
     allKinds: "All", kAuth: "Logins", kProc: "Processes", kFile: "Files", kNet: "Network", kKernel: "Kernel", kOther: "Other", kAlert: "Alerts",
     receivedLate: "received", truncatedRows: "Only the first {n} events are shown.", noTimeline: "Nothing recorded in this window",
@@ -197,7 +198,8 @@ const T = {
     pkg: "Paket", installed: "Installiert", fixedIn: "Behoben in", noVulns: "Keine behebbare Schwachstelle",
     vulnPending: "Noch keine Daten", proOnly: "Ubuntu Pro",
     appVulns: "Abhängigkeiten von Anwendungen", appFiles: "{n} Lock-Dateien, {m} Pakete", appMalicious: "Bekannte Schadpakete",
-    appMissing: "Noch keine Daten für", appTruncated: "Liste gekürzt", unknownSev: "ohne Einstufung", maliciousPkg: "Schadpaket", vulnId: "Meldung", lockFile: "Lock-Datei",
+    appMissing: "Noch keine Daten für", appTruncated: "Liste gekürzt", unknownSev: "ohne Einstufung", maliciousPkg: "Schadpaket",
+    containers: "Container", ctrImage: "Image", ctrRisks: "Zugriff auf den Host", dockerGroupLbl: "Gruppe docker (wie root)", vulnId: "Meldung", lockFile: "Lock-Datei",
     timeline: "Zeitachse", window: "Zeitraum", earlier: "Früher", later: "Später", anchor: "Zeitpunkt des Alarms",
     allKinds: "Alle", kAuth: "Anmeldungen", kProc: "Prozesse", kFile: "Dateien", kNet: "Netzwerk", kKernel: "Kernel", kOther: "Sonstiges", kAlert: "Alarme",
     receivedLate: "empfangen", truncatedRows: "Nur die ersten {n} Ereignisse werden gezeigt.", noTimeline: "In diesem Zeitraum wurde nichts aufgezeichnet",
@@ -590,8 +592,8 @@ function updatesCell(u) {
 }
 
 function postureSection(a) {
-  const p = a.posture, v = a.vulns, av = a.app_vulns;
-  if (!p && !v && !av) return null;
+  const p = a.posture, v = a.vulns, av = a.app_vulns, cs = a.containers || [];
+  if (!p && !v && !av && !cs.length) return null;
   const out = [];
   if (p) {
     const checks = p.checks || [];
@@ -669,6 +671,23 @@ function postureSection(a) {
           : h("span", { class: "chip" }, h("span", { class: "dot ok" }), t("noVulns")))),
       (av.malicious || []).length ? [h("h3", { class: "mt" }, t("appMalicious")), rows(av.malicious)] : null,
       (av.top || []).length ? rows(av.top.slice(0, 25)) : null));
+  }
+  if (cs.length) {
+    const socket = (c) => (c.mounts || []).some((m) => /^\/(var\/)?run\/docker(\.sock)?$/.test(m.source));
+    out.push(h("div", { class: "card mt" },
+      h("div", { class: "flex" }, h("h3", null, t("containers")), h("span", { class: "muted right" }, cs.length)),
+      (a.docker_group || []).length ? h("dl", { class: "kv" }, h("dt", null, t("dockerGroupLbl")),
+        h("dd", null, h("span", { class: "chip" }, h("span", { class: "dot medium" }), a.docker_group.join(", ")))) : null,
+      h("div", { class: "tablewrap" }, h("table", null,
+        h("thead", null, h("tr", null, ["", "Name", t("ctrImage"), t("ctrRisks")].map((x) => h("th", null, x)))),
+        h("tbody", null, cs.map((c) => {
+          const risks = (c.risks || []).concat(socket(c) ? ["docker.sock"] : []);
+          return h("tr", null,
+            h("td", null, h("span", { class: "dot " + (risks.length ? "high" : "ok") })),
+            h("td", { class: "mono nowrap" }, c.name, c.project ? h("span", { class: "muted" }, " " + c.project) : null),
+            h("td", { class: "mono nowrap" }, c.image),
+            h("td", null, risks.length ? risks.join(", ") : h("span", { class: "muted" }, "·")));
+        }))))));
   }
   return out;
 }

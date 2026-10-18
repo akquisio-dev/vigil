@@ -64,6 +64,12 @@ type AgentRec struct {
 	Vulns *VulnSummary `json:"vulns,omitempty"`
 	// AppVulns is the same for the dependencies in lock files (OSV).
 	AppVulns *AppVulnSummary `json:"app_vulns,omitempty"`
+	// Containers are the Docker containers from the last overview, with
+	// the members of the docker group and the images seen on the host.
+	Containers      []*Container         `json:"containers,omitempty"`
+	DockerGroup     []string             `json:"docker_group,omitempty"`
+	Images          map[string]time.Time `json:"images,omitempty"`
+	ImagesBaselined bool                 `json:"images_baselined,omitempty"`
 
 	// Forensics is true when the agent takes evidence snapshots.
 	Forensics       bool          `json:"forensics,omitempty"`

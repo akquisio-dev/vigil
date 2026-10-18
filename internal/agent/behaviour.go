@@ -313,6 +313,7 @@ func (a *Agent) rareExec(e *ExecInfo) {
 		if sha := scan(); sha != "" {
 			d["exe_sha256"] = sha
 		}
+		a.tagContainer(d, e.PID)
 		if newPair {
 			a.emit(proto.NewEvent("process.rare_child", d))
 		}

@@ -176,6 +176,7 @@ func (a *Agent) reportExec(e *ExecInfo) {
 		if sha := scan(); sha != "" {
 			d["exe_sha256"] = sha
 		}
+		a.tagContainer(d, e.PID)
 		a.emit(proto.NewEvent("process.exec", d))
 		a.flushSoon()
 	}()

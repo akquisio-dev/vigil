@@ -26,6 +26,7 @@ external dependencies.
 | Attackers | **who attacks from where**: country and network of every address on a world map, tried user names and paths, **campaigns** (one botnet instead of hundreds of addresses), **aimed attacks told apart from mass scanning**, logins from addresses that failed before, a report to print | T1110 |
 | Accounts | new accounts, accounts that gain uid 0 | T1136.001, T1078.003 |
 | Exposure | new listening ports, **Docker publications that bypass host firewalls like ufw** (read from the NAT table, not only from sockets) | |
+| Containers | containers that can take over the host (privileged, host PID, escape capabilities, writable system mounts, the Docker socket), images never seen on the host, users in the docker group; findings from inside a container name it | T1611, T1610 |
 | Canaries | decoy credentials, `.env` files, SSH keys and SQL dumps; any open is reported with process, user and parent chain | T1552.001, T1070.004 |
 | Kernel | new kernel modules, out-of-tree or unsigned modules, **modules hidden from `/proc/modules`** (rootkits), new kernel taint flags, **eBPF programs that hook syscalls or packets** (eBPF rootkits) | T1547.006, T1014 |
 | Defense evasion | agents that stop, restart or go silent (dead man's switch), forged or replayed agent traffic, fake `sshd`/`sudo` lines written to the journal by other processes, edits to the event log | T1562.001, T1557, T1070, T1565.001 |

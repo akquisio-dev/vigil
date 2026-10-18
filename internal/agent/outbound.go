@@ -66,7 +66,10 @@ func remoteWorthIt(ip net.IP) bool {
 	return !(ip.IsLoopback() || ip.IsUnspecified() || ip.IsLinkLocalUnicast() || ip.IsMulticast())
 }
 
-type procID struct{ comm, exe, uid string }
+type procID struct {
+	comm, exe, uid string
+	pid            int
+}
 
 func socketProcs(want map[string]bool) map[string]procID {
 	out := map[string]procID{}
@@ -100,7 +103,8 @@ func socketProcs(want map[string]bool) map[string]procID {
 					}
 				}
 			}
-			out[inode] = procID{comm: strings.TrimSpace(string(comm)), exe: strings.TrimSuffix(exe, " (deleted)"), uid: uid}
+			pid, _ := strconv.Atoi(filepath.Base(p))
+			out[inode] = procID{comm: strings.TrimSpace(string(comm)), exe: strings.TrimSuffix(exe, " (deleted)"), uid: uid, pid: pid}
 		}
 	}
 	return out
@@ -150,9 +154,11 @@ func (a *Agent) scanOutbound() {
 		}
 		sent++
 		private := f.c.remote.IsPrivate()
-		a.emit(proto.NewEvent("net.connection", map[string]any{
+		d := map[string]any{
 			"remote_ip": f.c.remote.String(), "remote_port": f.c.rport, "local_port": f.c.lport,
 			"process": p.comm, "exe": p.exe, "uid": p.uid, "private": private,
-		}))
+		}
+		a.tagContainer(d, p.pid)
+		a.emit(proto.NewEvent("net.connection", d))
 	}
 }

@@ -109,6 +109,10 @@ var rules = map[string]ruleDef{
 	"secret.exposed":             {"high", "T1552.001", "{kind} readable by every user: {path} line {line}", "{kind} für alle Benutzer lesbar: {path} Zeile {line}"},
 	"vuln.exploited":             {"critical", "T1190", "{package} {installed}: {count} vulnerabilities exploited in the wild ({cves}), fixed in {fixed}", "{package} {installed}: {count} aktiv ausgenutzte Schwachstellen ({cves}), behoben in {fixed}"},
 	"vuln.severe":                {"high", "", "{package} {installed}: {count} high or critical vulnerabilities ({cves}), fixed in {fixed}", "{package} {installed}: {count} hohe oder kritische Schwachstellen ({cves}), behoben in {fixed}"},
+	"container.privileged":       {"high", "T1611", "Container {container} ({image}) can take over the host: {reasons}", "Container {container} ({image}) kann den Host übernehmen: {reasons}"},
+	"container.docker_socket":    {"high", "T1611", "Container {container} ({image}) has the Docker socket, so it controls the host", "Container {container} ({image}) hat den Docker-Socket und damit den Host"},
+	"container.new_image":        {"medium", "T1610", "New image on this host: {image} (container {container})", "Neues Image auf diesem Host: {image} (Container {container})"},
+	"container.docker_group":     {"medium", "T1548", "Members of the docker group are root in all but name: {users}", "Mitglieder der Gruppe docker haben faktisch Root-Rechte: {users}"},
 	"vuln.app_malicious":         {"critical", "T1195.002", "Known malicious package {package} {installed} ({ecosystem}) in {path}", "Bekanntes Schadpaket {package} {installed} ({ecosystem}) in {path}"},
 	"vuln.app_exploited":         {"critical", "T1190", "{package} {installed} ({ecosystem}, {path}): {count} vulnerabilities exploited in the wild ({ids}), fixed in {fixed}", "{package} {installed} ({ecosystem}, {path}): {count} aktiv ausgenutzte Schwachstellen ({ids}), behoben in {fixed}"},
 	"vuln.app_severe":            {"high", "", "{package} {installed} ({ecosystem}, {path}): {count} high or critical vulnerabilities ({ids}), fixed in {fixed}", "{package} {installed} ({ecosystem}, {path}): {count} hohe oder kritische Schwachstellen ({ids}), behoben in {fixed}"},
@@ -142,6 +146,15 @@ func renderTitle(rule string, params map[string]string, lang string) string {
 	tpl := def.En
 	if lang == "de" {
 		tpl = def.De
+	}
+	// A finding from inside a container says which, also where the rule's
+	// title does not.
+	if c := params["container"]; c != "" && !strings.Contains(tpl, "{container}") {
+		if lang == "de" {
+			tpl += " [Container " + c + "]"
+		} else {
+			tpl += " [container " + c + "]"
+		}
 	}
 	for k, v := range params {
 		if w, ok := words[lang][v]; ok && (k == "change" || k == "problem" || k == "reason") {
@@ -199,6 +212,11 @@ func (s *Server) evaluate(a *AgentRec, r *Record) []finding {
 			params = map[string]string{}
 		}
 		params["host"] = host
+		if c := str(d, "container"); c != "" && params["container"] == "" {
+			params["container"] = clip(c, 128)
+		} else if id := str(d, "container_id"); id != "" && params["container"] == "" {
+			params["container"] = clip(id, 12)
+		}
 		if strings.HasPrefix(rule, "agent.") && time.Now().Before(a.MaintenanceUntil) {
 			return // the event itself stays in the log
 		}
@@ -548,6 +566,8 @@ func (s *Server) evaluate(a *AgentRec, r *Record) []finding {
 		out = append(out, s.packagesReceived(a, d)...)
 	case "system.apps":
 		out = append(out, s.appsReceived(a, d)...)
+	case "container.snapshot":
+		out = append(out, s.containersReceived(a, d)...)
 	case "response.result":
 		s.actionResult(a.ID, d)
 	case "response.state":

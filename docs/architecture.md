@@ -33,6 +33,7 @@ socket and runs only these external programs: `journalctl`, `iptables-save`,
 | Keys and accounts | parsed `authorized_keys` and `/etc/passwd` | `scan_seconds` |
 | Ports | `/proc/net/{tcp,tcp6,udp,udp6}`, owners via `/proc/*/fd` | `scan_seconds` |
 | Docker | DNAT rules in the `DOCKER` chain of `iptables-save -t nat` | `scan_seconds` |
+| Containers | running containers from the Docker API on its socket (GET only): name, image, compose project, privileged, host PID and network, added capabilities, bind mounts; the members of the docker group. Process, malware and connection events from inside a container carry `container`, `container_id` and `image` (from `/proc/<pid>/cgroup`) | `scan_seconds`, sent on change, at least daily |
 | Canaries | fanotify `FAN_OPEN` marks, notification class only | continuous |
 | Processes | kernel process events connector (netlink), details from `/proc/<pid>` | continuous |
 | Outbound | established TCP sockets in `/proc/net/{tcp,tcp6}` that are not to a listening port | 10 seconds |
@@ -208,6 +209,7 @@ can use. Fields in brackets are only present when known.
 | `secret.exposed` | `path`, `kind`, `line`, `fingerprint` (first 6 bytes of SHA-256 of the secret), `uid`, `mode`, (`baseline`) |
 | `secrets.scan` | `files`, `findings`, `seconds` |
 | `system.packages` | `os_id`, `os_version`, `os_codename`, `packages` (pairs of source package and version), `hash` |
+| `container.snapshot` | `containers` (`id`, `name`, `image`, `image_id`, `project`, `privileged`, `pid_host`, `net_host`, `cap_add`, `user`, `mounts` (`source`, `dest`, `rw`), `started`), `docker_group`, `hash` |
 | `system.apps` | `manifests` (pairs of lock file path and package count), `packages` (ecosystem, name, version, index of the first lock file naming it), `hash`, (`truncated`) |
 | `kernel.bpf_loaded` | `id`, `type`, `name`, `tag`, `uid`, (`baseline`) |
 | `kernel.baseline` | `modules`, `tainted`, `out_of_tree` (list of `name (flags)`) |

@@ -50,6 +50,14 @@ func TestWriteDemoData(t *testing.T) {
 		s.state.Agents[a.ID] = a
 	}
 	hosts[2].Silent, hosts[2].LastSeen = true, now.Add(-47*time.Minute)
+	hosts[1].Containers = []*Container{
+		{ID: "4f1c2a9b0d11", Name: "app-api-1", Image: "registry.example.com/app/api:2.4.1", Project: "app"},
+		{ID: "7a2b3c4d5e66", Name: "app-db-1", Image: "postgres:16-alpine", Project: "app"},
+		{ID: "9e8d7c6b5a44", Name: "traefik", Image: "traefik:v3.1", Mounts: []ContainerMount{{Source: "/var/run/docker.sock", Dest: "/var/run/docker.sock"}}},
+		{ID: "1a2b3c4d5e6f", Name: "node-exporter", Image: "prom/node-exporter:v1.8.2", PidHost: true, Mounts: []ContainerMount{{Source: "/", Dest: "/host"}},
+			Risks: []string{"host PID namespace", "host / mounted"}},
+	}
+	hosts[1].DockerGroup = []string{"deploy"}
 	hosts[1].AppVulns = &AppVulnSummary{Checked: now.Add(-2 * time.Hour), Manifests: 3, Packages: 412,
 		Counts: map[string]int{"critical": 1, "high": 2, "medium": 3, "unknown": 1},
 		Malicious: []AppHit{{ID: "MAL-2026-1001", Ecosystem: "npm", Package: "colors-utils-plus", Installed: "1.0.2", Severity: "critical", Malicious: true,

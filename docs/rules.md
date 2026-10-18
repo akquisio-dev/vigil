@@ -2,7 +2,7 @@
 
 # Detection rules
 
-vigil ships 100 rules. Every alert carries the rule id, so an alert can be looked up here.
+vigil ships 104 rules. Every alert carries the rule id, so an alert can be looked up here.
 
 Severity decides who is woken up: each notifier has a `min_severity`, `high` by default.
 
@@ -32,6 +32,8 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 | [`backup.missing`](#backup-missing) | high | [T1490](https://attack.mitre.org/techniques/T1490/) |
 | [`backup.stale`](#backup-stale) | high | [T1490](https://attack.mitre.org/techniques/T1490/) |
 | [`canary.tampered`](#canary-tampered) | high | [T1070.004](https://attack.mitre.org/techniques/T1070/004/) |
+| [`container.docker_socket`](#container-docker_socket) | high | [T1611](https://attack.mitre.org/techniques/T1611/) |
+| [`container.privileged`](#container-privileged) | high | [T1611](https://attack.mitre.org/techniques/T1611/) |
 | [`file.cron`](#file-cron) | high | [T1053.003](https://attack.mitre.org/techniques/T1053/003/) |
 | [`file.pam`](#file-pam) | high | [T1556.003](https://attack.mitre.org/techniques/T1556/003/) |
 | [`file.sudo`](#file-sudo) | high | [T1548.003](https://attack.mitre.org/techniques/T1548/003/) |
@@ -73,6 +75,8 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 | [`backup.small`](#backup-small) | medium | [T1490](https://attack.mitre.org/techniques/T1490/) |
 | [`canary.overflow`](#canary-overflow) | medium |  |
 | [`canary.remove_failed`](#canary-remove_failed) | medium |  |
+| [`container.docker_group`](#container-docker_group) | medium | [T1548](https://attack.mitre.org/techniques/T1548/) |
+| [`container.new_image`](#container-new_image) | medium | [T1610](https://attack.mitre.org/techniques/T1610/) |
 | [`file.accounts`](#file-accounts) | medium | [T1098](https://attack.mitre.org/techniques/T1098/) |
 | [`file.shell_init`](#file-shell_init) | medium | [T1546.004](https://attack.mitre.org/techniques/T1546/004/) |
 | [`file.sshd`](#file-sshd) | medium | [T1098](https://attack.mitre.org/techniques/T1098/) |
@@ -1253,6 +1257,30 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 
 **What to do:** Check who stopped it if no maintenance was planned.
 
+### `container.docker_socket` {#container-docker_socket}
+
+**Severity:** high · **ATT&CK:** [T1611](https://attack.mitre.org/techniques/T1611/)
+
+**Alert:** `Container {container} ({image}) has the Docker socket, so it controls the host`
+
+**Fires when:** A running container has the Docker socket mounted (/var/run/docker.sock). Through it, the container can start a privileged container with the host's / mounted, so it controls the host. One alert per container name.
+
+**Known false positives:** Reverse proxies that read container labels (Traefik), Portainer, Watchtower and CI runners.
+
+**What to do:** Prefer a socket proxy that allows only the read calls the tool needs. Suppress the alert for a tool you accept with full host access.
+
+### `container.privileged` {#container-privileged}
+
+**Severity:** high · **ATT&CK:** [T1611](https://attack.mitre.org/techniques/T1611/)
+
+**Alert:** `Container {container} ({image}) can take over the host: {reasons}`
+
+**Fires when:** A running Docker container can reach the host: it runs privileged, shares the host's PID namespace, has a capability that breaks out (SYS_ADMIN, SYS_PTRACE, SYS_MODULE, DAC_READ_SEARCH, SYS_RAWIO, BPF), or has the host's / or a system directory (/etc, /root, /usr, /dev, /proc, /sys, /var/lib/docker, ...) mounted writable. Whoever gets code execution in it owns the host. One alert per container name; resolves when the container is gone or changed.
+
+**Known false positives:** Monitoring and system tools (node exporters, cAdvisor, VPN or storage drivers) that need it by design.
+
+**What to do:** Check whether the container really needs it. Drop `privileged: true` and the extra capabilities, mount only the paths it needs and read only. Suppress the alert for a container that needs it by design.
+
 ### `forward.failed` {#forward-failed}
 
 **Severity:** high
@@ -1324,6 +1352,30 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 **Known false positives:** Hosts without internet access to GitHub; vigil-agent-update.path not enabled.
 
 **What to do:** Read the error. A failed signature check means the download was not the published release: find out why before trying again.
+
+### `container.docker_group` {#container-docker_group}
+
+**Severity:** medium · **ATT&CK:** [T1548](https://attack.mitre.org/techniques/T1548/)
+
+**Alert:** `Members of the docker group are root in all but name: {users}`
+
+**Fires when:** Users other than root are in the docker group. Anyone who can talk to the Docker socket can start a privileged container with the host's / mounted, so these users are root without a password.
+
+**Known false positives:** Developer machines and CI hosts where this is accepted.
+
+**What to do:** Remove users who do not need it (`gpasswd -d USER docker`), or use rootless Docker for them.
+
+### `container.new_image` {#container-new_image}
+
+**Severity:** medium · **ATT&CK:** [T1610](https://attack.mitre.org/techniques/T1610/)
+
+**Alert:** `New image on this host: {image} (container {container})`
+
+**Fires when:** A container runs from an image that was never seen on this host. The images of the first overview after enrollment or update are the baseline. Attackers who reach the Docker API or a compose file start their own image (crypto miners, tunnels).
+
+**Known false positives:** Deployments of a new service, a new image name or tag (`postgres:16` to `postgres:17`).
+
+**What to do:** Confirm the deployment was planned. If not, look at the container (`docker inspect`), stop it and find out who started it.
 
 ### `agent.dropped` {#agent-dropped}
 

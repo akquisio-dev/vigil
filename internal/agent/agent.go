@@ -58,7 +58,8 @@ type Agent struct {
 	bg            sync.WaitGroup // background scans, waited for in tests
 	rare          *RareState
 	fallback      *fallbackWatch
-	scanMu        sync.Mutex // one program scan at a time
+	containers    *containerIndex // nil with docker off
+	scanMu        sync.Mutex      // one program scan at a time
 	scans         scanCache
 }
 
@@ -84,6 +85,7 @@ func New(cfg *Config) (*Agent, error) {
 		flushNow:    make(chan struct{}, 1),
 		cursor:      st.JournalCursor,
 		fallback:    newFallbackWatch(cfg),
+		containers:  newContainerIndex(cfg),
 	}, nil
 }
 
@@ -199,6 +201,9 @@ func (a *Agent) Run(ctx context.Context) error {
 	}
 	if on(a.cfg.Apps) {
 		go a.runApps(ctx)
+	}
+	if a.containers != nil {
+		go a.runContainers(ctx)
 	}
 	for _, wl := range a.cfg.WebLogs {
 		go a.tailWebLog(ctx, wl)

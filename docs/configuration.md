@@ -28,7 +28,7 @@ the defaults below.
 | `canary_ignore_exe` | none | executables whose canary opens are not reported |
 | `ssh` | true | read SSH and sudo entries from the journal |
 | `ports` | true | watch listening sockets |
-| `docker` | true | read Docker NAT publications with `iptables-save` |
+| `docker` | true | read Docker NAT publications with `iptables-save`; ask the Docker API on `/var/run/docker.sock` (GET requests only) which containers run, to name the container in findings from inside one and to send an overview of the containers when it changes |
 | `processes` | true | watch program starts and report suspicious ones |
 | `outbound` | true | report new outbound TCP destinations with their process |
 | `suid` | true | find SUID/SGID programs and files with capabilities (all local filesystems every 6 hours, temp directories every 5 minutes) |

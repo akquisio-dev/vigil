@@ -293,6 +293,8 @@ type agentView struct {
 	ResponseTypes []string        `json:"response_types"`
 	Vulns         *VulnSummary    `json:"vulns,omitempty"`
 	AppVulns      *AppVulnSummary `json:"app_vulns,omitempty"`
+	Containers    []*Container    `json:"containers,omitempty"`
+	DockerGroup   []string        `json:"docker_group,omitempty"`
 	SelfTest      bool            `json:"selftest"`
 	SelfUpdate    bool            `json:"self_update"`
 	Update        *AgentUpdate    `json:"update,omitempty"`
@@ -310,7 +312,7 @@ func (s *Server) viewAgent(a *AgentRec) agentView {
 	}
 	v := agentView{ID: a.ID, Name: a.Name, Hostname: a.Hostname, Version: a.Version, Status: status,
 		LastSeen: a.LastSeen, LastIP: a.LastIP, Enrolled: a.Enrolled, Ports: len(a.Ports),
-		CanaryRoots: a.CanaryRoots, ConfigSync: a.AckedVersion >= a.ConfigVersion, OpenBySev: map[string]int{}, Updates: a.Updates, Posture: a.Posture, Contain: a.Contain, ResponseTypes: append([]string{}, a.ResponseTypes...), Vulns: a.Vulns, AppVulns: a.AppVulns, SelfTest: a.SelfTest, SelfUpdate: a.SelfUpdate, Update: a.Update}
+		CanaryRoots: a.CanaryRoots, ConfigSync: a.AckedVersion >= a.ConfigVersion, OpenBySev: map[string]int{}, Updates: a.Updates, Posture: a.Posture, Contain: a.Contain, ResponseTypes: append([]string{}, a.ResponseTypes...), Vulns: a.Vulns, AppVulns: a.AppVulns, Containers: a.Containers, DockerGroup: a.DockerGroup, SelfTest: a.SelfTest, SelfUpdate: a.SelfUpdate, Update: a.Update}
 	if time.Now().Before(a.MaintenanceUntil) {
 		until := a.MaintenanceUntil
 		v.Maintenance = &until

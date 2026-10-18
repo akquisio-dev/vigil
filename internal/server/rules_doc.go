@@ -412,6 +412,26 @@ var ruleDocs = map[string]ruleDoc{
 		"Packages held back on purpose. The kernel: the newest installed kernel version counts, so a host that was not rebooted shows in `updates.reboot_pending` instead.",
 		"Install the update (`apt upgrade`) and restart the services that use the package.",
 	},
+	"container.privileged": {
+		"A running Docker container can reach the host: it runs privileged, shares the host's PID namespace, has a capability that breaks out (SYS_ADMIN, SYS_PTRACE, SYS_MODULE, DAC_READ_SEARCH, SYS_RAWIO, BPF), or has the host's / or a system directory (/etc, /root, /usr, /dev, /proc, /sys, /var/lib/docker, ...) mounted writable. Whoever gets code execution in it owns the host. One alert per container name; resolves when the container is gone or changed.",
+		"Monitoring and system tools (node exporters, cAdvisor, VPN or storage drivers) that need it by design.",
+		"Check whether the container really needs it. Drop `privileged: true` and the extra capabilities, mount only the paths it needs and read only. Suppress the alert for a container that needs it by design.",
+	},
+	"container.docker_socket": {
+		"A running container has the Docker socket mounted (/var/run/docker.sock). Through it, the container can start a privileged container with the host's / mounted, so it controls the host. One alert per container name.",
+		"Reverse proxies that read container labels (Traefik), Portainer, Watchtower and CI runners.",
+		"Prefer a socket proxy that allows only the read calls the tool needs. Suppress the alert for a tool you accept with full host access.",
+	},
+	"container.new_image": {
+		"A container runs from an image that was never seen on this host. The images of the first overview after enrollment or update are the baseline. Attackers who reach the Docker API or a compose file start their own image (crypto miners, tunnels).",
+		"Deployments of a new service, a new image name or tag (`postgres:16` to `postgres:17`).",
+		"Confirm the deployment was planned. If not, look at the container (`docker inspect`), stop it and find out who started it.",
+	},
+	"container.docker_group": {
+		"Users other than root are in the docker group. Anyone who can talk to the Docker socket can start a privileged container with the host's / mounted, so these users are root without a password.",
+		"Developer machines and CI hosts where this is accepted.",
+		"Remove users who do not need it (`gpasswd -d USER docker`), or use rootless Docker for them.",
+	},
 	"vuln.app_malicious": {
 		"A lock file on the host (package-lock.json, requirements.txt, go.mod) names a package that OSV lists as malicious (a MAL- record): typosquats, hijacked releases and packages published to steal secrets. One alert per package and version. Needs `vuln_lookup` on the server.",
 		"A name that was malicious only in some versions is matched by version; a lock file left over from a project that no longer runs still counts.",
