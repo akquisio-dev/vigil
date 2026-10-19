@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.23.0
 
 - `sh install.sh try` installs the signed server and agent on one machine, both on 127.0.0.1, creates a dashboard user, connects the agent and prints an SSH tunnel command and a harmless command that raises a first alert. `try-remove` takes the trial out again and refuses on a machine that was not set up by `try`; `try-setup` does the trial setup with binaries already installed. CI runs the trial setup with each build, waits for the alert and checks the removal.
 - `vigil-server token` creates an enrollment token without the dashboard. It takes the data directory lock, so it refuses while the server runs, and records `enroll.token_created` in the audit chain.
