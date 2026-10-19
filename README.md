@@ -94,13 +94,19 @@ Full documentation, including the catalogue of all detection rules:
 
 ### Try it on one machine
 
-On a spare Linux machine with systemd (a fresh VPS is fine), as root:
+On a spare Linux machine with systemd (a fresh VPS is fine), as root, with
+[cosign](https://docs.sigstore.dev/cosign/system_config/installation/) for
+the signature check:
 
 ```sh
 curl -fsSLO https://github.com/akquisio-dev/vigil/releases/latest/download/install.sh
 less install.sh
 sh install.sh try
 ```
+
+On Debian and Ubuntu, without cosign: install `vigil-server` and
+`vigil-agent` from the [apt repository](docs/getting-started.md#with-apt-debian-and-ubuntu),
+then run `sh install.sh try-setup`.
 
 This installs the signed server and agent, both on 127.0.0.1 only, asks for
 a dashboard password, shows a QR code for your authenticator app and

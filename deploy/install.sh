@@ -43,6 +43,9 @@ done
 # A trial install is marked, so that try-remove never takes out a real one.
 TRY=/etc/vigil/.try-install
 TRY_USER=${VIGIL_TRY_USER:-admin}
+TMP=""
+# On a failed trial, say how to start over.
+trap 'st=$?; [ -z "$TMP" ] || rm -rf "$TMP"; if [ $st != 0 ] && [ -f "$TRY" ] && [ "$WHAT" != try-remove ]; then echo; echo "The trial setup stopped. Run: sh install.sh try-remove, then try again."; fi' EXIT
 
 # install_release WHAT downloads the binary and systemd units of WHAT,
 # checks them and installs them.
@@ -58,7 +61,6 @@ install_release() {
   BASE="https://github.com/$REPO/releases/download/$VERSION"
   BIN="vigil-${1}_${VERSION}_linux_${ARCH}"
   TMP=$(mktemp -d)
-  trap 'rm -rf "$TMP"' EXIT
   cd "$TMP"
   echo "vigil $1 $VERSION ($ARCH)"
   for f in "$BIN" SHA256SUMS SHA256SUMS.sigstore.json "vigil-$1.service"; do
@@ -105,11 +107,16 @@ install_release() {
   systemctl daemon-reload
   cd /
   rm -rf "$TMP"
+  TMP=""
   echo "installed /usr/local/bin/vigil-$1 $(/usr/local/bin/vigil-$1 version)"
 }
 
 # try_check stops before a trial would touch an existing installation.
 try_check() {
+  if [ -f "$TRY" ]; then
+    echo "a trial is already set up here, or was stopped half way: sh install.sh try-remove, then try again"
+    exit 1
+  fi
   for p in /etc/vigil/server.json /etc/vigil/agent.json /var/lib/vigil /var/lib/vigil-agent; do
     if [ -e "$p" ]; then
       echo "$p exists: vigil is already set up on this machine. The trial needs a machine without it."
@@ -133,7 +140,7 @@ try_setup() {
   done
   getent passwd vigil >/dev/null || useradd --system --home-dir /var/lib/vigil --shell /usr/sbin/nologin vigil
   install -d -m 0750 -g vigil /etc/vigil
-  echo "$1" > "$TRY"
+  [ -f "$TRY" ] || echo "$1" > "$TRY"
   umask 027
   cat > /etc/vigil/server.json <<'EOF'
 {
@@ -169,13 +176,12 @@ EOF
   install -d -m 0700 /var/lib/vigil-agent
   vigil-agent enroll -config /etc/vigil/agent.json -server http://127.0.0.1:8471 -token "$token"
   systemctl enable --now vigil-agent
-  host=$(hostname -f 2>/dev/null || hostname)
   cat <<EOF
 
 vigil runs on this machine, reachable from here only (127.0.0.1).
 
   Dashboard:  http://127.0.0.1:8470   user $TRY_USER
-  From your computer:  ssh -L 8470:127.0.0.1:8470 root@$host
+  From your computer:  ssh -L 8470:127.0.0.1:8470 root@ADDRESS_OF_THIS_MACHINE
                        then open http://127.0.0.1:8470 there
 
 The first scan is the baseline: what is on the machine now counts as
@@ -184,6 +190,7 @@ expected. To see a finding within a minute, run a program from /tmp:
   cp /bin/sleep /tmp/vigil-try && /tmp/vigil-try 5; rm -f /tmp/vigil-try
 
 It shows up under Alerts as "Program started from a temporary directory".
+(If /tmp is mounted noexec, use /var/tmp instead.)
 
 This is a trial layout, not one for production: see
 https://akquisio-dev.github.io/vigil/getting-started/ for that.
@@ -211,6 +218,9 @@ try_remove() {
   fi
   systemctl daemon-reload
   echo "trial removed"
+  if [ "$how" = installed ]; then
+    echo "the binaries and units you installed yourself are still there"
+  fi
 }
 
 case "$WHAT" in
@@ -219,6 +229,10 @@ case "$WHAT" in
     for b in /usr/local/bin/vigil-server /usr/local/bin/vigil-agent; do
       [ ! -e "$b" ] || { echo "$b exists: vigil is already installed on this machine"; exit 1; }
     done
+    # Marked before anything is installed, so try-remove can clean up
+    # after a download or check that fails.
+    install -d -m 0750 /etc/vigil
+    echo release > "$TRY"
     install_release server
     install_release agent
     try_setup release

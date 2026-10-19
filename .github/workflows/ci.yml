@@ -59,5 +59,9 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
+      - uses: sigstore/cosign-installer@v3
+        with:
+          cosign-release: v2.4.1
+      - run: tools/trytest/release.sh v0.22.0
       - run: make build
       - run: tools/trytest/run.sh

@@ -15,6 +15,10 @@ fail() {
 sudo install -m 0755 dist/vigil-server dist/vigil-agent /usr/local/bin/
 sudo install -m 0644 deploy/systemd/vigil-* /etc/systemd/system/
 sudo systemctl daemon-reload
+# A setup that stops half way (here: a password that is too short) is
+# taken out by try-remove and can then run again.
+if printf 'short\n' | sudo VIGIL_TRY_USER=ci sh deploy/install.sh try-setup; then fail "accepted a short password"; fi
+sudo sh deploy/install.sh try-remove || fail "try-remove after a stopped setup"
 printf 'a-trial-password\n' | sudo VIGIL_TRY_USER=ci sh deploy/install.sh try-setup
 
 # The agent reports program starts from /tmp; repeat until it is up.
@@ -29,7 +33,10 @@ until sudo grep -q '"rule":"process.tmp_exec"' /var/lib/vigil/state.json; do
 done
 rm -rf "$(dirname "$trigger")"
 echo "alert raised"
-curl -fsS -o /dev/null http://127.0.0.1:8470/ || fail "dashboard not reachable"
+users=$(mktemp)
+sudo cat /var/lib/vigil/users.json > "$users"
+python3 -I tools/trytest/login.py "$users" ci a-trial-password process.tmp_exec || fail "the alert is not in the dashboard after logging in"
+rm -f "$users"
 
 sudo sh deploy/install.sh try-remove
 for p in /etc/vigil /var/lib/vigil /var/lib/vigil-agent; do
