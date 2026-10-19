@@ -63,5 +63,7 @@ jobs:
         with:
           cosign-release: v2.4.1
       - run: tools/trytest/release.sh v0.22.0
+      # what a new user runs: install.sh try of the newest release
+      - run: tools/trytest/run.sh latest
       - run: make build
       - run: tools/trytest/run.sh
