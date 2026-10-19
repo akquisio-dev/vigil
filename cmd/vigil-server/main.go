@@ -26,6 +26,7 @@ const usage = `usage:
   vigil-server user remove [-config ...] NAME
   vigil-server user list   [-config ...]
   vigil-server verify      [-config ...]
+  vigil-server token       [-config ...]
   vigil-server notify test [-config ...] [-name NOTIFIER]
   vigil-server backup       [-config ...] [-out FILE|-] [-to PUBLIC_KEY | -plain]
   vigil-server backup keygen -out SECRET_KEY_FILE
@@ -101,6 +102,19 @@ func main() {
 			fail()
 		}
 		notifyTest(mustConfig(*cfgPath), *only)
+	case "token":
+		cfg := mustConfig(*cfgPath)
+		tok, exp, err := server.CreateEnrollToken(cfg, "cli")
+		if err != nil {
+			log.Fatal(err)
+		}
+		// The token alone on stdout, for scripts; the hint on stderr.
+		fmt.Println(tok)
+		url := cfg.AgentURL
+		if url == "" {
+			url = "http://SERVER:8471"
+		}
+		fmt.Fprintf(os.Stderr, "valid once until %s:\n  vigil-agent enroll -server %s -token %s\n", exp.Local().Format(time.DateTime), url, tok)
 	case "user":
 		userCmd(mustConfig(*cfgPath).DataDir, sub, *role, fs.Args())
 	default:

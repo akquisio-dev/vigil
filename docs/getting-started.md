@@ -3,6 +3,12 @@
 This guide sets up one server and enrolls hosts. It assumes Linux with
 systemd. Commands run as root.
 
+To look at vigil first, `sh install.sh try` sets up server and agent on one
+spare machine, on 127.0.0.1 only, and `sh install.sh try-remove` takes them
+out again (see the [README](https://github.com/akquisio-dev/vigil#try-it-on-one-machine)).
+`sh install.sh try-setup` does the same with binaries and units you
+installed yourself, for example built from source.
+
 ## Plan the network
 
 vigil has two listeners on the server:
@@ -147,7 +153,9 @@ command in your own terminal so the password never lands in a log or a chat.
 ## Enroll a host
 
 In the dashboard, open **Settings** and create an enrollment token. It is valid
-for one hour and one use. On the host:
+for one hour and one use. While the server is stopped, `vigil-server token`
+makes one as well, for scripts (it is recorded in the audit log like one
+from the dashboard). On the host:
 
 ```sh
 install -m 0755 dist/vigil-agent /usr/local/bin/

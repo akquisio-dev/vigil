@@ -600,11 +600,8 @@ func (s *Server) handleAgentAction(w http.ResponseWriter, r *http.Request, sess 
 }
 
 func (s *Server) handleToken(w http.ResponseWriter, r *http.Request, sess *session) {
-	tok := "vgl_" + newID(24)
-	t := &EnrollToken{Hash: sha(tok), Created: time.Now().UTC(), Expires: time.Now().UTC().Add(time.Hour), By: sess.User}
 	s.mu.Lock()
-	s.state.Tokens[t.Hash] = t
-	s.saveLocked()
+	tok, t := s.newEnrollTokenLocked(sess.User)
 	s.mu.Unlock()
 	s.audit(sess.User, "enroll.token_created", map[string]any{"expires": t.Expires})
 	writeJSON(w, map[string]any{"token": tok, "expires": t.Expires})

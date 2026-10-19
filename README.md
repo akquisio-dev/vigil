@@ -92,6 +92,25 @@ Full documentation, including the catalogue of all detection rules:
 
 ## Quick start
 
+### Try it on one machine
+
+On a spare Linux machine with systemd (a fresh VPS is fine), as root:
+
+```sh
+curl -fsSLO https://github.com/akquisio-dev/vigil/releases/latest/download/install.sh
+less install.sh
+sh install.sh try
+```
+
+This installs the signed server and agent, both on 127.0.0.1 only, asks for
+a dashboard password, shows a QR code for your authenticator app and
+connects the agent. It then prints how to reach the dashboard through an SSH
+tunnel and one harmless command that raises a first alert.
+`sh install.sh try-remove` takes everything out again. The trial is not a
+production layout: there is no TLS, no VPN and no notification channel.
+
+### Install
+
 From a signed release (needs [cosign](https://docs.sigstore.dev/cosign/system_config/installation/)):
 
 ```sh

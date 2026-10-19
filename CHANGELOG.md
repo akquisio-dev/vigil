@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- `sh install.sh try` installs the signed server and agent on one machine, both on 127.0.0.1, creates a dashboard user, connects the agent and prints an SSH tunnel command and a harmless command that raises a first alert. `try-remove` takes the trial out again and refuses on a machine that was not set up by `try`; `try-setup` does the trial setup with binaries already installed. CI runs the trial setup with each build, waits for the alert and checks the removal.
+- `vigil-server token` creates an enrollment token without the dashboard. It takes the data directory lock, so it refuses while the server runs, and records `enroll.token_created` in the audit chain.
+
 ## v0.22.0
 
 - Containers: with `docker` on (the default) the agent asks the Docker API, with GET requests only, which containers run. Process, malware and connection findings from inside a container name it (`[container NAME]` in the alert). The agent sends an overview when it changes (`container.snapshot`), and the host page lists the containers. New rules `container.privileged` and `container.docker_socket` (high, a container that can take over the host), `container.new_image` (medium, an image never seen on the host, after a baseline) and `container.docker_group` (medium, users other than root in the docker group).
