@@ -54,7 +54,9 @@ instruction the server can give is "place canary of type T at path P" or
 "remove canary C". The agent enforces locally configured roots, generates
 the content, refuses symlinks on the whole path, refuses names and suffixes
 that would be executed or used for login, never overwrites and deletes only
-its own unchanged files. Agents execute nothing the server sends. A self test
+its own unchanged files. A canary is root owned, either 0600 or, when the
+server asks for a readable one, 0644 in a directory that already exists;
+there is no way to hand a file to another user. Agents execute nothing the server sends. A self test
 request carries only a random id: the agent writes a fixed comment into a cron
 directory (never replacing a file), runs its own copy of `sleep 1` and writes
 one log line, then removes both files.

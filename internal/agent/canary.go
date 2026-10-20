@@ -17,16 +17,21 @@ import (
 )
 
 type CanaryState struct {
-	ID      string    `json:"id"`
-	Type    string    `json:"type"`
-	Path    string    `json:"path"`
-	Hash    string    `json:"hash,omitempty"`
-	Ino     uint64    `json:"ino,omitempty"`
-	Size    int64     `json:"size,omitempty"`
-	MtimeNs int64     `json:"mtime_ns,omitempty"`
-	Created time.Time `json:"created"`
-	Status  string    `json:"status"` // active | tampered | error
-	Error   string    `json:"error,omitempty"`
+	ID      string `json:"id"`
+	Type    string `json:"type"`
+	Path    string `json:"path"`
+	Hash    string `json:"hash,omitempty"`
+	Ino     uint64 `json:"ino,omitempty"`
+	Size    int64  `json:"size,omitempty"`
+	MtimeNs int64  `json:"mtime_ns,omitempty"`
+	// Mode, Uid and Gid as placed; Mode 0 is state from before they were kept.
+	Mode     uint32    `json:"mode,omitempty"`
+	Uid      uint32    `json:"uid,omitempty"`
+	Gid      uint32    `json:"gid,omitempty"`
+	Readable bool      `json:"readable,omitempty"`
+	Created  time.Time `json:"created"`
+	Status   string    `json:"status"` // active | tampered | error
+	Error    string    `json:"error,omitempty"`
 }
 
 const maxCanaryBytes = 64 << 10
@@ -120,8 +125,13 @@ func (a *Agent) placeCanary(c proto.Canary) (*CanaryState, error) {
 	if len(content) > maxCanaryBytes {
 		return nil, errors.New("generated content too large")
 	}
-	dfd, base, err := openParent(c.Path, true)
+	// Directories made here are 0700 root, so a readable canary needs a
+	// parent that already exists and that its readers can get through.
+	dfd, base, err := openParent(c.Path, !c.Readable)
 	if err != nil {
+		if c.Readable && errors.Is(err, syscall.ENOENT) {
+			return nil, errors.New("the directory must already exist for a readable canary")
+		}
 		return nil, err
 	}
 	defer syscall.Close(dfd)
@@ -134,6 +144,16 @@ func (a *Agent) placeCanary(c proto.Canary) (*CanaryState, error) {
 	}
 	f := os.NewFile(uintptr(fd), c.Path)
 	defer f.Close()
+	// Set on the descriptor, not the path, and after O_EXCL: the umask
+	// never widens the mode and nothing can be swapped in between.
+	mode := uint32(0o600)
+	if c.Readable {
+		mode = 0o644
+	}
+	if err := syscall.Fchmod(fd, mode); err != nil {
+		syscall.Unlinkat(dfd, base)
+		return nil, err
+	}
 	if _, err := f.Write(content); err != nil {
 		return nil, err
 	}
@@ -148,6 +168,7 @@ func (a *Agent) placeCanary(c proto.Canary) (*CanaryState, error) {
 	return &CanaryState{
 		ID: c.ID, Type: c.Type, Path: c.Path, Hash: hex.EncodeToString(sum[:]),
 		Ino: st.Ino, Size: st.Size, MtimeNs: st.Mtim.Nano(), Created: time.Now().UTC(), Status: "active",
+		Mode: st.Mode & 0o7777, Uid: st.Uid, Gid: st.Gid, Readable: c.Readable,
 	}, nil
 }
 
@@ -200,7 +221,7 @@ func (a *Agent) applyConfig(cfg proto.AgentConfig) {
 	}
 	for id, cs := range a.state.Canaries {
 		c, keep := want[id]
-		if keep && c.Path == cs.Path && cs.Status != "error" {
+		if keep && c.Path == cs.Path && c.Readable == cs.Readable && cs.Status != "error" {
 			continue
 		}
 		if err := removeCanary(cs); err != nil {
@@ -250,7 +271,13 @@ func (a *Agent) checkCanaries() {
 			problem = "missing"
 		} else if st.Ino != cs.Ino || st.Mode&syscall.S_IFMT != syscall.S_IFREG {
 			problem = "replaced"
-		} else if st.Size != cs.Size || st.Mtim.Nano() != cs.MtimeNs {
+		} else if cs.Mode == 0 {
+			// Placed by an older agent: take the owner and mode it has now.
+			cs.Mode, cs.Uid, cs.Gid = st.Mode&0o7777, st.Uid, st.Gid
+		} else if st.Mode&0o7777 != cs.Mode || st.Uid != cs.Uid || st.Gid != cs.Gid {
+			problem = "permissions"
+		}
+		if problem == "" && (st.Size != cs.Size || st.Mtim.Nano() != cs.MtimeNs) {
 			data, err := os.ReadFile(cs.Path)
 			sum := sha256.Sum256(data)
 			if err != nil || hex.EncodeToString(sum[:]) != cs.Hash {

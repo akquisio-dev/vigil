@@ -35,6 +35,8 @@ type AgentRec struct {
 	prevSeen time.Time // LastSeen before the batch being evaluated
 
 	CanaryRoots []string `json:"canary_roots"`
+	// CanaryReadable: the agent can place canaries readable by every user.
+	CanaryReadable bool `json:"canary_readable,omitempty"`
 
 	Ports       []map[string]any `json:"ports"`
 	Baseline    map[string]bool  `json:"baseline"`
@@ -95,6 +97,7 @@ type CanaryRec struct {
 	Type      string            `json:"type"`
 	Path      string            `json:"path"`
 	Params    map[string]string `json:"params,omitempty"`
+	Readable  bool              `json:"readable,omitempty"`
 	Created   time.Time         `json:"created"`
 	By        string            `json:"by"`
 	Status    string            `json:"status"` // pending | active | tampered | error

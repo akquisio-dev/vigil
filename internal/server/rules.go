@@ -323,7 +323,12 @@ func (s *Server) evaluate(a *AgentRec, r *Record) []finding {
 		if exe == "" {
 			exe = "pid " + str(d, "pid")
 		}
-		p := map[string]string{"path": str(d, "path"), "exe": exe, "uid": str(d, "uid"), "pid": str(d, "pid")}
+		// A reader that is already reaped leaves no uid behind.
+		uid := str(d, "uid")
+		if uid == "" {
+			uid = "unknown"
+		}
+		p := map[string]string{"path": str(d, "path"), "exe": exe, "uid": uid, "pid": str(d, "pid")}
 		if anc, ok := d["ancestry"].([]any); ok && len(anc) > 0 {
 			names := make([]string, 0, len(anc))
 			for _, x := range anc {
@@ -372,6 +377,7 @@ func (s *Server) evaluate(a *AgentRec, r *Record) []finding {
 		a.SelfTest, _ = d["selftest"].(bool)
 		a.SelfUpdate, _ = d["self_update"].(bool)
 		a.Forensics, _ = d["forensics"].(bool)
+		a.CanaryReadable, _ = d["canary_readable"].(bool)
 		a.CanaryRoots = a.CanaryRoots[:0]
 		if roots, ok := d["canary_roots"].([]any); ok {
 			for _, root := range roots {

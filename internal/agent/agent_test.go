@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -201,6 +202,57 @@ func TestCanaryLifecycle(t *testing.T) {
 		if _, err := os.Stat(p); !os.IsNotExist(err) {
 			t.Fatalf("%s: still there", typ)
 		}
+	}
+}
+
+func TestReadableCanary(t *testing.T) {
+	a, root := testAgent(t)
+	// A readable canary never creates directories: they would be 0700.
+	if _, err := a.placeCanary(proto.Canary{ID: "x", Type: "env", Path: root + "/missing/.env.bak", Readable: true}); err == nil {
+		t.Fatal("a readable canary must not create its directory")
+	}
+	if _, err := os.Stat(root + "/missing"); !os.IsNotExist(err) {
+		t.Fatal("directory was created")
+	}
+	old := syscall.Umask(0o077)
+	defer syscall.Umask(old)
+	p := root + "/.env.bak"
+	cs, err := a.placeCanary(proto.Canary{ID: "y", Type: "env", Path: p, Readable: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fi, _ := os.Stat(p); fi.Mode().Perm() != 0o644 || cs.Mode != 0o644 || !cs.Readable {
+		t.Fatalf("mode %v, state %o", fi.Mode(), cs.Mode)
+	}
+	a.state.Canaries["y"] = cs
+	a.checkCanaries()
+	if cs.Status != "active" {
+		t.Fatalf("untouched canary is %s", cs.Status)
+	}
+	os.Chmod(p, 0o600)
+	a.checkCanaries()
+	if cs.Status != "tampered" || len(a.queue) == 0 || a.queue[len(a.queue)-1].Data["problem"] != "permissions" {
+		t.Fatalf("chmod not noticed: %s %v", cs.Status, a.queue)
+	}
+}
+
+func TestCanaryStateFromOlderAgent(t *testing.T) {
+	a, root := testAgent(t)
+	p := root + "/c.txt"
+	cs, err := a.placeCanary(proto.Canary{ID: "x", Type: "credentials", Path: p})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cs.Mode, cs.Uid, cs.Gid = 0, 0, 0
+	a.state.Canaries["x"] = cs
+	a.checkCanaries()
+	if cs.Status != "active" || cs.Mode != 0o600 {
+		t.Fatalf("old state: %s %o", cs.Status, cs.Mode)
+	}
+	os.Chmod(p, 0o644)
+	a.checkCanaries()
+	if cs.Status != "tampered" {
+		t.Fatal("chmod after the first check not noticed")
 	}
 }
 

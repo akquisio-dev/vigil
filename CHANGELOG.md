@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.24.0
+
+- Readable canaries: a canary can be placed with mode 0644 (dashboard checkbox, API field `readable`). A canary readable only by root never fires for an intruder who got in through a web app or game server running as its own user; a readable one does. It is still owned by root, its content is still worthless, and the agent only places it in a directory that already exists. The server refuses the option for agents that do not report support, so an older agent can not silently place a 0600 file instead.
+- The agent remembers mode, owner and group of every canary and reports `canary.tampered` with problem `permissions` when they change. Canaries placed by older agents take their current values on the first check.
+- `canary.opened` reads the reader's uid and parent chain first, before the slower fields, and the alert says `uid unknown` instead of `uid ` when the reader was already gone.
+
 ## v0.23.0
 
 - `sh install.sh try` installs the signed server and agent on one machine, both on 127.0.0.1, creates a dashboard user, connects the agent and prints an SSH tunnel command and a harmless command that raises a first alert. `try-remove` takes the trial out again and refuses on a machine that was not set up by `try`; `try-setup` does the trial setup with binaries already installed. CI runs the trial setup with each build, waits for the alert and checks the removal.

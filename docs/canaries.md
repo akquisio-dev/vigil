@@ -46,6 +46,34 @@ configuration and refuses anything that could turn a canary into a backdoor:
 
 Files are created with mode 0600 and owned by root.
 
+## Readable canaries
+
+By default a canary is mode 0600 and owned by root, so only root can open
+it. An intruder who comes in through a web application or a game server
+runs as that service's user and gets "permission denied": the open never
+happens and there is no alert. Canaries in `/root` are also hidden from any
+service with `ProtectHome=yes`.
+
+Tick **Readable by every user** (API field `readable`) to place the canary
+with mode 0644. It is still owned by root and its content is still
+worthless, so nothing is lost when a service user reads it; that read is
+the alert. The fanotify mark sits on the file itself, so it also fires for
+services with `ProtectSystem=strict`, private mounts or their own
+namespaces.
+
+- The directory must already exist. The agent creates missing directories
+  as 0700 root, which service users could not get through, so for a
+  readable canary it refuses instead.
+- Put it where the service user lands and can look: next to the
+  application in its working directory, not in `/root` or `/home`.
+- Pick a directory that deploys leave alone. `rsync --delete`, `git clean`
+  or a fresh copy of the directory remove the file and raise
+  `canary.tampered`.
+- Make sure the application does not read every file in its directory
+  (plugin or command loaders), or it trips the canary itself.
+- The option needs agent v0.24.0 or newer; the dashboard greys it out for
+  older agents.
+
 ## Where to put them
 
 Good places are where an intruder looks first:
@@ -78,8 +106,10 @@ such as `cat` are often gone before the executable path can be read; the name,
 user and parent chain usually remain. Compare the login UID and the time with
 the SSH logins of the host.
 
-If a canary is deleted, replaced or edited, `canary.tampered` fires: someone
-found it.
+If a canary is deleted, replaced, edited or gets another mode or owner,
+`canary.tampered` fires: someone found it. If the reader was already gone
+when the agent looked, the alert says `uid unknown`; the event still has
+the process name, login UID and session.
 
 ## Removing a canary
 

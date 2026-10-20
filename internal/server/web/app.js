@@ -18,6 +18,7 @@ const T = {
     created: "Created", updated: "Updated", by: "By", status: "Status", type: "Type", path: "Path",
     triggers: "Opened", lastTriggered: "Last opened", place: "Place canary", remove: "Remove",
     domain: "Domain (optional)", email: "Tracking e-mail (optional)", comment: "Key comment (optional)",
+    readable: "Readable by every user (0644), so a broken service account trips it too", readableTag: "readable",
     canaryRoots: "Canary roots", none: "none", expected: "expected", unexpected: "new",
     accept: "Accept", acceptAll: "Accept all", process: "Process", scope: "Scope", via: "Via",
     rename: "Rename", deleteHost: "Remove host", confirmDelete: "Remove this host and its canaries?",
@@ -134,6 +135,7 @@ const T = {
     created: "Erstellt", updated: "Aktualisiert", by: "Von", status: "Status", type: "Typ", path: "Pfad",
     triggers: "Geöffnet", lastTriggered: "Zuletzt geöffnet", place: "Köder auslegen", remove: "Entfernen",
     domain: "Domain (optional)", email: "Tracking-Mail (optional)", comment: "Schlüssel-Kommentar (optional)",
+    readable: "Für alle Benutzer lesbar (0644), dann löst auch ein geknackter Dienst ihn aus", readableTag: "lesbar",
     canaryRoots: "Köder-Wurzeln", none: "keine", expected: "erwartet", unexpected: "neu",
     accept: "Erlauben", acceptAll: "Alle erlauben", process: "Prozess", scope: "Bereich", via: "Über",
     rename: "Umbenennen", deleteHost: "Host entfernen", confirmDelete: "Diesen Host und seine Köder entfernen?",
@@ -1174,9 +1176,12 @@ async function canariesView() {
   const typeSel = h("select", { name: "type" }, types.map((x) => h("option", { value: x }, x)));
   const pathIn = h("input", { name: "path", required: true, placeholder: "/…", class: "mono" });
   const roots = h("div", { class: "muted mono" });
+  const readableBox = h("input", { type: "checkbox", name: "readable" });
   const showRoots = () => {
     const a = o.agents.find((x) => x.id === agentSel.value);
     roots.textContent = t("canaryRoots") + ": " + ((a && a.canary_roots && a.canary_roots.join("  ")) || t("none"));
+    readableBox.disabled = !(a && a.canary_readable);
+    if (readableBox.disabled) readableBox.checked = false;
   };
   agentSel.addEventListener("change", showRoots);
   showRoots();
@@ -1186,12 +1191,13 @@ async function canariesView() {
     err.textContent = "";
     try {
       await post("/api/ui/canaries", { agent_id: f.get("agent_id"), type: f.get("type"), path: f.get("path").trim(),
-        params: { domain: f.get("domain"), email: f.get("email"), comment: f.get("comment") } });
+        params: { domain: f.get("domain"), email: f.get("email"), comment: f.get("comment") }, readable: readableBox.checked });
       render();
     } catch (x) { err.textContent = x.message; }
   } },
     h("div", { class: "grid two" }, h("label", null, t("host"), agentSel), h("label", null, t("type"), typeSel)),
     h("label", null, t("path"), pathIn), roots,
+    h("label", { class: "check" }, readableBox, t("readable")),
     h("div", { class: "grid tiles" },
       h("label", null, t("domain"), h("input", { name: "domain" })),
       h("label", null, t("email"), h("input", { name: "email", type: "email" })),
@@ -1202,7 +1208,7 @@ async function canariesView() {
     statusChip(c.status),
     h("div", null,
       h("div", { class: "title mono" }, c.path),
-      h("div", { class: "sub" }, [c.host, c.type].join("  ·  ")),
+      h("div", { class: "sub" }, [c.host, c.type, c.readable ? t("readableTag") : null].filter(Boolean).join("  ·  ")),
       c.error ? h("div", { class: "sub warn" }, c.error) : null),
     h("div", { class: "meta" },
       c.triggers ? h("span", { class: "chip" }, h("span", { class: "dot critical" }), t("triggers") + " " + c.triggers + " · ", timeEl(c.last_triggered)) : null,

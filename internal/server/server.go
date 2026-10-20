@@ -575,7 +575,7 @@ func (s *Server) agentConfig(a *AgentRec) (json.RawMessage, string) {
 	cfg := proto.AgentConfig{AgentID: a.ID, Version: a.ConfigVersion, Canaries: []proto.Canary{}, Actions: s.pendingActions(a.ID), SelfTest: s.pendingSelfTest(a.ID), Snapshots: s.pendingSnapshots(a.ID), Yara: s.yaraConfig(), Update: s.pendingUpdate(a)}
 	for _, c := range s.state.Canaries {
 		if c.AgentID == a.ID {
-			cfg.Canaries = append(cfg.Canaries, proto.Canary{ID: c.ID, Type: c.Type, Path: c.Path, Params: c.Params})
+			cfg.Canaries = append(cfg.Canaries, proto.Canary{ID: c.ID, Type: c.Type, Path: c.Path, Params: c.Params, Readable: c.Readable})
 		}
 	}
 	raw, _ := json.Marshal(cfg)

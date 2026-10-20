@@ -126,6 +126,9 @@ type Canary struct {
 	Type   string            `json:"type"`
 	Path   string            `json:"path"`
 	Params map[string]string `json:"params,omitempty"`
+	// Readable makes the file mode 0644, so a service account that was
+	// broken into trips it too. The default 0600 only catches root.
+	Readable bool `json:"readable,omitempty"`
 }
 
 // CanaryTypes are the only kinds an agent will ever create.

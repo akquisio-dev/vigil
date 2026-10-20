@@ -159,6 +159,12 @@ func (a *Agent) reportCanaryOpen(path string, pid int, seen map[string]time.Time
 func procInfo(pid int) map[string]any {
 	d := map[string]any{"pid": pid}
 	base := "/proc/" + strconv.Itoa(pid)
+	// Status first: the uid matters most, and a reaped reader takes it
+	// along within microseconds.
+	uid, ppid := statusFields(pid)
+	if uid != "" {
+		d["uid"] = uid
+	}
 	if exe, err := os.Readlink(base + "/exe"); err == nil {
 		d["exe"] = exe
 	}
@@ -179,10 +185,6 @@ func procInfo(pid int) map[string]any {
 	}
 	if v, err := os.ReadFile(base + "/sessionid"); err == nil {
 		d["sessionid"] = strings.TrimSpace(string(v))
-	}
-	uid, ppid := statusFields(pid)
-	if uid != "" {
-		d["uid"] = uid
 	}
 	var chain []string
 	for i := 0; i < 10 && ppid > 1; i++ {

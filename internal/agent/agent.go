@@ -151,7 +151,7 @@ func (a *Agent) Run(ctx context.Context) error {
 			allowed = append(allowed, t)
 		}
 	}
-	a.emit(proto.NewEvent("agent.started", map[string]any{"version": Version, "hostname": host, "canary_roots": a.cfg.CanaryRoots, "response": allowed, "selftest": on(a.cfg.SelfTest), "forensics": on(a.cfg.Forensics), "self_update": a.cfg.SelfUpdate}))
+	a.emit(proto.NewEvent("agent.started", map[string]any{"version": Version, "hostname": host, "canary_roots": a.cfg.CanaryRoots, "canary_readable": true, "response": allowed, "selftest": on(a.cfg.SelfTest), "forensics": on(a.cfg.Forensics), "self_update": a.cfg.SelfUpdate}))
 	cleanSelfTests()
 	a.reportContainment()
 	go a.watchUpdates(ctx)
