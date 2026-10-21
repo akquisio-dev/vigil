@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -306,7 +307,8 @@ func (s *Server) evaluate(a *AgentRec, r *Record) []finding {
 		if port := num(d, "port"); str(d, "scope") == "loopback" && strings.HasPrefix(str(d, "process"), "sshd") && port >= 6010 && port < 6100 {
 			break
 		}
-		p := map[string]string{"proto": str(d, "proto"), "port": str(d, "port"), "addr": str(d, "addr"), "process": str(d, "process"), "key": str(d, "key")}
+		p := map[string]string{"proto": str(d, "proto"), "port": str(d, "port"), "addr": str(d, "addr"), "process": str(d, "process"), "key": str(d, "key"),
+			"scope": str(d, "scope")}
 		switch {
 		case str(d, "via") == "docker" && str(d, "scope") != "loopback":
 			add("port.docker", str(d, "key"), p)
@@ -406,6 +408,9 @@ func (s *Server) evaluate(a *AgentRec, r *Record) []finding {
 				"cmd_miner": "process.miner", "service_shell": "process.service_shell", "cmd_download_exec": "process.download_exec",
 				"deleted_exe": "process.deleted_exe", "tmp_exe": "process.tmp_exec", "cmd_decode_exec": "process.decode_exec",
 				"memfd_exe": "process.memfd_exec", "ld_preload": "process.preload"}[sig]
+			if rule == "process.download_exec" && aptKeyHome(p) {
+				continue
+			}
 			if rule != "" && !seen[rule] {
 				seen[rule] = true
 				k := key
@@ -593,6 +598,17 @@ func (s *Server) evaluate(a *AgentRec, r *Record) []finding {
 	return out
 }
 
+// apt-key makes its GnuPG home with mktemp -d in /tmp and then runs
+// "chmod 700" on it, which reads like "chmod +x /tmp/...". Only that exact
+// command is let through: a program started from the directory later is
+// still process.tmp_exec. The parent is not checked, because it has often
+// exited before the agent reads it.
+var aptKeyHomeRe = regexp.MustCompile(`^chmod 700 /tmp/apt-key-gpghome\.[A-Za-z0-9]{10}$`)
+
+func aptKeyHome(p map[string]string) bool {
+	return p["exe"] == "/usr/bin/chmod" && aptKeyHomeRe.MatchString(p["cmdline"])
+}
+
 // procKey allows every port a named process opens with this protocol and
 // scope. Game servers and similar tools pick random ports on each start.
 func procKey(p map[string]any) string {
@@ -601,6 +617,26 @@ func procKey(p map[string]any) string {
 		return ""
 	}
 	return "proc:" + name + "/" + str(p, "proto") + "/" + str(p, "scope")
+}
+
+// alertProcKey is procKey for a port alert. Alerts from before v0.25.0
+// carry no scope; it follows from the rule and the address then.
+func alertProcKey(al *Alert) string {
+	if al.Rule != "port.public" && al.Rule != "port.local" {
+		return ""
+	}
+	p := decodeParams(al.Detail)
+	scope := p["scope"]
+	switch {
+	case scope != "":
+	case al.Rule == "port.local":
+		scope = "loopback"
+	case p["addr"] == "0.0.0.0" || p["addr"] == "::" || p["addr"] == "*":
+		scope = "any"
+	default:
+		scope = "address"
+	}
+	return procKey(map[string]any{"process": p["process"], "proto": p["proto"], "scope": scope})
 }
 
 func portExpected(a *AgentRec, p map[string]any) bool {

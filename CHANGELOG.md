@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Suppressions can match a parameter by pattern: a program by name whatever its pid, a path with `*`, a port or uid range, a network. Free text (command lines, request samples) still only matches exactly, and patterns that name nothing are refused. A server without patterns reads them as values that never occur, so a downgrade makes a pattern suppression silence nothing instead of more.
+- The suppression form shows how many open alerts it covers, per host, before you save, and saving resolves them. API: `dry_run` and `resolve` on `POST /api/ui/suppressions`, which now answers `{suppression, resolved}`.
+- Port alerts have **Allow process** on the alert page. Allowing a process also resolves the open alerts for ports of its earlier runs, which are closed by then (a game server picks new random ports on every start). Port alerts carry `scope`.
+- `apt-key` making its GnuPG home (`chmod 700 /tmp/apt-key-gpghome.XXXXXXXXXX`) is no longer `process.download_exec`. Only that exact command is let through; a program started from the directory is still `process.tmp_exec`.
+
 ## v0.24.0
 
 - Readable canaries: a canary can be placed with mode 0644 (dashboard checkbox, API field `readable`). A canary readable only by root never fires for an intruder who got in through a web app or game server running as its own user; a readable one does. It is still owned by root, its content is still worthless, and the agent only places it in a directory that already exists. The server refuses the option for agents that do not report support, so an older agent can not silently place a 0600 file instead.

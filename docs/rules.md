@@ -443,7 +443,7 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 
 **Fires when:** A command line that downloads and runs code in one go (`curl … | sh`, `wget … && chmod +x`, `chmod +x /tmp/…`).
 
-**Known false positives:** Installers that are run this way on purpose, for example during a deploy.
+**Known false positives:** Installers that are run this way on purpose, for example during a deploy. `apt-key` making its GnuPG home (`chmod 700 /tmp/apt-key-gpghome.XXXXXXXXXX`) is let through by the server.
 
 **What to do:** Check who ran it (`uid`, parent) and what was downloaded. If nobody did, treat as an intrusion.
 
@@ -801,7 +801,7 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 
 **Known false positives:** New services, programs that pick a random port on every start (game servers, Wine).
 
-**What to do:** Check the process. Accept the port, or all ports of the process, in the dashboard if it is expected. An unknown process listening publicly can be a backdoor.
+**What to do:** Check the process. Accept the port, or all ports of the process (**Allow process** on the alert or the host page, which also resolves the alerts of the process's earlier runs), if it is expected. An unknown process listening publicly can be a backdoor.
 
 ### `port.local` {#port-local}
 

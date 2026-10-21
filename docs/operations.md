@@ -262,6 +262,29 @@ a deploy runner that logs in from a fixed address), open the alert and use
 **Suppress similar**. Choose which of the alert's parameters must match, whether
 it applies to this host only, a reason and a duration (at most 90 days).
 
+A parameter can match a pattern instead of one exact value. The form offers the
+pattern that fits the parameter, prefilled from the alert:
+
+| Pattern | For | Example |
+|---|---|---|
+| program, any pid | `process` | `name:srcds_linux` matches `srcds_linux/3104444` |
+| path pattern | paths (`exe`, `path`, `cwd`, ...) | `glob:/tmp/go-build*/b*/exe/*` (`*` never crosses `/`) |
+| range | `port`, `uid` | `range:27000-27100` |
+| network | addresses | `cidr:10.90.0.0/24` |
+
+Command lines, web request samples and user agents only match exactly: a
+pattern over free text could swallow an appended `; curl ... | sh`. Patterns
+that name nothing (`*`, `/tmp*`, a network wider than /8) are refused.
+
+Before you save, the form shows how many open alerts the suppression covers and
+on which hosts; saving resolves them. A count far higher than expected means the
+suppression is too broad.
+
+For new listening ports of a program that picks a random port on every start
+(game servers, Wine), **Allow process** on the alert or the host page is the
+better tool: it does not expire, and it resolves the open port alerts of that
+program's earlier runs too.
+
 - Matching findings raise no alert and no notification. The events that caused
   them stay in the event log, and each suppression counts its hits.
 - Creating, renewing, deleting and expiring a suppression are written to the
@@ -272,6 +295,9 @@ it applies to this host only, a reason and a duration (at most 90 days).
   rule, and all rules about agents, canaries, the event chain, log spoofing,
   notifiers and self tests.
   Use a maintenance window for planned agent restarts instead.
+- A server older than v0.25.0 reads a pattern as an exact value that never
+  occurs, so after a downgrade a pattern suppression silences nothing rather
+  than more.
 
 ## Self test
 

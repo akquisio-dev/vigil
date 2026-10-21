@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -219,7 +220,7 @@ func TestSuppressions(t *testing.T) {
 	cron := func(path string) []finding {
 		return []finding{{Rule: "file.cron", Key: "file.cron|a1|" + path, Params: map[string]string{"path": path, "change": "changed"}}}
 	}
-	if _, err := s.newSuppression("u", "canary.opened", "", "noise", nil, 0); err == nil {
+	if _, err := s.newSuppression("u", "canary.opened", "", "noise", nil, nil, 0); err == nil {
 		t.Fatal("a critical canary rule must not be suppressible")
 	}
 	for _, r := range []string{"agent.restarted", "agent.forged", "chain.broken", "log.spoofed", "user.root", "nope"} {
@@ -227,10 +228,10 @@ func TestSuppressions(t *testing.T) {
 			t.Errorf("%s must not be suppressible", r)
 		}
 	}
-	if _, err := s.newSuppression("u", "file.cron", "", " ", nil, 0); err == nil {
+	if _, err := s.newSuppression("u", "file.cron", "", " ", nil, nil, 0); err == nil {
 		t.Fatal("a reason is required")
 	}
-	sp, err := s.newSuppression("u", "file.cron", "a1", "nightly backup job", map[string]string{"path": "/etc/cron.d/backup"}, 400)
+	sp, err := s.newSuppression("u", "file.cron", "a1", "nightly backup job", map[string]string{"path": "/etc/cron.d/backup"}, nil, 400)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -251,6 +252,86 @@ func TestSuppressions(t *testing.T) {
 	s.state.Alerts = nil
 	if got := s.raise(cron("/etc/cron.d/backup"), "a1", 4); len(got) != 1 {
 		t.Fatal("expired suppression must not match")
+	}
+}
+
+func TestSuppressionPatterns(t *testing.T) {
+	s := &Server{state: &State{Agents: map[string]*AgentRec{"a1": {ID: "a1"}}, Canaries: map[string]*CanaryRec{}, KnownLogins: map[string]time.Time{}}}
+	for _, c := range []struct{ key, spec string }{
+		{"process", "name:srcds/1"}, {"exe", "name:x"}, {"exe", "glob:*"}, {"exe", "glob:/*"}, {"exe", "glob:/tmp*"},
+		{"exe", "glob:/tmp/x"}, {"cmdline", "glob:/usr/bin/curl *"}, {"image", "glob:a*"}, {"exe", "glob:/tmp/[x"},
+		{"addr", "range:1-2"}, {"port", "range:9-3"}, {"port", "range:x"}, {"ip", "cidr:0.0.0.0/0"}, {"ip", "cidr:2001::/16"},
+		{"ip", "cidr:nope"}, {"exe", "regex:.*"},
+	} {
+		if _, err := parsePattern(c.key, c.spec); err == nil {
+			t.Errorf("%s %s must be refused", c.key, c.spec)
+		}
+	}
+	match := func(key, spec, val string) bool {
+		p, err := parsePattern(key, spec)
+		if err != nil {
+			t.Fatalf("%s %s: %v", key, spec, err)
+		}
+		return patternMatch(p, val)
+	}
+	for _, c := range []struct {
+		key, spec, val string
+		want           bool
+	}{
+		{"process", "name:srcds_linux", "srcds_linux/3104444", true},
+		{"process", "name:srcds_linux", "srcds_linux", true},
+		{"process", "name:srcds_linux", "srcds_linux2/1", false},
+		{"process", "name:srcds_linux", "", false},
+		{"exe", "glob:/tmp/go-build*/b001/exe/*", "/tmp/go-build123/b001/exe/gendocs", true},
+		{"exe", "glob:/tmp/go-build*/b001/exe/*", "/tmp/go-build123/b001/exe/x/../../evil", false},
+		{"exe", "glob:/tmp/build/*", "/tmp/build/sub/evil", false},
+		{"port", "range:27000-27100", "27015", true},
+		{"port", "range:27000-27100", "26999", false},
+		{"port", "range:27000-27100", "2.7015e+04", false},
+		{"ip", "cidr:10.90.0.0/24", "10.90.0.7", true},
+		{"ip", "cidr:10.90.0.9/24", "10.90.1.7", false},
+		{"ip", "cidr:10.90.0.0/24", "::ffff:10.90.0.7", true},
+		{"ip", "cidr:10.90.0.0/24", "not-an-ip", false},
+	} {
+		if got := match(c.key, c.spec, c.val); got != c.want {
+			t.Errorf("%s %s on %q = %v", c.key, c.spec, c.val, got)
+		}
+	}
+
+	if _, err := s.newSuppression("u", "port.public", "a1", "x", map[string]string{"port": "1"}, map[string]string{"port": "range:1-2"}, 0); err == nil {
+		t.Fatal("exact value and pattern on one parameter must be refused")
+	}
+	sp, err := s.newSuppression("u", "port.public", "a1", "game server picks random ports", map[string]string{"proto": "udp"},
+		map[string]string{"process": "name:srcds_linux"}, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	port := func(proc, proto string, n int) finding {
+		return finding{Rule: "port.public", Key: fmt.Sprint("p", n), Params: map[string]string{"process": proc, "proto": proto, "port": fmt.Sprint(n)}}
+	}
+	// Open alerts from before the suppression: two covered, one not.
+	s.raise([]finding{port("srcds_linux/1", "udp", 50000), port("srcds_linux/2", "udp", 50001), port("srcds_linux/2", "tcp", 50002)}, "a1", 1)
+	if n := len(s.matchingAlerts(sp)); n != 2 {
+		t.Fatalf("suppression covers %d open alerts, want 2", n)
+	}
+	s.state.Suppressions = []*Suppression{sp}
+	if got := s.raise([]finding{port("srcds_linux/9", "udp", 51000)}, "a1", 2); len(got) != 0 {
+		t.Fatal("a new pid of the same program must be suppressed")
+	}
+	if got := s.raise([]finding{port("nc/9", "udp", 51001)}, "a1", 3); len(got) != 1 {
+		t.Fatal("another program must still alert")
+	}
+	if v := viewSuppression(sp, time.Now()); v.Patterns["process"] != "name:srcds_linux" || v.Match["proto"] != "udp" || len(v.Match) != 1 {
+		t.Fatalf("view: %+v %+v", v.Match, v.Patterns)
+	}
+
+	// A server without patterns compares the stored value exactly. It must
+	// never be equal to a parameter, so a rollback silences nothing extra.
+	stored := sp.Match["process"]
+	for _, val := range []string{"srcds_linux/9", "name:srcds_linux", "\x01name:srcds_linux", stored} {
+		if cleanParam(val) == stored {
+			t.Fatalf("exact compare of %q matches the stored pattern", val)
+		}
 	}
 }
 
@@ -380,5 +461,105 @@ func TestIntelAndNetRules(t *testing.T) {
 	}
 	if r := rulesFor(map[string]any{"remote_ip": "8.8.4.4", "remote_port": float64(3333), "process": "x"}); len(r) != 1 || r[0] != "net.miner_pool" {
 		t.Fatalf("miner port: %v", r)
+	}
+}
+
+func TestAptKeyHomeIsNotDownloadExec(t *testing.T) {
+	s, err := New(&Config{DataDir: t.TempDir()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	a := &AgentRec{ID: "a1", Name: "host"}
+	s.state.Agents[a.ID] = a
+	rules := func(exe, cmdline, parent, uid string) []string {
+		var out []string
+		d := map[string]any{"exe": exe, "cmdline": cmdline, "parent_comm": parent, "uid": uid, "signals": []any{"cmd_download_exec"}}
+		for _, f := range s.evaluate(a, &Record{Event: proto.Event{Type: "process.exec", TS: time.Now(), Data: d}}) {
+			out = append(out, f.Rule)
+		}
+		return out
+	}
+	// the four seen on our hosts, one of them after the parent had exited
+	for _, c := range [][3]string{
+		{"chmod 700 /tmp/apt-key-gpghome.bRG2FKaleK", "apt-key", "42"},
+		{"chmod 700 /tmp/apt-key-gpghome.iMAvLV8uNX", "apt-key", "105"},
+		{"chmod 700 /tmp/apt-key-gpghome.7q6NPMuWXE", "", "0"},
+		{"chmod 700 /tmp/apt-key-gpghome.fFTYWRk0Gd", "apt-key", "105"},
+	} {
+		if got := rules("/usr/bin/chmod", c[0], c[1], c[2]); len(got) != 0 {
+			t.Errorf("%s: %v", c[0], got)
+		}
+	}
+	for _, c := range [][2]string{
+		{"/usr/bin/chmod", "chmod +x /tmp/apt-key-gpghome.bRG2FKaleK"},
+		{"/usr/bin/chmod", "chmod 700 /tmp/apt-key-gpghome.bRG2FKaleK/run"},
+		{"/usr/bin/chmod", "chmod 700 /tmp/apt-key-gpghome.bRG2FKaleK /tmp/x"},
+		{"/tmp/chmod", "chmod 700 /tmp/apt-key-gpghome.bRG2FKaleK"},
+		{"/usr/bin/chmod", "chmod 755 /tmp/payload"},
+	} {
+		if got := rules(c[0], c[1], "apt-key", "0"); len(got) != 1 || got[0] != "process.download_exec" {
+			t.Errorf("%s %s must alert: %v", c[0], c[1], got)
+		}
+	}
+}
+
+func TestAllowProcessResolvesPortAlertsOfEarlierRuns(t *testing.T) {
+	s, err := New(&Config{DataDir: t.TempDir()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	a := &AgentRec{ID: "a1", Name: "game", BaselineSet: true, Baseline: map[string]bool{}}
+	s.state.Agents[a.ID] = a
+	opened := func(proc, pr, addr, scope string, port int) {
+		d := map[string]any{"key": fmt.Sprintf("socket/%s/%s:%d", pr, addr, port), "proto": pr, "addr": addr,
+			"port": float64(port), "process": proc, "scope": scope}
+		s.mu.Lock()
+		s.raise(s.evaluate(a, &Record{Event: proto.Event{Type: "port.opened", TS: time.Now(), Data: d}}), a.ID, 0)
+		s.mu.Unlock()
+	}
+	opened("srcds_linux/100", "udp", "0.0.0.0", "any", 51435)
+	opened("srcds_linux/100", "tcp", "127.0.0.1", "loopback", 41681)
+	opened("srcds_linux/200", "udp", "0.0.0.0", "any", 52969)
+	opened("nc/300", "udp", "0.0.0.0", "any", 4444)
+	// an alert from before v0.25.0, without scope
+	s.state.Alerts = append(s.state.Alerts, &Alert{ID: "old", Rule: "port.public", Agent: "a1", Status: "open",
+		Detail: encodeParams(map[string]string{"addr": "0.0.0.0", "port": "57251", "process": "srcds_linux/50", "proto": "udp"})})
+
+	key := ""
+	for _, al := range s.state.Alerts {
+		if v := s.viewAlert(al, "en"); al.Rule == "port.public" && strings.HasPrefix(decodeParams(al.Detail)["process"], "srcds") {
+			if key != "" && v.ProcKey != key {
+				t.Fatalf("proc keys differ: %s %s", key, v.ProcKey)
+			}
+			key = v.ProcKey
+		}
+	}
+	if key != "proc:srcds_linux/udp/any" {
+		t.Fatalf("proc key %q", key)
+	}
+	// no srcds port is open any more: all of them are from earlier runs
+	a.Ports = nil
+	r := httptest.NewRequest("POST", "/api/ui/agents/a1/accept-port", strings.NewReader(`{"key":"`+key+`"}`))
+	r.SetPathValue("id", "a1")
+	r.SetPathValue("action", "accept-port")
+	w := httptest.NewRecorder()
+	s.handleAgentAction(w, r, &session{User: "admin"})
+	if w.Code != 200 {
+		t.Fatalf("accept-port: %d %s", w.Code, w.Body)
+	}
+	open := map[string]bool{}
+	for _, al := range s.state.Alerts {
+		if al.Status == "open" {
+			open[decodeParams(al.Detail)["process"]+"/"+al.Rule] = true
+		}
+	}
+	if len(open) != 2 || !open["srcds_linux/100/port.local"] || !open["nc/300/port.public"] {
+		t.Fatalf("still open: %v", open)
+	}
+	opened("srcds_linux/400", "udp", "0.0.0.0", "any", 53000)
+	for _, al := range s.state.Alerts {
+		if al.Status == "open" && strings.Contains(al.Detail, "srcds_linux/400") {
+			t.Fatal("allowed process alerts again")
+		}
 	}
 }

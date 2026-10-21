@@ -336,12 +336,14 @@ type alertView struct {
 	*Alert
 	Host         string `json:"host"`
 	Suppressible bool   `json:"suppressible"`
+	// ProcKey allows every port of the alert's program on its host.
+	ProcKey string `json:"proc_key,omitempty"`
 }
 
 func (s *Server) viewAlert(al *Alert, lg string) alertView {
 	cp := *al
 	cp.Title = renderTitle(al.Rule, decodeParams(al.Detail), lg)
-	v := alertView{Alert: &cp, Suppressible: Suppressible(al.Rule)}
+	v := alertView{Alert: &cp, Suppressible: Suppressible(al.Rule), ProcKey: alertProcKey(al)}
 	if a := s.state.Agents[al.Agent]; a != nil {
 		v.Host = a.Name
 	}
@@ -545,6 +547,12 @@ func (s *Server) handleAgentAction(w http.ResponseWriter, r *http.Request, sess 
 		}
 		for _, al := range s.state.Alerts {
 			if al.Agent != id || al.Status != "open" || !strings.HasPrefix(al.Rule, "port.") {
+				continue
+			}
+			// a process key also covers ports of earlier runs that are
+			// closed by now (a new random port on every start)
+			if strings.HasPrefix(req.Key, "proc:") && alertProcKey(al) == req.Key {
+				al.Status, al.By, al.Updated = "resolved", sess.User, time.Now().UTC()
 				continue
 			}
 			k := decodeParams(al.Detail)["key"]

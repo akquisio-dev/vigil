@@ -45,6 +45,8 @@ const T = {
     alertsWeek: "Alerts, last 7 days", openBySev: "Open by severity", tactics: "ATT&CK tactics", topRules: "Top rules",
     attackers: "Attacking addresses", days7: "7 days", theme: "Appearance", light: "Light", dark: "Dark", system: "System",
     suppressions: "Suppressions", suppress: "Suppress similar", suppressHint: "Matching findings stay in the event log but raise no alert.",
+    patExact: "exactly", pat_name: "program, any pid", pat_glob: "path pattern", pat_range: "range", pat_cidr: "network",
+    covers: "Open alerts that match: {n}. They are resolved when you save.",
     onlyHost: "Only this host", reason: "Reason", duration: "Duration", days: "days", hits: "Hits", expires: "Expires",
     expired: "Expired", renew: "Renew", allHostsLbl: "all hosts", noSuppressions: "No suppressions", confirmSuppressionDelete: "Delete this suppression?",
     activeCount: "active", match: "Match", severity: "Severity",
@@ -162,6 +164,8 @@ const T = {
     alertsWeek: "Alarme, letzte 7 Tage", openBySev: "Offen nach Schwere", tactics: "ATT&CK-Taktiken", topRules: "Häufigste Regeln",
     attackers: "Angreifende Adressen", days7: "7 Tage", theme: "Darstellung", light: "Hell", dark: "Dunkel", system: "System",
     suppressions: "Ausnahmen", suppress: "Ähnliche stummschalten", suppressHint: "Passende Funde bleiben im Ereignisprotokoll, lösen aber keinen Alarm aus.",
+    patExact: "genau", pat_name: "Programm, jede PID", pat_glob: "Pfadmuster", pat_range: "Bereich", pat_cidr: "Netz",
+    covers: "Passende offene Alarme: {n}. Sie werden beim Speichern geschlossen.",
     onlyHost: "Nur dieser Host", reason: "Begründung", duration: "Dauer", days: "Tage", hits: "Treffer", expires: "Läuft ab",
     expired: "Abgelaufen", renew: "Verlängern", allHostsLbl: "alle Hosts", noSuppressions: "Keine Ausnahmen", confirmSuppressionDelete: "Diese Ausnahme löschen?",
     activeCount: "aktiv", match: "Bedingung", severity: "Schwere",
@@ -847,26 +851,72 @@ async function responseCard(a) {
     (r.allowed || []).length ? null : h("div", { class: "muted mt" }, t("notEnabled")), out);
 }
 
+// patternFor offers the one pattern that fits a parameter (see parsePattern
+// in suppress.go), prefilled from the alert's value. Free text such as a
+// command line only ever matches exactly.
+function patternFor(k, v) {
+  if (k === "process" && v) return { op: "name", arg: v.split("/")[0] };
+  if ((k === "port" || k === "uid") && /^\d+$/.test(v)) return { op: "range", arg: v + "-" + v };
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(v)) return { op: "cidr", arg: v.replace(/\.\d+$/, ".0") + "/24" };
+  if (/^[0-9a-f:]+:[0-9a-f:]*$/i.test(v) && v.includes("::")) return { op: "cidr", arg: v + "/64" };
+  if (v.startsWith("/") && !["cmdline", "sample", "user_agent", "title"].includes(k)) {
+    // numbered directories (go-build1247739926) and the file name vary
+    const parts = v.split("/").map((p, i, all) => i === all.length - 1 ? "*" : p.replace(/^(.*\D)\d{3,}$/, "$1*"));
+    return { op: "glob", arg: parts.join("/") };
+  }
+  return null;
+}
+
 async function alertDetail(id) {
   const all = await api("/api/ui/alerts");
   const a = all.find((x) => x.id === id);
   if (!a) { location.hash = "#/alerts"; return; }
   const params = (a.detail || "").split("\n").filter(Boolean).map((l) => l.split(/=(.*)/s));
   const act = (action) => async () => { await post("/api/ui/alerts/" + a.id + "/" + action); render(); };
-  // suppression form, prefilled from the alert; volatile parameters start unchecked
+  // suppression form, prefilled from the alert; volatile parameters start
+  // unchecked, and a process matches by name because its pid always differs
   const volatile = new Set(["count", "pid", "gap", "fingerprint"]);
   const onlyHost = h("input", { type: "checkbox", checked: Boolean(a.agent) });
-  const checks = params.filter(([k]) => k && k !== "host").map(([k, v]) => ({ k, v, box: h("input", { type: "checkbox", checked: !volatile.has(k) }) }));
+  const checks = params.filter(([k]) => k && k !== "host").map(([k, v]) => {
+    const op = patternFor(k, v || "");
+    const box = h("input", { type: "checkbox", checked: !volatile.has(k) });
+    const mode = h("select", { class: "small", hidden: !op }, h("option", { value: "" }, t("patExact")),
+      op ? h("option", { value: op.op, selected: k === "process" }, t("pat_" + op.op)) : null);
+    const arg = h("input", { class: "mono small", value: op ? op.arg : "", hidden: !(op && k === "process") });
+    mode.onchange = () => { arg.hidden = !mode.value; preview(); };
+    box.onchange = arg.oninput = () => preview();
+    return { k, v, box, mode, arg };
+  });
   const reason = h("input", { maxlength: 500, required: true });
   const daysSel = h("select", null, [7, 30, 90].map((d) => h("option", { value: d, selected: d === 30 }, d + " " + t("days"))));
   const err = h("div", { class: "err" });
+  const covers = h("div", { class: "muted" });
+  const body = () => {
+    const match = {}, patterns = {};
+    for (const c of checks) {
+      if (!c.box.checked) continue;
+      if (c.mode.value) patterns[c.k] = c.mode.value + ":" + c.arg.value; else match[c.k] = c.v;
+    }
+    return { rule: a.rule, agent: onlyHost.checked ? a.agent : "", match, patterns, reason: reason.value, days: Number(daysSel.value) };
+  };
+  let timer = 0;
+  const preview = () => {
+    clearTimeout(timer);
+    timer = setTimeout(async () => {
+      err.textContent = "";
+      try {
+        const r = await post("/api/ui/suppressions", { ...body(), dry_run: true });
+        covers.textContent = t("covers").replace("{n}", r.alerts) +
+          (r.alerts ? " (" + Object.entries(r.hosts).map(([n, c]) => n + " " + c).join(", ") + ")" : "");
+      } catch (x) { covers.textContent = ""; err.textContent = x.message; }
+    }, 300);
+  };
+  onlyHost.onchange = preview;
   const box = h("form", { class: "card stack mt", hidden: true, onsubmit: async (e) => {
     e.preventDefault();
     err.textContent = "";
-    const match = {};
-    for (const c of checks) if (c.box.checked) match[c.k] = c.v;
     try {
-      await post("/api/ui/suppressions", { rule: a.rule, agent: onlyHost.checked ? a.agent : "", match, reason: reason.value, days: Number(daysSel.value) });
+      await post("/api/ui/suppressions", { ...body(), resolve: true });
       if (a.status !== "resolved") await post("/api/ui/alerts/" + a.id + "/resolve");
       location.hash = "#/suppressions";
     } catch (x) { err.textContent = x.message; }
@@ -874,7 +924,8 @@ async function alertDetail(id) {
     h("h3", null, t("suppress")),
     h("div", { class: "muted" }, t("suppressHint")),
     a.agent ? h("label", { class: "check" }, onlyHost, t("onlyHost") + " (" + (a.host || a.agent) + ")") : null,
-    checks.map((c) => h("label", { class: "check" }, c.box, h("span", { class: "mono" }, c.k + " = " + (c.v || "·")))),
+    checks.map((c) => h("div", { class: "check pattern" }, h("label", { class: "check" }, c.box, h("span", { class: "mono" }, c.k + " = " + (c.v || "·"))), c.mode, c.arg)),
+    covers,
     h("div", { class: "grid two" }, h("label", null, t("reason"), reason), h("label", null, t("duration"), daysSel)),
     err, h("div", null, h("button", { class: "btn", type: "submit" }, t("suppress"))));
   mount(shell("alerts",
@@ -895,7 +946,10 @@ async function alertDetail(id) {
         a.status === "open" ? h("button", { class: "btn", onclick: act("ack") }, t("ack")) : null,
         a.status !== "resolved" ? h("button", { class: "btn ghost", onclick: act("resolve") }, t("resolve")) : null,
         a.status !== "open" ? h("button", { class: "btn ghost", onclick: act("reopen") }, t("reopen")) : null,
-        a.suppressible ? h("button", { class: "btn ghost", onclick: () => { box.hidden = false; reason.focus(); } }, icon("bell-off"), t("suppress")) : null,
+        a.suppressible ? h("button", { class: "btn ghost", onclick: () => { box.hidden = false; preview(); reason.focus(); } }, icon("bell-off"), t("suppress")) : null,
+        a.proc_key && a.agent && can("admin") ? h("button", { class: "btn ghost", title: a.proc_key, onclick: async () => {
+          await post("/api/ui/agents/" + a.agent + "/accept-port", { key: a.proc_key }); render();
+        } }, t("acceptProcess")) : null,
         a.incident ? h("a", { class: "btn ghost", href: "#/incidents/" + a.incident }, icon("stack-2"), t("incident"))
           : a.agent ? h("button", { class: "btn ghost", onclick: async () => {
             const r = await post("/api/ui/incidents/new/create", { alert: a.id }); location.hash = "#/incidents/" + r.id;
@@ -1328,7 +1382,8 @@ async function suppressionsView() {
     h("span", { class: "chip" }, h("span", { class: "dot " + (sp.active ? "ok" : "pending") }), sp.active ? t("active") : t("expired")),
     h("div", null,
       h("div", { class: "title" }, h("span", { class: "mono" }, sp.rule), "  ", h("span", { class: "muted" }, sp.host || t("allHostsLbl"))),
-      Object.keys(sp.match || {}).length ? h("div", { class: "sub mono" }, Object.entries(sp.match).map(([k, v]) => k + " = " + v).join("  ·  ")) : null,
+      Object.keys(sp.match || {}).length || Object.keys(sp.patterns || {}).length ? h("div", { class: "sub mono" },
+        [...Object.entries(sp.match || {}).map(([k, v]) => k + " = " + v), ...Object.entries(sp.patterns || {}).map(([k, v]) => k + " ~ " + v)].join("  ·  ")) : null,
       h("div", { class: "sub" }, sp.reason + "  ·  " + sp.by)),
     h("div", { class: "meta" },
       h("span", null, t("hits") + " " + sp.hits),

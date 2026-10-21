@@ -415,6 +415,9 @@ tr.click:hover td { background: var(--bg); }
 .sev.low { background: var(--bg); color: var(--text-secondary); }
 label.check { display: flex; align-items: center; gap: 8px; font-weight: 400; }
 label.check input { width: auto; }
+div.check.pattern { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+div.check.pattern select, div.check.pattern input:not([type=checkbox]) { width: auto; min-width: 0; max-width: 100%; }
+div.check.pattern input.mono { flex: 1 1 220px; }
 .row.faded { opacity: 0.55; }
 [hidden] { display: none !important; }
 
