@@ -39,7 +39,9 @@ func clip(s string) string {
 // becomes one event per interval instead of thousands.
 type failures struct {
 	count int
-	users map[string]bool
+	// users counts the attempts per tried user, for the first ten users of
+	// an address; attempts for further users only count in count.
+	users map[string]int
 	// existing are the tried users the server has an account for (sshd
 	// says "invalid user" for the others).
 	existing map[string]bool
@@ -199,14 +201,18 @@ func (a *Agent) handleSSH(msg, pid string, ts time.Time) {
 	}
 	f := a.sshFails[ip]
 	if f == nil {
-		f = &failures{users: map[string]bool{}, existing: map[string]bool{}}
+		f = &failures{users: map[string]int{}, existing: map[string]bool{}}
 		a.sshFails[ip] = f
 	}
 	if count {
 		f.count++
 	}
-	if len(f.users) < 10 || f.users[user] {
-		f.users[user] = true
+	if _, seen := f.users[user]; len(f.users) < 10 || seen {
+		if count {
+			f.users[user]++
+		} else {
+			f.users[user] += 0
+		}
 		if exists {
 			f.existing[user] = true
 		}
@@ -225,11 +231,15 @@ func (a *Agent) flushSSHFailures() {
 			continue
 		}
 		users := make([]string, 0, len(f.users))
-		for u := range f.users {
+		perUser := map[string]any{}
+		for u, n := range f.users {
 			users = append(users, u)
+			if n > 0 {
+				perUser[u] = n
+			}
 		}
 		sort.Strings(users)
-		d := map[string]any{"ip": ip, "count": f.count, "users": users}
+		d := map[string]any{"ip": ip, "count": f.count, "users": users, "user_counts": perUser}
 		if len(f.existing) > 0 {
 			ex := make([]string, 0, len(f.existing))
 			for u := range f.existing {

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Agents count failed SSH logins per tried user name (`user_counts` in `ssh.failed`). The attack statistics keep them per day and hour; days from older agents share a total out evenly and are marked as estimated. Day files written before are rebuilt from the log on the first start, or kept as they are when the log no longer has the day.
+- The attackers page has a section on tried user names: ranking with inline bars and trend lines, word cloud, heatmap by hour of day, matrix by country, a flow diagram country, name, account exists, and a treemap of the attempts by country and network.
+- Live attack map: with `map_home` in `server.json`, new attacks are drawn as arcs from their country to the hosts, with the newest listed below the map. New endpoint `GET /api/ui/attacks/live?after=SEQ`.
+
 ## v0.25.0
 
 - Suppressions can match a parameter by pattern: a program by name whatever its pid, a path with `*`, a port or uid range, a network. Free text (command lines, request samples) still only matches exactly, patterns that name nothing are refused, a path pattern below `/tmp`, `/var/tmp` or `/dev/shm` in a process rule needs the exact uid, and a value cut at 300 characters never matches a pattern. A server without patterns reads them as values that never occur, so a downgrade makes a pattern suppression silence nothing instead of more.

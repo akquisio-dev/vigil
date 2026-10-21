@@ -92,6 +92,9 @@ type Config struct {
 	// 4.0, about 12 MB) once a month to show where attacking addresses come
 	// from. Lookups stay on the server.
 	GeoIP bool `json:"geoip,omitempty"`
+	// MapHome is where the hosts stand, as [latitude, longitude], for the
+	// live view of the attack map. Without it the map shows no arcs.
+	MapHome *[2]float64 `json:"map_home,omitempty"`
 	// FourEyes lists response action types that a second admin must approve
 	// (with a fresh TOTP code) before they reach the agent; "*" means all.
 	FourEyes []string `json:"four_eyes,omitempty"`

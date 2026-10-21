@@ -121,6 +121,10 @@ func TestSSHFailureCounting(t *testing.T) {
 	if ex, _ := d["existing_users"].([]string); len(ex) != 2 || ex[0] != "deploy" || ex[1] != "root" {
 		t.Fatalf("existing_users: %v", d["existing_users"])
 	}
+	uc, _ := d["user_counts"].(map[string]any)
+	if len(uc) != 4 || uc["root"] != 2 || uc["deploy"] != 1 || uc["oracle"] != 1 || uc["test"] != 2 {
+		t.Fatalf("user_counts: %v", uc)
+	}
 }
 
 func testAgent(t *testing.T) (*Agent, string) {

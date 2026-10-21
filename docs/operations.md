@@ -141,6 +141,29 @@ in with a password. Addresses that failed only as the user they then logged
 in as with a key are the team (an SSH client offers its keys one after the
 other) and are left out of the statistics.
 
+The tried user names have their own section:
+
+- a ranking with the attempts as bars, the number of addresses and countries
+  per name and its trend per day (per hour for 24 hours);
+- a word cloud of the 60 most tried names, names the host has an account for
+  in red;
+- a heatmap of names by hour of the day, in the viewer's time zone;
+- a matrix of names by country, with the attempts in every cell;
+- a flow diagram from country to name to "account exists" or not, which shows
+  at a glance how much of the guessing hits real accounts;
+- a treemap of the attempts by country and network.
+
+Agents from v0.26.0 count the attempts per name. For days reported by older
+agents a total for several names is shared out evenly, and the page says so.
+These views come from failed SSH logins on port 22: with password login off,
+sshd never sees a password, so vigil shows none.
+
+With `map_home` set in `server.json` (`[latitude, longitude]` of the hosts),
+the world map is live: every new attack is drawn as an arc from its country to
+the hosts, and the newest ones are listed below the map. Agents report every
+30 seconds, so an attack appears up to that late. Viewers who prefer reduced
+motion get the list and the markers without animation.
+
 The report button saves the page as Markdown or opens it for printing as PDF
 (analysts and admins, recorded in the audit log).
 

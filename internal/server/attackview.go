@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
 	"net/netip"
 	"sort"
@@ -33,6 +34,33 @@ type netCount struct {
 	Net     string `json:"net,omitempty"`
 	IPs     int    `json:"ips"`
 	Count   int    `json:"count"`
+}
+
+// userStat is one tried user name: attempts in total, per day of the window
+// and per UTC hour, and how widely it is tried.
+type userStat struct {
+	User      string  `json:"user"`
+	Attempts  int     `json:"attempts"`
+	IPs       int     `json:"ips"`
+	Countries int     `json:"countries"`
+	Existing  bool    `json:"existing,omitempty"`
+	Days      []int   `json:"days"`
+	Hours     [24]int `json:"hours"`
+}
+
+// userMatrix counts attempts per user name (rows) and country (columns).
+type userMatrix struct {
+	Users     []string `json:"users"`
+	Countries []string `json:"countries"`
+	Cells     [][]int  `json:"cells"`
+}
+
+// flow is one band of the country, user, account diagram.
+type flow struct {
+	Country  string `json:"country"`
+	User     string `json:"user"`
+	Existing bool   `json:"existing"`
+	Count    int    `json:"count"`
 }
 
 type userCount struct {
@@ -103,6 +131,12 @@ type attackView struct {
 	Networks  []netCount     `json:"networks"`
 	NetKinds  map[string]int `json:"net_kinds"`
 	Users     []userCount    `json:"users"`
+	UserStats []userStat     `json:"user_stats"`
+	Matrix    userMatrix     `json:"matrix"`
+	Flows     []flow         `json:"flows"`
+	// Estimated: attempts per user were shared out evenly for some days
+	// (agents before v0.26.0 report one total for several users).
+	Estimated bool           `json:"estimated,omitempty"`
 	Paths     []geoCount     `json:"paths"`
 	WebKinds  []geoCount     `json:"web_kinds"`
 	Campaigns []campaignView `json:"campaigns"`
@@ -157,7 +191,18 @@ func (s *Server) ownTokens() []string {
 }
 
 // attackWindow merges the days of the window. The caller holds r.mu.
-func (r *attackRollup) attackWindow(days int, now time.Time) (map[string]*atkIP, map[string]int, []dayStat, [24]int, int) {
+// userWindow holds the attempts per user over the window. It comes from the
+// day's per-user hours, which also count the few failed tries of the team's
+// own addresses (a key offered in the wrong order); the per-address views
+// leave those out.
+type userWindow struct {
+	days  map[string][]int
+	hours map[string]*[24]int
+	est   bool
+}
+
+func (r *attackRollup) attackWindow(days int, now time.Time) (map[string]*atkIP, map[string]int, []dayStat, [24]int, int, userWindow) {
+	uw := userWindow{days: map[string][]int{}, hours: map[string]*[24]int{}}
 	merged := map[string]*atkIP{}
 	active := map[string]int{}
 	var hours [24]int
@@ -185,10 +230,28 @@ func (r *attackRollup) attackWindow(days int, now time.Time) (map[string]*atkIP,
 				hours[h] += n
 			}
 			overflow += d.Overflow
+			idx := days - 1 - i
+			for u, hr := range d.UH {
+				dd := uw.days[u]
+				if dd == nil {
+					dd = make([]int, days)
+					uw.days[u] = dd
+				}
+				uh := uw.hours[u]
+				if uh == nil {
+					uh = &[24]int{}
+					uw.hours[u] = uh
+				}
+				for h, n := range hr {
+					dd[idx] += n
+					uh[h] += n
+				}
+			}
+			uw.est = uw.est || d.Est
 		}
 		per = append(per, ds)
 	}
-	return merged, active, per, hours, overflow
+	return merged, active, per, hours, overflow, uw
 }
 
 // attackStats builds the view for the last days (1 to 30), cached for a
@@ -212,12 +275,16 @@ func (s *Server) attackStats(days int) *attackView {
 	now := time.Now().UTC()
 	r.mu.Lock()
 	ready := r.ready
-	merged, active, per, hours, overflow := r.attackWindow(days, now)
+	merged, active, per, hours, overflow, uw := r.attackWindow(days, now)
 	r.mu.Unlock()
 
 	v := &attackView{Days: days, Ready: ready, Generated: now, PerDay: per, Hours: hours, NetKinds: map[string]int{}, Geo: s.geoStatus(),
 		all: map[string]*addrView{}}
 	v.Totals.Overflow = overflow
+	v.Estimated = uw.est
+	userCC := map[string]map[string]bool{}
+	cellCount := map[[2]string]int{}
+	flowCount := map[flow]int{}
 	userIPs := map[string]int{}
 	userExisting := map[string]bool{}
 	pathIPs := map[string]int{}
@@ -243,6 +310,18 @@ func (s *Server) attackStats(days int) *attackView {
 			kindIPs[k]++
 		}
 		g := s.geo(ip)
+		cc := g.Country
+		if cc == "" {
+			cc = "??"
+		}
+		for u, n := range x.UC {
+			if userCC[u] == nil {
+				userCC[u] = map[string]bool{}
+			}
+			userCC[u][cc] = true
+			cellCount[[2]string{u, cc}] += n
+			flowCount[flow{Country: cc, User: u}] += n
+		}
 		av := &addrView{IP: ip, GeoInfo: g, SSH: x.SSH, Web: x.Web, Users: x.Users, Existing: x.Existing, Paths: x.Paths, Kinds: x.Kinds,
 			Logins: x.Logins, LoginAs: x.LoginUsers, ExploitOK: x.ExploitOK, Shells: x.Shells, UA: x.UA, First: x.First, Last: x.Last,
 			Days: active[ip], Campaign: -1}
@@ -254,10 +333,6 @@ func (s *Server) attackStats(days int) *attackView {
 		sort.Strings(av.Hosts)
 		if list, ok := s.intel.lookup(ip); ok {
 			av.Listed = list
-		}
-		cc := g.Country
-		if cc == "" {
-			cc = "??"
 		}
 		c := countries[cc]
 		if c == nil {
@@ -380,6 +455,13 @@ func (s *Server) attackStats(days int) *attackView {
 	if v.Users == nil {
 		v.Users = []userCount{}
 	}
+	// an account exists or not per host, whichever address tried it
+	flows := map[flow]int{}
+	for f, n := range flowCount {
+		f.Existing = userExisting[f.User]
+		flows[f] += n
+	}
+	v.UserStats, v.Matrix, v.Flows = userViews(uw, userIPs, userExisting, userCC, cellCount, flows)
 	v.Paths = topCounts(pathIPs, 15)
 	v.WebKinds = topCounts(kindIPs, 10)
 	if v.Campaigns == nil {
@@ -395,6 +477,105 @@ func (s *Server) attackStats(days int) *attackView {
 }
 
 func (a *addrView) attempts() int { return a.SSH + a.Web }
+
+const (
+	userStatsMax    = 60 // the word cloud; the table shows the first ones
+	matrixUsers     = 12
+	matrixCountries = 8
+	flowCountries   = 6
+	flowUsers       = 10
+	otherKey        = "*" // the rest, folded into one row or band
+)
+
+// userViews builds the per-user statistics, the user by country matrix and
+// the bands from country to user to account. Users are ranked by attempts.
+func userViews(uw userWindow, userIPs map[string]int, existing map[string]bool, userCC map[string]map[string]bool,
+	cells map[[2]string]int, flows map[flow]int) ([]userStat, userMatrix, []flow) {
+	stats := []userStat{}
+	for u, dd := range uw.days {
+		st := userStat{User: u, IPs: userIPs[u], Countries: len(userCC[u]), Existing: existing[u], Days: dd}
+		if h := uw.hours[u]; h != nil {
+			st.Hours = *h
+		}
+		for _, n := range dd {
+			st.Attempts += n
+		}
+		if st.Attempts > 0 {
+			stats = append(stats, st)
+		}
+	}
+	sort.Slice(stats, func(i, j int) bool {
+		if stats[i].Attempts != stats[j].Attempts {
+			return stats[i].Attempts > stats[j].Attempts
+		}
+		return stats[i].User < stats[j].User
+	})
+	if len(stats) > userStatsMax {
+		stats = stats[:userStatsMax]
+	}
+
+	ccTotal := map[string]int{}
+	for k, n := range cells {
+		ccTotal[k[1]] += n
+	}
+	rank := func(m map[string]int, n int) []string {
+		keys := make([]string, 0, len(m))
+		for k := range m {
+			keys = append(keys, k)
+		}
+		sort.Slice(keys, func(i, j int) bool {
+			if m[keys[i]] != m[keys[j]] {
+				return m[keys[i]] > m[keys[j]]
+			}
+			return keys[i] < keys[j]
+		})
+		if len(keys) > n {
+			keys = keys[:n]
+		}
+		return keys
+	}
+	mx := userMatrix{Users: []string{}, Countries: rank(ccTotal, matrixCountries), Cells: [][]int{}}
+	for i := 0; i < len(stats) && i < matrixUsers; i++ {
+		u := stats[i].User
+		row := make([]int, len(mx.Countries))
+		for j, cc := range mx.Countries {
+			row[j] = cells[[2]string{u, cc}]
+		}
+		mx.Users = append(mx.Users, u)
+		mx.Cells = append(mx.Cells, row)
+	}
+
+	topCC := map[string]bool{}
+	for _, cc := range rank(ccTotal, flowCountries) {
+		topCC[cc] = true
+	}
+	topUser := map[string]bool{}
+	for i := 0; i < len(stats) && i < flowUsers; i++ {
+		topUser[stats[i].User] = true
+	}
+	folded := map[flow]int{}
+	for f, n := range flows {
+		if !topCC[f.Country] {
+			f.Country = otherKey
+		}
+		if !topUser[f.User] {
+			f.User = otherKey
+		}
+		folded[f] += n
+	}
+	out := []flow{}
+	for f, n := range folded {
+		f.Count = n
+		out = append(out, f)
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Count != out[j].Count {
+			return out[i].Count > out[j].Count
+		}
+		return fmt.Sprint(out[i]) < fmt.Sprint(out[j])
+	})
+	return stats, mx, out
+}
 
 func topCounts(m map[string]int, n int) []geoCount {
 	out := []geoCount{}
@@ -700,6 +881,79 @@ func (s *Server) failedBefore(ip string, days int) (int, []string) {
 		}
 	}
 	return n, users
+}
+
+// liveAttack is one attack record for the live map.
+type liveAttack struct {
+	Seq     uint64    `json:"seq"`
+	Time    time.Time `json:"time"`
+	IP      string    `json:"ip"`
+	Country string    `json:"country,omitempty"`
+	Host    string    `json:"host,omitempty"`
+	Kind    string    `json:"kind"` // ssh | web
+	Count   int       `json:"count"`
+	Users   []string  `json:"users,omitempty"`
+}
+
+// GET /api/ui/attacks/live?after=SEQ: attack records newer than SEQ from
+// the in-memory window, oldest first, at most 200. Without after, only the
+// cursor is returned, so a new viewer starts with what comes next.
+func (s *Server) handleAttacksLive(w http.ResponseWriter, r *http.Request, sess *session) {
+	q := r.URL.Query()
+	after, _ := strconv.ParseUint(q.Get("after"), 10, 64)
+	head, _ := s.store.Head()
+	out := []liveAttack{}
+	if q.Has("after") {
+		names := s.agentNames()
+		s.store.Each(func(rec Record) {
+			if rec.Seq <= after || len(out) >= 200 {
+				return
+			}
+			d := rec.Event.Data
+			la := liveAttack{Seq: rec.Seq, Time: recordTime(rec).UTC(), IP: str(d, "ip"), Host: names[rec.Agent]}
+			switch rec.Event.Type {
+			case "ssh.failed":
+				la.Kind, la.Count = "ssh", int(num(d, "count"))
+				la.Users = strSlice(d["users"])
+				if len(la.Users) > 5 {
+					la.Users = la.Users[:5]
+				}
+			case "web.activity":
+				if num(d, "probes")+num(d, "exploits_ok")+num(d, "shells") == 0 {
+					return
+				}
+				la.Kind, la.Count = "web", int(num(d, "requests"))
+			default:
+				return
+			}
+			a, err := netip.ParseAddr(la.IP)
+			if err != nil || a.IsLoopback() || a.IsPrivate() || la.Count <= 0 {
+				return
+			}
+			la.Country = s.geo(la.IP).Country
+			out = append(out, la)
+		})
+		out = s.dropOwn(out)
+	}
+	writeJSON(w, map[string]any{"cursor": head, "attacks": out, "home": s.cfg.MapHome})
+}
+
+// dropOwn leaves out the team's addresses (see atkIP.own).
+func (s *Server) dropOwn(list []liveAttack) []liveAttack {
+	r := &s.attacks
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	day := r.days[time.Now().UTC().Format("2006-01-02")]
+	kept := list[:0]
+	for _, la := range list {
+		if day != nil {
+			if x := day.IPs[la.IP]; x != nil && x.own() {
+				continue
+			}
+		}
+		kept = append(kept, la)
+	}
+	return kept
 }
 
 // GET /api/ui/attacks?days=1|7|30

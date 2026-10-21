@@ -113,6 +113,11 @@ const T = {
     attemptsN: "attempts", countries: "Countries", networks: "Networks", successTile: "Successful", targetedTile: "Aimed at us",
     campaigns: "Campaigns", worldMap: "Origin of the attacks", byCountry: "Countries", byNetwork: "Networks", netKind: "Type of network",
     net_hosting: "data centre or cloud (estimate)", net_tor: "Tor", net_other: "other networks", triedUsers: "Most tried user names",
+    accountMissing: "no such account", accountShort: "exists", otherUsers: "other names", otherCountries: "other countries", otherNetworks: "other networks",
+    userName: "User name", trendDays: "per day", trend24: "per hour", userRanking: "Ranking", cloudTitle: "Word cloud", heatTitle: "User names by hour",
+    matrixTitle: "User names by country", sankeyTitle: "Country, user name, account", treemapTitle: "Origin by network", treemapSub: "area = attempts",
+    noUserData: "No attempts per user name yet. Agents from v0.26.0 count them.", usersEstimated: "Some days come from older agents that report one total for several names; those are shared out evenly.",
+    existingTried: "Tried names that exist", webAttack: "web attack", liveSeen: "{n} since opened", liveHint: "Agents report every 30 seconds, so attacks appear up to that late.",
     accountExists: "account exists", webAttacks: "Web attacks", attackPaths: "Most requested attack paths", hourOfDay: "Time of day",
     perDay: "Per day", addressesTitle: "Addresses", cls_all: "All", cls_success: "Successful", cls_targeted: "Aimed",
     cls_persistent: "Persistent", cls_noise: "Noise", r_login: "logged in after failing", r_web_ok: "attack answered with 2xx",
@@ -232,6 +237,11 @@ const T = {
     attemptsN: "Versuche", countries: "Länder", networks: "Netze", successTile: "Erfolgreich", targetedTile: "Gezielt auf uns",
     campaigns: "Kampagnen", worldMap: "Herkunft der Angriffe", byCountry: "Länder", byNetwork: "Netze", netKind: "Art des Netzes",
     net_hosting: "Rechenzentrum oder Cloud (geschätzt)", net_tor: "Tor", net_other: "sonstige Netze", triedUsers: "Meistversuchte Benutzernamen",
+    accountMissing: "kein solches Konto", accountShort: "existiert", otherUsers: "andere Namen", otherCountries: "andere Länder", otherNetworks: "andere Netze",
+    userName: "Benutzername", trendDays: "pro Tag", trend24: "pro Stunde", userRanking: "Rangliste", cloudTitle: "Wortwolke", heatTitle: "Benutzernamen nach Uhrzeit",
+    matrixTitle: "Benutzernamen nach Land", sankeyTitle: "Land, Benutzername, Konto", treemapTitle: "Herkunft nach Netz", treemapSub: "Fläche = Versuche",
+    noUserData: "Noch keine Versuche pro Benutzername. Agents ab v0.26.0 zählen sie.", usersEstimated: "Einige Tage stammen von älteren Agents, die eine Summe für mehrere Namen melden; die ist gleichmäßig aufgeteilt.",
+    existingTried: "Versuchte Namen, die existieren", webAttack: "Web-Angriff", liveSeen: "{n} seit geöffnet", liveHint: "Agents melden alle 30 Sekunden, Angriffe erscheinen also bis zu so spät.",
     accountExists: "Konto existiert", webAttacks: "Web-Angriffe", attackPaths: "Meistabgefragte Angriffspfade", hourOfDay: "Tageszeit",
     perDay: "Pro Tag", addressesTitle: "Adressen", cls_all: "Alle", cls_success: "Erfolgreich", cls_targeted: "Gezielt",
     cls_persistent: "Hartnäckig", cls_noise: "Rauschen", r_login: "nach Fehlversuchen angemeldet", r_web_ok: "Angriff mit 2xx beantwortet",
@@ -1710,7 +1720,7 @@ function countryName(cc) {
 
 // worldMap colours each country by its attempts (log scale) and puts a dot
 // on countries too small to see.
-function worldMap(countries, onPick) {
+function worldMap(countries, onPick, live) {
   const box = h("div", { class: "worldmap" }, h("div", { class: "empty small" }, "…"));
   loadWorld().then((w) => {
     const svg = document.createElementNS(SVG, "svg");
@@ -1747,8 +1757,305 @@ function worldMap(countries, onPick) {
       svg.append(dot);
     }
     box.replaceChildren(svg);
+    if (live) liveLayer(svg, w, box, live.feed, live.status);
   }).catch(() => box.replaceChildren(h("div", { class: "empty small" }, t("worldMap"))));
   return box;
+}
+
+// ---- attack analytics -------------------------------------------------
+// Every chart uses one red scale (the world map's), so "darker means more"
+// reads the same everywhere. User names are attacker-controlled: they only
+// ever become text nodes.
+
+function sv(tag, attrs = {}, ...kids) {
+  const el = document.createElementNS(SVG, tag);
+  for (const [k, v] of Object.entries(attrs)) if (v != null) el.setAttribute(k, v);
+  for (const c of kids.flat()) if (c != null) el.append(typeof c === "string" ? document.createTextNode(c) : c);
+  return el;
+}
+function hoverTip(el, text) {
+  el.addEventListener("mousemove", (e) => tip(e, typeof text === "function" ? text() : text));
+  el.addEventListener("mouseleave", (e) => tip(e, null));
+  return el;
+}
+const heatLevel = (n, max) => n ? 0.12 + 0.88 * Math.log(1 + n) / Math.log(1 + Math.max(1, max)) : 0;
+function localHours(utc) {
+  const off = Math.round(-new Date().getTimezoneOffset() / 60);
+  return Array.from({ length: 24 }, (_, i) => utc[((i - off) % 24 + 24) % 24]);
+}
+const userLabel = (u) => u === "*" ? t("otherUsers") : u;
+const ccLabel = (cc) => cc === "*" ? t("otherCountries") : countryName(cc);
+const num = (n) => n.toLocaleString(lang);
+
+function heatCell(level, text, cls) {
+  const fill = h("span", { class: "hfill" });
+  fill.style.opacity = level;
+  return h("div", { class: "hcell" + (cls ? " " + cls : "") + (level > 0.62 ? " hot" : "") }, fill, text != null ? h("span", { class: "hnum" }, text) : null);
+}
+
+function sparkline(values, label) {
+  const W = 84, H = 22, max = Math.max(1, ...values);
+  const pts = values.map((v, i) => [values.length > 1 ? i * (W - 4) / (values.length - 1) + 2 : W / 2, H - 3 - (v / max) * (H - 6)]);
+  const svg = sv("svg", { viewBox: "0 0 " + W + " " + H, class: "spark", role: "img", "aria-label": label + ": " + values.join(", ") },
+    sv("polyline", { points: pts.map((p) => p.map((x) => x.toFixed(1)).join(",")).join(" ") }),
+    sv("circle", { cx: pts[pts.length - 1][0].toFixed(1), cy: pts[pts.length - 1][1].toFixed(1), r: 2.5 }));
+  return hoverTip(svg, label + ": " + values.join(" · "));
+}
+
+// ranked table: attempts as inline bars, spread, and the trend per day (or
+// per hour for a one-day window)
+function userTable(stats, days) {
+  const top = stats.slice(0, 15);
+  if (!top.length) return h("div", { class: "empty small" }, t("noUserData"));
+  const max = Math.max(...top.map((s) => s.attempts));
+  return h("div", { class: "scrollx" }, h("table", { class: "usertable" },
+    h("thead", null, h("tr", null, [t("userName"), t("attemptsN"), t("addresses"), t("countries"), days === 1 ? t("trend24") : t("trendDays")].map((x) => h("th", null, x)))),
+    h("tbody", null, top.map((s) => {
+      const bar = h("span", { class: "inbar-fill" });
+      bar.style.width = (100 * s.attempts / max).toFixed(1) + "%";
+      return h("tr", null,
+        h("td", { class: "mono ucell" }, h("a", { href: pivotHref("user", s.user) }, s.user), s.existing ? h("span", { class: "acct", title: t("accountExists") }, t("accountShort")) : null),
+        h("td", { class: "barcell" }, h("span", { class: "inbar" }, bar), h("span", { class: "num-sm" }, num(s.attempts))),
+        h("td", { class: "num-sm" }, num(s.ips)),
+        h("td", { class: "num-sm" }, num(s.countries)),
+        h("td", null, sparkline(days === 1 ? localHours(s.hours) : s.days, s.user)));
+    }))));
+}
+
+// heatmap user name x local hour of day
+function userHeatmap(stats) {
+  const top = stats.slice(0, 12);
+  if (!top.length) return h("div", { class: "empty small" }, t("noUserData"));
+  const rows = top.map((s) => ({ user: s.user, hours: localHours(s.hours) }));
+  const max = Math.max(1, ...rows.flatMap((r) => r.hours));
+  const grid = h("div", { class: "heatgrid", role: "table", "aria-label": t("heatTitle") });
+  grid.append(h("div", { class: "hlabel" }), ...Array.from({ length: 24 }, (_, i) => h("div", { class: "hhead" }, i % 3 === 0 ? String(i) : "")));
+  for (const r of rows) {
+    grid.append(h("div", { class: "hlabel mono", title: r.user }, r.user));
+    r.hours.forEach((n, i) => grid.append(hoverTip(heatCell(heatLevel(n, max)), r.user + "  ·  " + String(i).padStart(2, "0") + ":00  ·  " + num(n) + " " + t("attemptsN"))));
+  }
+  return h("div", { class: "scrollx" }, grid);
+}
+
+// matrix user name x country with the count in each cell
+function userCountryMatrix(m) {
+  if (!m.users.length || !m.countries.length) return h("div", { class: "empty small" }, t("noUserData"));
+  const max = Math.max(1, ...m.cells.flat());
+  const grid = h("div", { class: "matrix", role: "table", "aria-label": t("matrixTitle") });
+  grid.style.gridTemplateColumns = "minmax(64px, 120px) repeat(" + m.countries.length + ", minmax(34px, 1fr))";
+  grid.append(h("div", { class: "hlabel" }), ...m.countries.map((cc) => h("div", { class: "mhead", title: countryName(cc) }, cc === "??" ? "?" : cc)));
+  m.users.forEach((u, i) => {
+    grid.append(h("div", { class: "hlabel mono", title: u }, u));
+    m.cells[i].forEach((n, j) => grid.append(hoverTip(heatCell(heatLevel(n, max), n ? num(n) : "", "mcell"),
+      u + "  ·  " + countryName(m.countries[j]) + "  ·  " + num(n) + " " + t("attemptsN"))));
+  });
+  return h("div", { class: "scrollx" }, grid);
+}
+
+// Sankey: country -> user name -> account exists on the host or not
+function userSankey(flows) {
+  if (!flows.length) return h("div", { class: "empty small" }, t("noUserData"));
+  const W = 680, H = 340, NW = 10, GAP = 6, X = [140, 340, 520];
+  const cols = [new Map(), new Map(), new Map()];
+  const bump = (col, key, n) => cols[col].set(key, (cols[col].get(key) || 0) + n);
+  const l1 = new Map(), l2 = new Map();
+  for (const f of flows) {
+    const acct = f.existing ? "yes" : "no";
+    bump(0, f.country, f.count); bump(1, f.user, f.count); bump(2, acct, f.count);
+    l1.set(f.country + "\n" + f.user, (l1.get(f.country + "\n" + f.user) || 0) + f.count);
+    l2.set(f.user + "\n" + acct, (l2.get(f.user + "\n" + acct) || 0) + f.count);
+  }
+  const total = flows.reduce((a, f) => a + f.count, 0);
+  const nodes = cols.map((m) => {
+    const keys = [...m.keys()].sort((a, b) => (a === "*") - (b === "*") || m.get(b) - m.get(a));
+    const scale = (H - GAP * (keys.length - 1)) / total;
+    let y = 0;
+    const out = new Map();
+    for (const k of keys) { const hgt = Math.max(1, m.get(k) * scale); out.set(k, { y, h: hgt, n: m.get(k), inY: y, outY: y }); y += hgt + GAP; }
+    return { out, scale };
+  });
+  const svg = sv("svg", { viewBox: "0 0 " + W + " " + H, class: "sankey", role: "img", "aria-label": t("sankeyTitle") });
+  const band = (x0, y0, x1, y1, w) => {
+    const mx = (x0 + x1) / 2;
+    return "M" + x0 + "," + y0 + "C" + mx + "," + y0 + " " + mx + "," + y1 + " " + x1 + "," + y1 +
+      "L" + x1 + "," + (y1 + w) + "C" + mx + "," + (y1 + w) + " " + mx + "," + (y0 + w) + " " + x0 + "," + (y0 + w) + "Z";
+  };
+  const links = (map, a, b, labelA, labelB) => {
+    const order = [...map.entries()].sort((p, q) => {
+      const [pa, pb] = p[0].split("\n"), [qa, qb] = q[0].split("\n");
+      return nodes[a].out.get(pa).y - nodes[a].out.get(qa).y || nodes[b].out.get(pb).y - nodes[b].out.get(qb).y;
+    });
+    for (const [key, n] of order) {
+      const [ka, kb] = key.split("\n");
+      const na = nodes[a].out.get(ka), nb = nodes[b].out.get(kb);
+      const w = n * nodes[a].scale;
+      const p = sv("path", { d: band(X[a] + NW, na.outY, X[b], nb.inY, w), class: "link" + (kb === "yes" ? " exist" : "") });
+      hoverTip(p, labelA(ka) + "  →  " + labelB(kb) + "  ·  " + num(n) + " " + t("attemptsN"));
+      svg.append(p);
+      na.outY += w; nb.inY += n * nodes[b].scale;
+    }
+  };
+  links(l1, 0, 1, ccLabel, userLabel);
+  links(l2, 1, 2, userLabel, (k) => k === "yes" ? t("accountExists") : t("accountMissing"));
+  const labels = [ccLabel, userLabel, (k) => k === "yes" ? t("accountExists") : t("accountMissing")];
+  nodes.forEach((col, ci) => {
+    for (const [k, nd] of col.out) {
+      svg.append(hoverTip(sv("rect", { x: X[ci], y: nd.y.toFixed(1), width: NW, height: nd.h.toFixed(1), rx: 2, class: "node" + (ci === 2 && k === "yes" ? " exist" : "") }),
+        labels[ci](k) + "  ·  " + num(nd.n)));
+      const left = ci === 0;
+      if (nd.h >= 12) {
+        svg.append(sv("text", { x: left ? X[ci] - 6 : X[ci] + NW + 6, y: (nd.y + nd.h / 2).toFixed(1), "text-anchor": left ? "end" : "start", class: "nlabel" + (ci === 1 && k !== "*" ? " mono" : "") },
+          labels[ci](k)));
+      }
+    }
+  });
+  return h("div", { class: "scrollx" }, svg);
+}
+
+// squarified treemap (Bruls, Huizing, van Wijk) of items {v} in a rectangle
+function squarify(items, x, y, w, hgt) {
+  const total = items.reduce((a, b) => a + b.v, 0);
+  if (!total) return [];
+  const scale = w * hgt / total;
+  const queue = items.filter((i) => i.v > 0).map((i) => ({ ...i, a: i.v * scale }));
+  const out = [];
+  let row = [];
+  const worst = (r, side) => {
+    const s = r.reduce((a, b) => a + b.a, 0), mx = Math.max(...r.map((q) => q.a)), mn = Math.min(...r.map((q) => q.a));
+    return Math.max(side * side * mx / (s * s), s * s / (side * side * mn));
+  };
+  const flush = () => {
+    const s = row.reduce((a, b) => a + b.a, 0);
+    if (w >= hgt) {
+      const rw = s / hgt; let yy = y;
+      for (const r of row) { const rh = r.a / rw; out.push({ ...r, x, y: yy, w: rw, h: rh }); yy += rh; }
+      x += rw; w -= rw;
+    } else {
+      const rh = s / w; let xx = x;
+      for (const r of row) { const rw = r.a / rh; out.push({ ...r, x: xx, y, w: rw, h: rh }); xx += rw; }
+      y += rh; hgt -= rh;
+    }
+    row = [];
+  };
+  while (queue.length) {
+    const side = Math.min(w, hgt);
+    if (!row.length || worst([...row, queue[0]], side) <= worst(row, side)) row.push(queue.shift());
+    else flush();
+  }
+  if (row.length) flush();
+  return out;
+}
+
+// treemap: area = attempts, countries holding their networks
+function originTreemap(countries, networks) {
+  const top = countries.filter((c) => c.count > 0).slice(0, 10);
+  if (!top.length) return h("div", { class: "empty small" }, t("noAttacks"));
+  const restN = countries.slice(10).reduce((a, c) => a + c.count, 0);
+  const items = top.map((c) => ({ key: c.key, v: c.count }));
+  if (restN) items.push({ key: "*", v: restN });
+  const W = 1000, H = 360;
+  const max = Math.max(...items.map((i) => i.v));
+  const fit = (text, width, px) => { const n = Math.floor((width - 16) / px); return text.length <= n ? text : n > 3 ? text.slice(0, n - 1) + "…" : ""; };
+  const svg = sv("svg", { viewBox: "0 0 " + W + " " + H, class: "treemap", role: "img", "aria-label": t("treemapTitle") });
+  for (const c of squarify(items, 0, 0, W, H)) {
+    const nets = networks.filter((n) => n.country === c.key && n.count > 0).map((n) => ({ key: "AS" + n.asn + " " + n.org, v: n.count }));
+    const known = nets.reduce((a, n) => a + n.v, 0);
+    if (c.v - known > 0) nets.push({ key: t("otherNetworks"), v: c.v - known, rest: true });
+    const level = heatLevel(c.v, max);
+    for (const n of squarify(nets.length ? nets : [{ key: "", v: c.v }], c.x, c.y, c.w, c.h)) {
+      const r = sv("rect", { x: n.x.toFixed(1), y: n.y.toFixed(1), width: Math.max(0, n.w).toFixed(1), height: Math.max(0, n.h).toFixed(1), class: "tcell" + (n.rest ? " rest" : "") });
+      r.style.fillOpacity = n.rest ? level * 0.55 : level;
+      svg.append(hoverTip(r, ccLabel(c.key) + (n.key ? "  ·  " + n.key : "") + "  ·  " + num(n.v) + " " + t("attemptsN")));
+    }
+    svg.append(sv("rect", { x: c.x.toFixed(1), y: c.y.toFixed(1), width: c.w.toFixed(1), height: c.h.toFixed(1), class: "tframe" }));
+    if (c.w > 50 && c.h > 34) {
+      svg.append(sv("text", { x: (c.x + 8).toFixed(1), y: (c.y + 18).toFixed(1), class: "tlabel" + (level > 0.62 ? " hot" : "") }, fit(ccLabel(c.key), c.w, 7.2)));
+      svg.append(sv("text", { x: (c.x + 8).toFixed(1), y: (c.y + 32).toFixed(1), class: "tsub" + (level > 0.62 ? " hot" : "") }, num(c.v)));
+    }
+  }
+  return h("div", { class: "scrollx" }, svg);
+}
+
+// word cloud: the biggest names in the middle, existing accounts in red
+function userCloud(stats) {
+  const list = stats.slice(0, 60);
+  if (!list.length) return h("div", { class: "empty small" }, t("noUserData"));
+  const max = Math.max(...list.map((s) => s.attempts)), min = Math.min(...list.map((s) => s.attempts));
+  const size = (n) => 12 + 26 * (max === min ? 1 : Math.sqrt((n - min) / (max - min)));
+  const ordered = [];
+  list.forEach((s, i) => { if (i % 2) ordered.push(s); else ordered.unshift(s); });
+  return h("div", { class: "cloud" }, ordered.map((s) => {
+    const a = h("a", { class: "word mono" + (s.existing ? " exist" : ""), href: pivotHref("user", s.user) }, s.user);
+    a.style.fontSize = size(s.attempts).toFixed(1) + "px";
+    return hoverTip(a, s.user + "  ·  " + num(s.attempts) + " " + t("attemptsN") + ", " + num(s.ips) + " " + t("addresses") + (s.existing ? "  ·  " + t("accountExists") : ""));
+  }));
+}
+
+// liveLayer polls new attack records and draws each as an arc from its
+// country to the hosts. Agents send every 30 s, so live means up to that late.
+function liveLayer(svg, w, box, feed, status) {
+  const g = sv("g", { class: "live" });
+  svg.append(g);
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const proj = (lat, lon) => [(lon + 180) / 360 * w.w, (84 - lat) / 142 * w.h];
+  let cursor = null, homeXY = null, seen = 0;
+  const rows = [];
+  const addRow = (a) => {
+    const what = a.kind === "ssh" ? "SSH " + (a.users || []).join(", ") : t("webAttack");
+    rows.unshift(h("div", { class: "frow" },
+      h("span", { class: "muted mono" }, new Date(a.time).toLocaleTimeString(lang)),
+      h("span", { class: "fcc", title: countryName(a.country) }, a.country || "?"),
+      h("a", { class: "mono", href: pivotHref("ip", a.ip) }, a.ip),
+      h("span", { class: "muted" }, "→ " + (a.host || "?")),
+      h("span", { class: "fwhat mono" }, what + "  ×" + a.count)));
+    rows.length = Math.min(rows.length, 6);
+    feed.replaceChildren(...rows);
+  };
+  const shoot = (a) => {
+    const from = w.dots[a.country];
+    if (!from) return;
+    const [ox, oy] = from;
+    const ring = sv("circle", { cx: ox, cy: oy, r: 3, class: "pulse" });
+    g.append(ring);
+    if (!reduce) ring.animate([{ r: 3, opacity: 0.9 }, { r: 14, opacity: 0 }], { duration: 1600, easing: "ease-out" }).finished.then(() => ring.remove(), () => ring.remove());
+    else setTimeout(() => ring.remove(), 1600);
+    if (!homeXY) return;
+    const [tx, ty] = homeXY;
+    const dist = Math.hypot(tx - ox, ty - oy);
+    const mx = (ox + tx) / 2, my = (oy + ty) / 2 - Math.min(120, dist * 0.35);
+    const arc = sv("path", { d: "M" + ox.toFixed(1) + "," + oy.toFixed(1) + "Q" + mx.toFixed(1) + "," + my.toFixed(1) + " " + tx.toFixed(1) + "," + ty.toFixed(1), class: "arc " + a.kind });
+    g.append(arc);
+    if (reduce) { setTimeout(() => arc.remove(), 2500); return; }
+    const len = arc.getTotalLength();
+    arc.style.strokeDasharray = len.toFixed(1);
+    arc.animate([{ strokeDashoffset: len, opacity: 1 }, { strokeDashoffset: 0, opacity: 1, offset: 0.6 }, { strokeDashoffset: 0, opacity: 0 }],
+      { duration: 2600, easing: "ease-out" }).finished.then(() => arc.remove(), () => arc.remove());
+    setTimeout(() => {
+      const hit = sv("circle", { cx: tx, cy: ty, r: 2, class: "impact" });
+      g.append(hit);
+      hit.animate([{ r: 2, opacity: 1 }, { r: 10, opacity: 0 }], { duration: 900, easing: "ease-out" }).finished.then(() => hit.remove(), () => hit.remove());
+    }, 1560);
+  };
+  const poll = async () => {
+    if (!box.isConnected) return;
+    if (!document.hidden) {
+      try {
+        const r = await api("/api/ui/attacks/live" + (cursor == null ? "" : "?after=" + cursor));
+        cursor = r.cursor;
+        if (r.home && !homeXY) {
+          homeXY = proj(r.home[0], r.home[1]);
+          g.append(sv("circle", { cx: homeXY[0], cy: homeXY[1], r: 3.5, class: "home" }));
+        }
+        seen += r.attacks.length;
+        status.textContent = t("liveSeen").replace("{n}", num(seen));
+        r.attacks.slice(-6).forEach(addRow);
+        // spread a burst (agents send every 30 s) over the next seconds
+        r.attacks.slice(-24).forEach((a, i) => setTimeout(() => shoot(a), i * 220));
+      } catch { /* the next poll tries again */ }
+    }
+    setTimeout(poll, 5000);
+  };
+  poll();
 }
 
 // columns per hour of the local day (the server counts in UTC)
@@ -1839,6 +2146,9 @@ async function attacksView(params) {
       h("dt", null, t("addressesTitle")), h("dd", { class: "mono" }, c.members.slice(0, 6).map((ip) => h("a", { href: pivotHref("ip", ip) }, ip + " ")), c.members.length > 6 ? "…" : ""))))) : h("div", { class: "card empty small" }, t("none"));
 
   const kinds = ["hosting", "tor", "other"].map((k) => ({ key: k, count: v.net_kinds[k] || 0 }));
+  const liveFeed = h("div", { class: "livefeed" });
+  const liveStatus = h("span", { class: "muted small" });
+  const liveChip = h("span", { class: "livechip", title: t("liveHint") }, h("span", { class: "livedot" }), "LIVE", liveStatus);
   mount(shell("attacks",
     h("h1", null, t("attacks")),
     h("div", { class: "crumbs" }, t("attacksSub")),
@@ -1846,8 +2156,8 @@ async function attacksView(params) {
     v.ready ? null : h("div", { class: "card note" }, t("building")),
     tiles,
     v.geo.enabled ? h("div", { class: "grid dash-a" },
-      panel(t("worldMap"), cc ? h("a", { href: href({}) }, countryName(cc) + "  ×") : null,
-        worldMap(v.countries, (k) => { location.hash = href({ country: k }); }), geoAttr(v.geo)),
+      panel(t("worldMap"), h("span", { class: "flex" }, cc ? h("a", { href: href({}) }, countryName(cc) + "  ×") : null, liveChip),
+        worldMap(v.countries, (k) => { location.hash = href({ country: k }); }, { feed: liveFeed, status: liveStatus }), liveFeed, geoAttr(v.geo)),
       panel(t("byCountry"), null, rankList(v.countries.slice(0, 10).map((c) => ({ key: c.key, count: c.count, extra: c.ips + " " + t("addresses") })),
         { tone: "red", label: (i) => countryName(i.key), href: (i) => href({ country: i.key }), empty: t("noAttacks") })))
       : h("div", { class: "card note" }, t("geoOff")),
@@ -1855,15 +2165,25 @@ async function attacksView(params) {
       panel(t("byNetwork"), null, rankList(v.networks.slice(0, 8).map((n) => ({ key: "AS" + n.asn + " " + n.org, count: n.ips,
         extra: [countryName(n.country), n.net ? t("net_" + n.net) : "", n.count.toLocaleString(lang) + " " + t("attemptsN")].filter(Boolean).join("  ·  ") })),
         { empty: v.geo.enabled ? t("noAttacks") : t("notConfigured") })),
-      panel(t("triedUsers"), null, rankList(v.users.slice(0, 10).map((u) => ({ key: u.user, count: u.ips, extra: u.existing ? t("accountExists") : "" })),
-        { mono: true, tone: "red", empty: t("noAttacks") })),
-      panel(t("netKind"), null, rankList(kinds.map((k) => ({ key: t("net_" + k.key), count: k.count })), { empty: t("noAttacks") }))),
+      panel(t("netKind"), null, rankList(kinds.map((k) => ({ key: t("net_" + k.key), count: k.count })), { empty: t("noAttacks") })),
+      panel(t("perDay"), null, dayChart(v.per_day))),
+    v.geo.enabled ? h("div", { class: "mt" }, panel(t("treemapTitle"), t("treemapSub"), originTreemap(v.countries, v.networks))) : null,
+    h("h2", null, t("triedUsers")),
+    v.estimated ? h("div", { class: "muted small" }, t("usersEstimated")) : null,
+    h("div", { class: "grid dash-a" },
+      panel(t("userRanking"), null, userTable(v.user_stats || [], v.days)),
+      panel(t("cloudTitle"), null, userCloud(v.user_stats || []))),
+    h("div", { class: "mt" }, panel(t("heatTitle"), t("timezoneLocal"), userHeatmap(v.user_stats || []))),
+    h("div", { class: "grid two mt" },
+      panel(t("matrixTitle"), null, userCountryMatrix(v.matrix || { users: [], countries: [], cells: [] })),
+      panel(t("sankeyTitle"), null, userSankey(v.flows || []))),
     h("div", { class: "grid dash-b mt" },
-      panel(t("perDay"), null, dayChart(v.per_day)),
       panel(t("hourOfDay"), t("timezoneLocal"), hourChart(v.hours)),
       panel(t("webAttacks"), null, v.web_kinds.length || v.paths.length ? [
         rankList(v.web_kinds.map((k) => ({ key: k.key, count: k.ips })), { mono: true }),
-        h("div", { class: "rank-gap" }), rankList(v.paths.slice(0, 6).map((k) => ({ key: k.key, count: k.ips })), { mono: true })] : h("div", { class: "empty small" }, t("noAttacks")))),
+        h("div", { class: "rank-gap" }), rankList(v.paths.slice(0, 6).map((k) => ({ key: k.key, count: k.ips })), { mono: true })] : h("div", { class: "empty small" }, t("noAttacks"))),
+      panel(t("existingTried"), t("addresses"), rankList(v.users.filter((u) => u.existing).slice(0, 8).map((u) => ({ key: u.user, count: u.ips })),
+        { mono: true, tone: "red", empty: t("none") }))),
     h("h2", null, t("campaigns")), campaigns,
     h("h2", null, t("addressesTitle") + (cc ? ": " + countryName(cc) : "")), clsTabs, table));
 }

@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -196,5 +197,122 @@ func TestAttackStatsRetention(t *testing.T) {
 	s.attacks.persist()
 	if _, err := os.Stat(old); err == nil {
 		t.Error("old day file kept")
+	}
+}
+
+func TestAttackUserStats(t *testing.T) {
+	s := forensicServer(t)
+	now := time.Now().UTC()
+	fail := func(at time.Time, ip string, n int, users []string, counts map[string]any, existing ...string) {
+		d := map[string]any{"ip": ip, "count": float64(n), "users": anyList(users...)}
+		if counts != nil {
+			d["user_counts"] = counts
+		}
+		if len(existing) > 0 {
+			d["existing_users"] = anyList(existing...)
+		}
+		appendAt(t, s, "a2", at, "ssh.failed", d)
+	}
+	// an agent before v0.26.0: 5 attempts shared out over 3 users
+	fail(now.Add(-2*time.Hour), "198.51.100.1", 5, []string{"admin", "oracle", "root"}, nil, "root")
+	// a current agent counts per user
+	fail(now.Add(-time.Hour), "198.51.100.2", 7, []string{"root", "ubuntu"}, map[string]any{"root": float64(6), "ubuntu": float64(1)}, "root")
+	fail(now.AddDate(0, 0, -1), "198.51.100.2", 4, []string{"root"}, map[string]any{"root": float64(4)}, "root")
+	s.startAttacks()
+	waitAttacks(t, s)
+	v := s.attackStats(7)
+	if !v.Estimated {
+		t.Error("shared-out counts must be marked as estimated")
+	}
+	got := map[string]userStat{}
+	for _, u := range v.UserStats {
+		got[u.User] = u
+	}
+	if got["admin"].Attempts != 2 || got["oracle"].Attempts != 2 || got["root"].Attempts != 1+6+4 || got["ubuntu"].Attempts != 1 {
+		t.Fatalf("attempts per user: %+v", got)
+	}
+	if r := got["root"]; len(r.Days) != 7 || r.Days[6] != 7 || r.Days[5] != 4 || r.IPs != 2 || !r.Existing {
+		t.Fatalf("root: %+v", r)
+	}
+	hours := 0
+	for _, n := range got["root"].Hours {
+		hours += n
+	}
+	if hours != 11 {
+		t.Fatalf("root hours sum %d", hours)
+	}
+	if v.UserStats[0].User != "root" {
+		t.Fatalf("ranking: %v", v.UserStats[0].User)
+	}
+	if len(v.Matrix.Users) != 4 || v.Matrix.Users[0] != "root" || len(v.Matrix.Countries) != 1 || v.Matrix.Cells[0][0] != 11 {
+		t.Fatalf("matrix: %+v", v.Matrix)
+	}
+	flows := 0
+	for _, f := range v.Flows {
+		flows += f.Count
+		if f.User == "root" && !f.Existing || f.User == "admin" && f.Existing {
+			t.Fatalf("flow account: %+v", f)
+		}
+	}
+	if flows != 5+7+4 {
+		t.Fatalf("flows sum %d", flows)
+	}
+
+	// A day saved before per-user counts is rebuilt from the log ...
+	s.attacks.persist()
+	yday := now.AddDate(0, 0, -1).Format("2006-01-02")
+	path := filepath.Join(s.cfg.DataDir, "attacks", yday+".json")
+	old := `{"day":"` + yday + `","ips":{"198.51.100.2":{"s":4,"u":["root"],"f":"` + now.AddDate(0, 0, -1).Format(time.RFC3339) + `","t":"` + now.AddDate(0, 0, -1).Format(time.RFC3339) + `"}},"hours":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}`
+	if err := os.WriteFile(path, []byte(old), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	s2 := &Server{cfg: s.cfg, store: s.store, state: s.state}
+	s2.startAttacks()
+	waitAttacks(t, s2)
+	if d := s2.attacks.days[yday]; d == nil || d.UH["root"] == nil || d.UH["root"][now.AddDate(0, 0, -1).Hour()] != 4 {
+		t.Fatalf("old day not rebuilt: %+v", d)
+	}
+
+	// ... but kept as it is when the log no longer covers it.
+	gone := now.AddDate(0, 0, -5)
+	gday := gone.Format("2006-01-02")
+	old = `{"day":"` + gday + `","ips":{"203.0.113.9":{"s":9,"u":["pi"],"f":"` + gone.Format(time.RFC3339) + `","t":"` + gone.Format(time.RFC3339) + `"}},"hours":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}`
+	os.WriteFile(filepath.Join(s.cfg.DataDir, "attacks", gday+".json"), []byte(old), 0o600)
+	s3 := &Server{cfg: s.cfg, store: s.store, state: s.state}
+	s3.startAttacks()
+	waitAttacks(t, s3)
+	if d := s3.attacks.days[gday]; d == nil || d.IPs["203.0.113.9"] == nil || d.IPs["203.0.113.9"].SSH != 9 {
+		t.Fatalf("old day lost: %+v", d)
+	}
+}
+
+func TestAttacksLive(t *testing.T) {
+	s := forensicServer(t)
+	s.cfg.MapHome = &[2]float64{49.0, 8.4}
+	now := time.Now().UTC()
+	s.startAttacks()
+	waitAttacks(t, s)
+	var first struct {
+		Cursor  uint64       `json:"cursor"`
+		Attacks []liveAttack `json:"attacks"`
+		Home    *[2]float64  `json:"home"`
+	}
+	getJSON(t, func(w http.ResponseWriter, r *http.Request) { s.handleAttacksLive(w, r, &session{User: "u"}) }, "/api/ui/attacks/live", nil, &first)
+	if len(first.Attacks) != 0 || first.Home == nil || first.Home[0] != 49.0 {
+		t.Fatalf("first call: %+v", first)
+	}
+	appendAt(t, s, "a2", now, "ssh.failed", map[string]any{"ip": "198.51.100.7", "count": float64(3), "users": anyList("root")})
+	appendAt(t, s, "a2", now, "ssh.failed", map[string]any{"ip": "10.90.0.1", "count": float64(1), "users": anyList("root")})
+	appendAt(t, s, "a1", now, "web.activity", map[string]any{"ip": "198.51.100.8", "requests": float64(9), "probes": float64(0)})
+	appendAt(t, s, "a1", now, "web.activity", map[string]any{"ip": "198.51.100.9", "requests": float64(9), "probes": float64(4)})
+	appendAt(t, s, "a1", now, "ssh.login", map[string]any{"ip": "198.51.100.10", "user": "root"})
+	var next struct {
+		Cursor  uint64       `json:"cursor"`
+		Attacks []liveAttack `json:"attacks"`
+	}
+	getJSON(t, func(w http.ResponseWriter, r *http.Request) { s.handleAttacksLive(w, r, &session{User: "u"}) }, fmt.Sprintf("/api/ui/attacks/live?after=%d", first.Cursor), nil, &next)
+	if len(next.Attacks) != 2 || next.Attacks[0].IP != "198.51.100.7" || next.Attacks[0].Kind != "ssh" || next.Attacks[0].Host != "game" ||
+		next.Attacks[1].IP != "198.51.100.9" || next.Attacks[1].Kind != "web" || next.Cursor <= first.Cursor {
+		t.Fatalf("live: %+v", next)
 	}
 }

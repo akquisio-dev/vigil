@@ -107,7 +107,16 @@ func TestWriteDemoData(t *testing.T) {
 				if rng.Intn(2) == 0 {
 					us = append(us, "root")
 				}
-				add(at.Add(time.Duration(rng.Intn(3600))*time.Second), h, "ssh.failed", map[string]any{"ip": ip, "count": float64(2 + rng.Intn(18)), "users": us})
+				n := 2 + rng.Intn(18)
+				uc := map[string]any{}
+				for i, u := range us {
+					c := n / len(us)
+					if i == 0 {
+						c += n % len(us)
+					}
+					uc[u.(string)] = float64(c)
+				}
+				add(at.Add(time.Duration(rng.Intn(3600))*time.Second), h, "ssh.failed", map[string]any{"ip": ip, "count": float64(n), "users": us, "user_counts": uc})
 			}
 		}
 		if at.Hour() == 9 || at.Hour() == 14 {

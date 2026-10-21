@@ -146,6 +146,7 @@ func (s *Server) uiHandler() http.Handler {
 	mux.HandleFunc("POST /api/ui/searches/{id}/delete", s.analyst(s.handleSearchDelete))
 	mux.HandleFunc("POST /api/ui/hunt", s.analyst(s.handleHunt))
 	mux.HandleFunc("GET /api/ui/attacks", s.auth(s.handleAttacks))
+	mux.HandleFunc("GET /api/ui/attacks/live", s.auth(s.handleAttacksLive))
 	mux.HandleFunc("GET /api/ui/attacks/report", s.analyst(s.handleAttackReport))
 	mux.HandleFunc("GET /api/ui/sessions", s.auth(s.handleSessions))
 	mux.HandleFunc("GET /api/ui/session", s.auth(s.handleSession))

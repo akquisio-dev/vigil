@@ -25,26 +25,34 @@ const (
 	attackIPsPerDay = 50000
 	attackUsersMax  = 20
 	attackPathsMax  = 12
+	// attackUserHours bounds the users with an hour profile per day.
+	attackUserHours = 2000
+	// attackDayVersion 2 added the attempts per user (uc, uh). Days saved
+	// before are rebuilt from the log while it still has them.
+	attackDayVersion = 2
 )
 
 type atkIP struct {
-	SSH        int       `json:"s,omitempty"`  // failed SSH attempts
-	Web        int       `json:"w,omitempty"`  // flagged web requests
-	Probes     int       `json:"p,omitempty"`  // requests for typical attack paths
-	ExploitOK  int       `json:"x,omitempty"`  // attack requests the server answered with 2xx
-	Shells     int       `json:"sh,omitempty"` // requests to web shells
-	WebLogins  int       `json:"wl,omitempty"` // login form posts
-	Logins     int       `json:"l,omitempty"`  // successful SSH logins
-	PwLogins   int       `json:"pl,omitempty"` // of them with a password
-	LoginUsers []string  `json:"lu,omitempty"`
-	Users      []string  `json:"u,omitempty"` // tried SSH users
-	Existing   []string  `json:"e,omitempty"` // tried users the host has an account for
-	Paths      []string  `json:"pa,omitempty"`
-	Kinds      []string  `json:"k,omitempty"` // web attack kinds
-	UA         string    `json:"ua,omitempty"`
-	Hosts      []string  `json:"h,omitempty"` // agent IDs
-	First      time.Time `json:"f"`
-	Last       time.Time `json:"t"`
+	SSH        int      `json:"s,omitempty"`  // failed SSH attempts
+	Web        int      `json:"w,omitempty"`  // flagged web requests
+	Probes     int      `json:"p,omitempty"`  // requests for typical attack paths
+	ExploitOK  int      `json:"x,omitempty"`  // attack requests the server answered with 2xx
+	Shells     int      `json:"sh,omitempty"` // requests to web shells
+	WebLogins  int      `json:"wl,omitempty"` // login form posts
+	Logins     int      `json:"l,omitempty"`  // successful SSH logins
+	PwLogins   int      `json:"pl,omitempty"` // of them with a password
+	LoginUsers []string `json:"lu,omitempty"`
+	Users      []string `json:"u,omitempty"` // tried SSH users
+	// UC counts the attempts per tried user (agents from v0.26.0 send them;
+	// for older ones the count is shared out, see atkDay.Est).
+	UC       map[string]int `json:"uc,omitempty"`
+	Existing []string       `json:"e,omitempty"` // tried users the host has an account for
+	Paths    []string       `json:"pa,omitempty"`
+	Kinds    []string       `json:"k,omitempty"` // web attack kinds
+	UA       string         `json:"ua,omitempty"`
+	Hosts    []string       `json:"h,omitempty"` // agent IDs
+	First    time.Time      `json:"f"`
+	Last     time.Time      `json:"t"`
 }
 
 func (x *atkIP) attempts() int { return x.SSH + x.Web }
@@ -73,7 +81,13 @@ type atkDay struct {
 	IPs      map[string]*atkIP `json:"ips"`
 	Hours    [24]int           `json:"hours"` // attempts per UTC hour
 	Overflow int               `json:"overflow,omitempty"`
-	saved    bool
+	V        int               `json:"v,omitempty"`
+	// UH holds the SSH attempts per tried user and UTC hour.
+	UH map[string]*[24]int `json:"uh,omitempty"`
+	// Est: some attempts per user were shared out evenly, because the
+	// agent reported only a total for several users.
+	Est   bool `json:"est,omitempty"`
+	saved bool
 }
 
 type attackRollup struct {
@@ -122,7 +136,7 @@ func (r *attackRollup) add(rec Record) {
 	}
 	d := r.days[day]
 	if d == nil {
-		d = &atkDay{Day: day, IPs: map[string]*atkIP{}}
+		d = &atkDay{Day: day, IPs: map[string]*atkIP{}, V: attackDayVersion}
 		r.days[day] = d
 	}
 	d.saved = false // a late record: write the day again
@@ -150,8 +164,49 @@ func (r *attackRollup) add(rec Record) {
 		n := int(num(dd, "count"))
 		x.SSH += n
 		d.Hours[t.Hour()] += n
-		for _, u := range strSlice(dd["users"]) {
+		users := strSlice(dd["users"])
+		for _, u := range users {
 			x.Users = addUnique(x.Users, u, attackUsersMax)
+		}
+		per, _ := dd["user_counts"].(map[string]any)
+		if per == nil && len(users) > 0 && n > 0 {
+			// an older agent: share the total out, the first users take
+			// the remainder
+			per = map[string]any{}
+			for i, u := range users {
+				c := n / len(users)
+				if i < n%len(users) {
+					c++
+				}
+				per[u] = float64(c)
+			}
+			if len(users) > 1 {
+				d.Est = true
+			}
+		}
+		for u := range per {
+			c := int(num(per, u))
+			if c <= 0 || u == "" {
+				continue
+			}
+			u = clip(u, 64)
+			if x.UC[u] > 0 || len(x.UC) < attackUsersMax {
+				if x.UC == nil {
+					x.UC = map[string]int{}
+				}
+				x.UC[u] += c
+			}
+			hr := d.UH[u]
+			if hr == nil && len(d.UH) < attackUserHours {
+				if d.UH == nil {
+					d.UH = map[string]*[24]int{}
+				}
+				hr = &[24]int{}
+				d.UH[u] = hr
+			}
+			if hr != nil {
+				hr[t.Hour()] += c
+			}
 		}
 		for _, u := range strSlice(dd["existing_users"]) {
 			x.Existing = addUnique(x.Existing, u, attackUsersMax)
@@ -228,16 +283,19 @@ func (s *Server) startAttacks() {
 		today := now.Format("2006-01-02")
 		days := r.keep
 		missing := map[string]bool{}
+		older := map[string]*atkDay{} // saved before per-user counts
 		var from time.Time
 		for i := days; i >= 0; i-- {
 			t := now.AddDate(0, 0, -i)
 			day := t.Format("2006-01-02")
 			if day != today {
-				if d := loadAttackDay(r.dir, day); d != nil {
+				if d := loadAttackDay(r.dir, day); d != nil && d.V >= attackDayVersion {
 					r.mu.Lock()
 					r.merge(d)
 					r.mu.Unlock()
 					continue
+				} else if d != nil {
+					older[day] = d
 				}
 			}
 			if from.IsZero() {
@@ -257,6 +315,14 @@ func (s *Server) startAttacks() {
 			return true
 		})
 		r.mu.Lock()
+		// A day the log no longer holds in full keeps its old rollup,
+		// without attempts per user.
+		for day, old := range older {
+			if cur := r.days[day]; cur == nil || dayAttempts(cur) < dayAttempts(old) {
+				delete(r.days, day)
+				r.merge(old)
+			}
+		}
 		r.ready = true
 		r.cache = nil
 		r.mu.Unlock()
@@ -284,7 +350,32 @@ func (r *attackRollup) merge(d *atkDay) {
 	for i := range cur.Hours {
 		d.Hours[i] += cur.Hours[i]
 	}
+	for u, hr := range cur.UH {
+		if d.UH == nil {
+			d.UH = map[string]*[24]int{}
+		}
+		into := d.UH[u]
+		if into == nil {
+			if len(d.UH) >= attackUserHours {
+				continue
+			}
+			into = &[24]int{}
+			d.UH[u] = into
+		}
+		for i := range hr {
+			into[i] += hr[i]
+		}
+	}
+	d.Est = d.Est || cur.Est
 	r.days[d.Day] = d
+}
+
+func dayAttempts(d *atkDay) int {
+	n := 0
+	for _, x := range d.IPs {
+		n += x.attempts()
+	}
+	return n
 }
 
 func mergeIP(into, x *atkIP) {
@@ -296,6 +387,14 @@ func mergeIP(into, x *atkIP) {
 	into.WebLogins += x.WebLogins
 	into.Logins += x.Logins
 	into.PwLogins += x.PwLogins
+	for u, c := range x.UC {
+		if into.UC[u] > 0 || len(into.UC) < attackUsersMax {
+			if into.UC == nil {
+				into.UC = map[string]int{}
+			}
+			into.UC[u] += c
+		}
+	}
 	for _, l := range [][2]*[]string{{&into.LoginUsers, &x.LoginUsers}, {&into.Users, &x.Users}, {&into.Existing, &x.Existing},
 		{&into.Paths, &x.Paths}, {&into.Kinds, &x.Kinds}, {&into.Hosts, &x.Hosts}} {
 		max := attackUsersMax
