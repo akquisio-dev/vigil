@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.26.0
 
 - Agents count failed SSH logins per tried user name (`user_counts` in `ssh.failed`). The attack statistics keep them per day and hour; days from older agents share a total out evenly and are marked as estimated. Day files written before are rebuilt from the log on the first start, or kept as they are when the log no longer has the day.
 - The attackers page has a section on tried user names: ranking with inline bars and trend lines, word cloud, heatmap by hour of day, matrix by country, a flow diagram country, name, account exists, and a treemap of the attempts by country and network.
