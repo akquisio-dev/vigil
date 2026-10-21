@@ -311,6 +311,11 @@ func TestAttacksLive(t *testing.T) {
 		Attacks []liveAttack `json:"attacks"`
 	}
 	getJSON(t, func(w http.ResponseWriter, r *http.Request) { s.handleAttacksLive(w, r, &session{User: "u"}) }, fmt.Sprintf("/api/ui/attacks/live?after=%d", first.Cursor), nil, &next)
+	for _, a := range next.Attacks {
+		if a.Seq > next.Cursor {
+			t.Fatalf("record %d after the cursor %d would come twice", a.Seq, next.Cursor)
+		}
+	}
 	if len(next.Attacks) != 2 || next.Attacks[0].IP != "198.51.100.7" || next.Attacks[0].Kind != "ssh" || next.Attacks[0].Host != "game" ||
 		next.Attacks[1].IP != "198.51.100.9" || next.Attacks[1].Kind != "web" || next.Cursor <= first.Cursor {
 		t.Fatalf("live: %+v", next)

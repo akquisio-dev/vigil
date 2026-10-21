@@ -906,7 +906,8 @@ func (s *Server) handleAttacksLive(w http.ResponseWriter, r *http.Request, sess 
 	if q.Has("after") {
 		names := s.agentNames()
 		s.store.Each(func(rec Record) {
-			if rec.Seq <= after || len(out) >= 200 {
+			// records after head come again with the next cursor
+			if rec.Seq <= after || rec.Seq > head || len(out) >= 200 {
 				return
 			}
 			d := rec.Event.Data
