@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Suppressions can match a parameter by pattern: a program by name whatever its pid, a path with `*`, a port or uid range, a network. Free text (command lines, request samples) still only matches exactly, and patterns that name nothing are refused. A server without patterns reads them as values that never occur, so a downgrade makes a pattern suppression silence nothing instead of more.
+- Suppressions can match a parameter by pattern: a program by name whatever its pid, a path with `*`, a port or uid range, a network. Free text (command lines, request samples) still only matches exactly, patterns that name nothing are refused, a path pattern below `/tmp`, `/var/tmp` or `/dev/shm` in a process rule needs the exact uid, and a value cut at 300 characters never matches a pattern. A server without patterns reads them as values that never occur, so a downgrade makes a pattern suppression silence nothing instead of more.
 - The suppression form shows how many open alerts it covers, per host, before you save, and saving resolves them. API: `dry_run` and `resolve` on `POST /api/ui/suppressions`, which now answers `{suppression, resolved}`.
 - Port alerts have **Allow process** on the alert page. Allowing a process also resolves the open alerts for ports of its earlier runs, which are closed by then (a game server picks new random ports on every start). Port alerts carry `scope`.
 - `apt-key` making its GnuPG home (`chmod 700 /tmp/apt-key-gpghome.XXXXXXXXXX`) is no longer `process.download_exec`. Only that exact command is let through; a program started from the directory is still `process.tmp_exec`.

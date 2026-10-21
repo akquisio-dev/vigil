@@ -62,7 +62,9 @@ func (sp *Suppression) matches(f finding, agentID string) bool {
 	for k, v := range sp.Match {
 		val := cleanParam(f.Params[k])
 		if p, ok := strings.CutPrefix(v, patternMark); ok {
-			if !patternMatch(p, val) {
+			// A cut value may have lost the part that would not match
+			// (a 255-byte directory name pushing "/evil" past the cut).
+			if len(val) >= paramMax || !patternMatch(p, val) {
 				return false
 			}
 		} else if val != v {
@@ -82,6 +84,9 @@ const patternMark = "\x01"
 // A glob over a command line could swallow "; curl evil|sh", and values are
 // cut at 300 characters, so these only match exactly.
 var noGlob = map[string]bool{"cmdline": true, "sample": true, "user_agent": true, "title": true}
+
+// Anyone on the host can create files here, under any name.
+var worldWritable = []string{"/tmp/", "/var/tmp/", "/dev/shm/"}
 
 // parsePattern checks a pattern ("op:arg") for one parameter and returns it
 // in canonical form. Each operator fits one kind of value:
@@ -112,6 +117,11 @@ func parsePattern(key, spec string) (string, error) {
 		lit := arg[:strings.IndexAny(arg+"*", "*?[")]
 		if lit == arg {
 			return bad("pattern without * ? or [ (use an exact value)")
+		}
+		for _, dir := range worldWritable {
+			if strings.HasPrefix(arg, dir) && len(lit) == len(dir) {
+				return bad("a pattern right below " + dir + " covers whatever anyone puts there")
+			}
 		}
 		// The fixed start must name something: a directory below / for
 		// paths, three characters otherwise.
@@ -221,6 +231,21 @@ func (s *Server) newSuppression(user, rule, agent, reason string, match, pattern
 			return nil, err
 		}
 		clean[k] = patternMark + p
+	}
+	// Below /tmp a path names nothing about who put the program there; the
+	// uid is the one field an intruder can not pick.
+	if strings.HasPrefix(rule, "process.") {
+		for k, v := range clean {
+			p, ok := strings.CutPrefix(v, patternMark+"glob:")
+			if !ok {
+				continue
+			}
+			for _, dir := range worldWritable {
+				if strings.HasPrefix(p, dir) && (clean["uid"] == "" || strings.HasPrefix(clean["uid"], patternMark)) {
+					return nil, errors.New(k + ": a pattern below " + dir + " needs the exact uid")
+				}
+			}
+		}
 	}
 	if agent != "" && s.state.Agents[agent] == nil {
 		return nil, errors.New("unknown host")
@@ -373,9 +398,15 @@ func (s *Server) handleSuppressionCreate(w http.ResponseWriter, r *http.Request,
 	s.saveLocked()
 	v := viewSuppression(sp, time.Now().UTC())
 	s.mu.Unlock()
-	s.audit(sess.User, "suppression.created", map[string]any{"id": sp.ID, "rule": sp.Rule, "agent": sp.Agent, "match": v.Match,
-		"patterns": v.Patterns, "reason": sp.Reason, "expires": sp.Expires, "resolved": closed})
-	writeJSON(w, map[string]any{"suppression": v, "resolved": len(closed)})
+	data := map[string]any{"id": sp.ID, "rule": sp.Rule, "agent": sp.Agent, "match": v.Match, "patterns": v.Patterns,
+		"reason": sp.Reason, "expires": sp.Expires, "resolved_count": len(closed)}
+	resolved := len(closed)
+	if len(closed) > 50 {
+		closed = closed[:50] // the first ones; the count says how many
+	}
+	data["resolved"] = closed
+	s.audit(sess.User, "suppression.created", data)
+	writeJSON(w, map[string]any{"suppression": v, "resolved": resolved})
 }
 
 func (s *Server) handleSuppressionAction(w http.ResponseWriter, r *http.Request, sess *session) {

@@ -261,7 +261,7 @@ func TestSuppressionPatterns(t *testing.T) {
 		{"process", "name:srcds/1"}, {"exe", "name:x"}, {"exe", "glob:*"}, {"exe", "glob:/*"}, {"exe", "glob:/tmp*"},
 		{"exe", "glob:/tmp/x"}, {"cmdline", "glob:/usr/bin/curl *"}, {"image", "glob:a*"}, {"exe", "glob:/tmp/[x"},
 		{"addr", "range:1-2"}, {"port", "range:9-3"}, {"port", "range:x"}, {"ip", "cidr:0.0.0.0/0"}, {"ip", "cidr:2001::/16"},
-		{"ip", "cidr:nope"}, {"exe", "regex:.*"},
+		{"ip", "cidr:nope"}, {"exe", "regex:.*"}, {"exe", "glob:/tmp/*"}, {"exe", "glob:/var/tmp/*"}, {"exe", "glob:/dev/shm/?x"},
 	} {
 		if _, err := parsePattern(c.key, c.spec); err == nil {
 			t.Errorf("%s %s must be refused", c.key, c.spec)
@@ -285,6 +285,7 @@ func TestSuppressionPatterns(t *testing.T) {
 		{"exe", "glob:/tmp/go-build*/b001/exe/*", "/tmp/go-build123/b001/exe/gendocs", true},
 		{"exe", "glob:/tmp/go-build*/b001/exe/*", "/tmp/go-build123/b001/exe/x/../../evil", false},
 		{"exe", "glob:/tmp/build/*", "/tmp/build/sub/evil", false},
+		{"exe", "glob:/tmp/go-build*/b*/exe/*", "/tmp/go-build1247739926/b001/exe/gendocs", true},
 		{"port", "range:27000-27100", "27015", true},
 		{"port", "range:27000-27100", "26999", false},
 		{"port", "range:27000-27100", "2.7015e+04", false},
@@ -296,6 +297,34 @@ func TestSuppressionPatterns(t *testing.T) {
 		if got := match(c.key, c.spec, c.val); got != c.want {
 			t.Errorf("%s %s on %q = %v", c.key, c.spec, c.val, got)
 		}
+	}
+
+	// below /tmp only the uid says who put a program there
+	tmpGlob := map[string]string{"exe": "glob:/tmp/go-build*/b*/exe/*"}
+	if _, err := s.newSuppression("u", "process.tmp_exec", "a1", "x", nil, tmpGlob, 0); err == nil {
+		t.Fatal("a /tmp pattern without uid must be refused")
+	}
+	if _, err := s.newSuppression("u", "process.tmp_exec", "a1", "x", nil, map[string]string{"exe": "glob:/tmp/go-build*/b*/exe/*", "uid": "range:0-0"}, 0); err == nil {
+		t.Fatal("a /tmp pattern with a uid range must be refused")
+	}
+	long, err := s.newSuppression("u", "process.tmp_exec", "a1", "go builds", map[string]string{"uid": "0"}, tmpGlob, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	exe := func(p string) finding {
+		return finding{Rule: "process.tmp_exec", Params: map[string]string{"exe": p, "uid": "0"}}
+	}
+	if !long.matches(exe("/tmp/go-build1/b001/exe/gendocs"), "a1") {
+		t.Fatal("go build helper must match")
+	}
+	// A file name long enough to push "/evil" past the cut: what is left
+	// would match the pattern, so a cut value must never match one.
+	cut := "/tmp/go-build1/b001/exe/" + strings.Repeat("a", 280) + "/evil"
+	if v := cleanParam(cut); len(v) != paramMax || strings.Contains(v, "evil") {
+		t.Fatalf("test value not cut as expected: %d", len(v))
+	}
+	if long.matches(exe(cut), "a1") {
+		t.Fatal("a value cut to the limit must not match a pattern")
 	}
 
 	if _, err := s.newSuppression("u", "port.public", "a1", "x", map[string]string{"port": "1"}, map[string]string{"port": "range:1-2"}, 0); err == nil {

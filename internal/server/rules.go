@@ -698,6 +698,9 @@ func (s *Server) raise(fs []finding, agentID string, seq uint64) []*Alert {
 // Params are kept as "k=v" lines so titles can be rendered per language.
 // Params carry agent-controlled strings into notification titles and mail
 // headers, so control characters (CR included) are dropped here.
+// paramMax is the length a parameter is cut to.
+const paramMax = 300
+
 func cleanParam(v string) string {
 	v = strings.Map(func(r rune) rune {
 		if r < 0x20 || r == 0x7f || (r >= 0x80 && r < 0xa0) || r == 0x2028 || r == 0x2029 {
@@ -705,8 +708,8 @@ func cleanParam(v string) string {
 		}
 		return r
 	}, v)
-	if len(v) > 300 {
-		v = v[:300]
+	if len(v) > paramMax {
+		v = v[:paramMax]
 	}
 	return v
 }

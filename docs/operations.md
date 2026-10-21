@@ -274,7 +274,10 @@ pattern that fits the parameter, prefilled from the alert:
 
 Command lines, web request samples and user agents only match exactly: a
 pattern over free text could swallow an appended `; curl ... | sh`. Patterns
-that name nothing (`*`, `/tmp*`, a network wider than /8) are refused.
+that name nothing (`*`, `/tmp/*`, a network wider than /8) are refused, and a
+path pattern below `/tmp`, `/var/tmp` or `/dev/shm` in a process rule needs the
+exact `uid`: anyone can create files there, so the uid is the only part an
+intruder can not choose. A value cut at 300 characters never matches a pattern.
 
 Before you save, the form shows how many open alerts the suppression covers and
 on which hosts; saving resolves them. A count far higher than expected means the

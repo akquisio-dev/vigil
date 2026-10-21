@@ -551,14 +551,16 @@ func (s *Server) handleAgentAction(w http.ResponseWriter, r *http.Request, sess 
 			}
 			// a process key also covers ports of earlier runs that are
 			// closed by now (a new random port on every start)
-			if strings.HasPrefix(req.Key, "proc:") && alertProcKey(al) == req.Key {
-				al.Status, al.By, al.Updated = "resolved", sess.User, time.Now().UTC()
-				continue
-			}
+			hit := strings.HasPrefix(req.Key, "proc:") && alertProcKey(al) == req.Key
 			k := decodeParams(al.Detail)["key"]
 			for _, p := range accepted {
-				if str(p, "key") == k {
-					al.Status, al.By, al.Updated = "resolved", sess.User, time.Now().UTC()
+				hit = hit || str(p, "key") == k
+			}
+			if hit {
+				now := time.Now().UTC()
+				al.Status, al.By, al.Updated = "resolved", sess.User, now
+				if al.Acked == nil {
+					al.Acked = &now
 				}
 			}
 		}
