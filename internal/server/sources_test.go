@@ -5,6 +5,7 @@ import (
 	"crypto/ed25519"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -40,7 +41,13 @@ func sharingServer(t *testing.T) *Server {
 	s.cfg.Brand = &BrandConfig{Name: "Zypo Cloud"}
 	s.cfg.Federation = &FederationConfig{Name: "net-a", Never: []string{"198.18.0.0/15"}}
 	s.state.Agents["a1"].Name = "STRATO alpha"
-	s.state.Agents["a1"].LastIP = "203.0.113.50"
+	s.cfg.TrustProxy = true // as behind the dashboard's proxy; the feed listener must ignore it
+	// behind a VPN the agent connects from an internal address; its public
+	// one only shows in the ports it listens on
+	s.state.Agents["a1"].LastIP = "10.90.0.2"
+	s.state.Agents["a1"].Ports = []map[string]any{{"proto": "tcp", "addr": "203.0.113.50", "port": float64(22)}}
+	// the team logged in from here three weeks ago, outside any share window
+	s.state.KnownLogins["joey|198.51.100.77"] = time.Now().AddDate(0, 0, -21)
 	now := time.Now().UTC()
 	fail := func(ip string, n int, users []string, existing ...string) {
 		d := map[string]any{"ip": ip, "count": float64(n), "users": anyList(users...)}
@@ -56,6 +63,7 @@ func sharingServer(t *testing.T) *Server {
 	fail("203.0.113.50", 50, []string{"root"})           // one of our hosts
 	fail("198.18.0.7", 50, []string{"root"})             // federation.never
 	fail("192.0.2.99", 50, []string{"root"})             // the partner's own network
+	fail("198.51.100.77", 3, []string{"joey"})           // the team, with the wrong key first
 	fail("198.51.100.13", 1, []string{"root"})           // under min_hits
 	fail("198.51.100.12", 5, []string{"root", "deploy"}) // and then logged in
 	appendAt(t, s, "a1", now.Add(-30*time.Minute), "ssh.login", map[string]any{"ip": "198.51.100.12", "user": "deploy", "method": "publickey"})
@@ -115,6 +123,35 @@ func TestFederationEndToEnd(t *testing.T) {
 		b, _ := io.ReadAll(resp.Body)
 		return resp.StatusCode, b
 	}
+	// X-Forwarded-For is the partner's word on this listener: it neither
+	// names the fetcher nor gets around the limit
+	spoof := func(tok, xff string) int {
+		req, _ := http.NewRequest("GET", ts.URL+"/api/federation/v1/feed", nil)
+		req.Header.Set("Authorization", "Bearer "+tok)
+		req.Header.Set("X-Forwarded-For", xff)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp.Body.Close()
+		return resp.StatusCode
+	}
+	if c := spoof(made.Token, "203.0.113.200"); c != 200 {
+		t.Fatalf("feed with XFF: %d", c)
+	}
+	a.mu.Lock()
+	if ip := a.state.Shares[0].PulledIP; ip != "127.0.0.1" {
+		t.Fatalf("fetcher recorded as %q", ip)
+	}
+	a.mu.Unlock()
+	defer a.limit.reset("feed:127.0.0.1")
+	for i := 0; i < limitFails; i++ {
+		spoof("vfs_wrong", fmt.Sprintf("198.18.%d.1", i))
+	}
+	if c := spoof(made.Token, "198.18.200.1"); c != 429 {
+		t.Fatalf("a new X-Forwarded-For got around the limit: %d", c)
+	}
+	a.limit.reset("feed:127.0.0.1")
 	if c, _ := get(""); c != 401 {
 		t.Fatalf("no token: %d", c)
 	}
@@ -132,7 +169,7 @@ func TestFederationEndToEnd(t *testing.T) {
 	var env feedEnvelope
 	json.Unmarshal(raw, &env)
 	payload, _ := base64.StdEncoding.DecodeString(env.Payload)
-	for _, never := range []string{"10.0.0.5", "203.0.113.50", "198.18.0.7", "192.0.2.99", "198.51.100.13", "198.51.100.12",
+	for _, never := range []string{"10.0.0.5", "203.0.113.50", "198.51.100.77", "198.18.0.7", "192.0.2.99", "198.51.100.13", "198.51.100.12",
 		"joey", "zypo", "deploy", "STRATO", "alpha", "a1", "secret-admin-path", "zgrab"} {
 		if bytes.Contains(payload, []byte(never)) {
 			t.Errorf("feed names %q: %s", never, payload)
@@ -201,6 +238,13 @@ func TestFederationEndToEnd(t *testing.T) {
 	}
 	if hasRule(fsLow, "source.login") {
 		t.Fatal("a low trust source must only feed the analytics")
+	}
+	conn := &Record{Agent: "a2", Event: proto.Event{Type: "net.connection", TS: time.Now(), Data: map[string]any{"remote_ip": "198.51.100.10", "remote_port": float64(443), "process": "curl"}}}
+	b.mu.Lock()
+	fsConn := b.evaluate(b.state.Agents["a2"], conn)
+	b.mu.Unlock()
+	if !hasRule(fsConn, "source.outbound") {
+		t.Fatal("connection to a reported address not flagged")
 	}
 
 	st := b.sourcesStats(7, time.Now().UTC())

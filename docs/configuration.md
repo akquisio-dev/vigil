@@ -401,7 +401,11 @@ both directions. Each side decides on its own what the other may fetch.
 
 - `listen` serves the feed, and only the feed, to partners. Bind it to a
   VPN address (WireGuard), never to a public one. Without it no feed is
-  served; fetching other networks works anyway.
+  served; fetching other networks works anyway. Give partners their own
+  WireGuard interface or subnet, not the one your agents use, and let the
+  firewall pass only the partner's address to this port: a partner in the
+  agents' network could reach the agent API and every other service there.
+  `X-Forwarded-For` is ignored on this listener.
 - `name` is how this network calls itself in its feed.
 - `never` lists addresses and networks that are never named in a feed and
   never flagged from a source: offices, VPN exits, monitoring services. The
@@ -417,7 +421,9 @@ In the dashboard, **Sources** (admins):
   would get. Whatever is chosen, a feed never carries host names, agent
   IDs, our own or internal addresses, addresses that logged in, user names
   that exist on our hosts, paths, processes or alert texts: the feed format
-  has no fields for them.
+  has no fields for them. Never named either: the addresses the agents
+  connect from and listen on, every address that ever logged in, and
+  `federation.never`.
 - **What we fetch**: the partner's feed address, its token and its
   fingerprint (shown under Sources on the partner's dashboard). The feed is
   signed with `data_dir/federation.key`, a key used for nothing else, and

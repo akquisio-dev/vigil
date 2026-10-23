@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"net/netip"
 	"net/url"
@@ -197,16 +198,30 @@ func parsePrefixes(list []string) ([]netip.Prefix, error) {
 }
 
 // neverList is what is never named in a feed nor flagged from a source:
-// the configured networks and the addresses our agents connect from.
+// the configured networks, the addresses our agents connect from and
+// listen on (behind a VPN the first is internal, the second has the public
+// one), and every address that ever logged in, whenever that was.
 func (s *Server) neverList() []netip.Prefix {
 	var out []netip.Prefix
 	if s.cfg.Federation != nil {
 		out, _ = parsePrefixes(s.cfg.Federation.Never)
 	}
+	add := func(v string) {
+		if ip, err := netip.ParseAddr(v); err == nil {
+			ip = ip.Unmap()
+			out = append(out, netip.PrefixFrom(ip, ip.BitLen()))
+		}
+	}
 	s.mu.Lock()
 	for _, a := range s.state.Agents {
-		if ip, err := netip.ParseAddr(a.LastIP); err == nil {
-			out = append(out, netip.PrefixFrom(ip.Unmap(), ip.Unmap().BitLen()))
+		add(a.LastIP)
+		for _, p := range a.Ports {
+			add(str(p, "addr"))
+		}
+	}
+	for k := range s.state.KnownLogins {
+		if i := strings.LastIndexByte(k, '|'); i >= 0 {
+			add(k[i+1:])
 		}
 	}
 	s.mu.Unlock()
@@ -383,7 +398,12 @@ func (s *Server) federationHandler() http.Handler {
 }
 
 func (s *Server) handleFeed(w http.ResponseWriter, r *http.Request) {
-	ip := s.clientIP(r)
+	// No proxy stands in front of this listener: X-Forwarded-For would be
+	// the partner's word, whatever trust_proxy says for the dashboard.
+	ip, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		ip = r.RemoteAddr
+	}
 	if s.limit.blocked("feed:" + ip) {
 		http.Error(w, errLimited.Error(), http.StatusTooManyRequests)
 		return
@@ -406,8 +426,8 @@ func (s *Server) handleFeed(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-	key, err := s.feedKey()
-	if err != nil {
+	key, kerr := s.feedKey()
+	if kerr != nil {
 		http.Error(w, "unavailable", http.StatusServiceUnavailable)
 		return
 	}
@@ -461,16 +481,17 @@ type sourceSet struct {
 func (s *Server) sourcesDir() string { return filepath.Join(s.cfg.DataDir, "sources") }
 
 func (s *Server) loadSources() {
-	ss := &s.sources
-	ss.mu.Lock()
-	defer ss.mu.Unlock()
-	ss.files = map[string]*srcFile{}
+	// s.mu before ss.mu, never inside it: evaluate holds s.mu and looks up
 	s.mu.Lock()
 	var ids []string
 	for _, src := range s.state.Sources {
 		ids = append(ids, src.ID)
 	}
 	s.mu.Unlock()
+	ss := &s.sources
+	ss.mu.Lock()
+	defer ss.mu.Unlock()
+	ss.files = map[string]*srcFile{}
 	for _, id := range ids {
 		raw, err := os.ReadFile(filepath.Join(s.sourcesDir(), id+".json"))
 		if err != nil {
