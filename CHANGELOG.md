@@ -16,6 +16,8 @@
 - The agent also watches the `authorized_keys` of accounts whose home is neither under /home nor /root (service accounts such as /var/lib/postgresql or /srv/backup). Before, a key planted there went unnoticed, and a login with it showed as `ssh.unknown_key`. After the update, keys already in such files are reported once as added.
 - New rule `intel.stale` (medium): a threat or hash list could not be downloaded for two days. It names the source and the last error and resolves itself with the next good download. A list waiting for an abuse.ch key that is not configured raises nothing. Before, a failing list was only visible in the server log.
 
+- Sources: allied vigil networks exchange attack data over a VPN, read-only. Each share decides per partner what may leave (categories, detail, period, minimum attempts, the partner's own networks), with a preview; host names, own addresses, logins, existing user names, paths and alert texts can never be shared. Fetched feeds are signed with their own key and pinned by fingerprint, normalised and bounded, never reach the threat lists or playbooks, and raise only `source.login` and `source.outbound` (trust medium or high). New tab with overlap matrix, lead time, comparison per source, heatmap, flow diagram and ranking. New option `federation`.
+
 ## v0.26.0
 
 - Agents count failed SSH logins per tried user name (`user_counts` in `ssh.failed`). The attack statistics keep them per day and hour; days from older agents share a total out evenly and are marked as estimated. Day files written before are rebuilt from the log on the first start, or kept as they are when the log no longer has the day.

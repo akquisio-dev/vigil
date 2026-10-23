@@ -386,6 +386,52 @@ alarm. The reason is written to the server log once.
 With `anchor_daily`, the head of the event chain is posted to your notifiers
 every day, which leaves a copy of the log's state outside the machine.
 
+## Sources and allied networks
+
+Two vigil networks can exchange what they see of attackers, read-only in
+both directions. Each side decides on its own what the other may fetch.
+
+```json
+"federation": {
+  "listen": "10.90.0.2:8472",
+  "name": "akquisio",
+  "never": ["198.51.100.0/24"]
+}
+```
+
+- `listen` serves the feed, and only the feed, to partners. Bind it to a
+  VPN address (WireGuard), never to a public one. Without it no feed is
+  served; fetching other networks works anyway.
+- `name` is how this network calls itself in its feed.
+- `never` lists addresses and networks that are never named in a feed and
+  never flagged from a source: offices, VPN exits, monitoring services. The
+  addresses the agents connect from are always added.
+
+In the dashboard, **Sources** (admins):
+
+- **What we share**: one share per partner with its own token (shown once,
+  only its hash is kept), the categories (SSH logins, web attacks, web
+  login attempts, web shell requests), counts and times or addresses only,
+  tried SSH user names or not, the period, a minimum number of attempts, and
+  the partner's own networks. The preview shows exactly what the partner
+  would get. Whatever is chosen, a feed never carries host names, agent
+  IDs, our own or internal addresses, addresses that logged in, user names
+  that exist on our hosts, paths, processes or alert texts: the feed format
+  has no fields for them.
+- **What we fetch**: the partner's feed address, its token and its
+  fingerprint (shown under Sources on the partner's dashboard). The feed is
+  signed with `data_dir/federation.key`, a key used for nothing else, and
+  refused unless it matches the pinned fingerprint. Sources are fetched
+  every 15 minutes, redirects are not followed, a feed is at most 16 MB and
+  50,000 addresses, and reports are kept for 1 to 90 days.
+
+Reports are untrusted: they never reach the threat lists of
+`threat_intel`, and playbooks never act on them. A source of trust
+*medium* or *high* raises `source.login` (a successful login from a
+reported address) and `source.outbound` (a host connected to one); *low*
+only feeds the analytics: overlap, who saw an attacker first, lead time,
+time of day and the attackers most sources report.
+
 ## Forwarding
 
 ```json

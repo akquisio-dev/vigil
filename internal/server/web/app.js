@@ -127,6 +127,7 @@ const T = {
     geoAttr: "IP Geolocation by DB-IP", noAttacks: "No attacks in this period", building: "The statistics are being built from the log",
     origin: "Origin", network: "Network", classLabel: "Class", country: "Country", activity30: "Activity, 30 days",
     attackReport: "Report (Markdown)", attackPrint: "Report to print / PDF", loggedInAs: "logged in as", unknown: "unknown", timezoneLocal: "local time",
+    sources: "Sources", sourcesSub: "Threat data from allied networks and other software, and what we share with them", sourcesTile: "Sources active", withProblems: "with problems", reported: "Reported", inTop: "in the ranking", overlapUs: "Also attacked us", ofOurs: "of our {n} attackers", firstShare: "Seen first by a source", earlyWarn: "early warnings among the shared attackers", medianLead: "Median lead", leadSub: "how much earlier a source saw our attackers", categories: "Categories", leadSame: "same hour", leadAhead: "{d} ahead", leadBehind: "{d} behind", overlapTitle: "Overlap", leadTitle: "Who saw them first", leadHint: "attackers we share", lb0: "we, over a day ahead", lb1: "we, up to a day ahead", lb2: "within an hour", lb3: "source, up to 6 h ahead", lb4: "source, 6 to 24 h ahead", lb5: "source, 1 to 3 days ahead", lb6: "source, over 3 days ahead", weFirst: "we saw them first", theyFirst: "the source saw them first", noOverlap: "No attacker seen by us and a source yet", srcTableTitle: "Sources compared", source: "Source", newPerDay: "New per day", fetchFailed: "fetch failed", staleShort: "no fetch for a day", srcHeatTitle: "When sources see attackers first", srcSankeyTitle: "Source, kind of attack, country", topReported: "Attackers reported by the most sources", seenBy: "Seen by", firstSeenBy: "First seen by", ourAttempts: "Our attempts", usLabel: "Our hosts", noSources: "No sources yet", noSourceData: "No reports from sources in this period", cat_ssh: "SSH logins", cat_web: "Web attacks", cat_web_login: "Web login attempts", cat_shell: "Web shell requests", trust_low: "trust low", trust_medium: "trust medium", trust_high: "trust high", trust: "Trust", trustHint: "Low: analytics only. Medium and high: a login from or a connection to a reported address raises an alert. Reports never start a response action.", fedConnections: "Partner connections", connectionsSub: "Partners fetch over the VPN with their own token. Nothing is ever sent on its own, and a partner cannot change anything here.", networkName: "This network", fingerprint: "Fingerprint", feedAddress: "Feed address", noListen: "No feed served: set federation.listen in server.json (a VPN address).", copy: "Copy", sharesTitle: "What we share", noShares: "Nothing shared yet", newShare: "Share with a partner", editShare: "Change share {name}", partnerName: "Partner", period: "Period", daysN: "{n} days", detail: "Detail", withCountsLong: "Attempts and first/last seen (otherwise addresses only)", withUsersLong: "Tried SSH user names (names that exist on our hosts are never shared)", minHits: "Minimum attempts per address", partnerNets: "The partner's own networks (never sent to them)", shareEnabled: "Partner may fetch", previewN: "The partner would get {n} addresses from {network}, these first:", neverShared: "Never shared, whatever is chosen: host names, our own and internal addresses, addresses that logged in, paths, processes and alert texts.", createShare: "Create share and token", save: "Save", cancel: "Cancel", edit: "Edit", rotateToken: "New token", tokenOnce: "Token for {name}. It is shown only now; pass it to the partner over a private channel.", confirmRotate: "Make a new token? The partner's current token stops working at once.", confirmShareDelete: "Stop sharing with this partner?", withCounts: "with counts", addressesOnly: "addresses only", withUsers: "with user names", minHitsN: "from {n} attempts", lastFetch: "last fetch", neverFetched: "not fetched yet", sourcesTitle: "What we fetch", newSource: "Add a source", editSource: "Change source {name}", sourceName: "Name", partnerToken: "Token from the partner", partnerFingerprint: "Fingerprint of the partner", tokenUnchanged: "unchanged", keepDaysLabel: "Keep reports (days)", keepDays: "kept {n} days", sourceEnabled: "Fetch every 15 minutes", addSource: "Add source", fetchNow: "Fetch now", confirmSourceDelete: "Remove this source and everything it reported?",
   },
   de: {
     overview: "Lage", alerts: "Alarme", events: "Ereignisse", canaries: "Köder", settings: "Einstellungen",
@@ -251,6 +252,7 @@ const T = {
     geoAttr: "IP Geolocation by DB-IP", noAttacks: "Keine Angriffe in diesem Zeitraum", building: "Die Statistik wird gerade aus dem Log aufgebaut",
     origin: "Herkunft", network: "Netz", classLabel: "Einstufung", country: "Land", activity30: "Aktivität, 30 Tage",
     attackReport: "Bericht (Markdown)", attackPrint: "Bericht drucken / PDF", loggedInAs: "angemeldet als", unknown: "unbekannt", timezoneLocal: "Ortszeit",
+    sources: "Quellen", sourcesSub: "Bedrohungsdaten von verbündeten Netzen und anderer Software, und was wir mit ihnen teilen", sourcesTile: "Aktive Quellen", withProblems: "mit Problemen", reported: "Gemeldet", inTop: "in der Rangliste", overlapUs: "Griffen auch uns an", ofOurs: "unserer {n} Angreifer", firstShare: "Zuerst von einer Quelle gesehen", earlyWarn: "Frühwarnungen unter den gemeinsamen Angreifern", medianLead: "Vorlauf (Median)", leadSub: "wie viel früher eine Quelle unsere Angreifer sah", categories: "Kategorien", leadSame: "gleiche Stunde", leadAhead: "{d} früher", leadBehind: "{d} später", overlapTitle: "Überschneidung", leadTitle: "Wer sah sie zuerst", leadHint: "gemeinsame Angreifer", lb0: "wir, über einen Tag früher", lb1: "wir, bis einen Tag früher", lb2: "innerhalb einer Stunde", lb3: "Quelle, bis 6 h früher", lb4: "Quelle, 6 bis 24 h früher", lb5: "Quelle, 1 bis 3 Tage früher", lb6: "Quelle, über 3 Tage früher", weFirst: "wir sahen sie zuerst", theyFirst: "die Quelle sah sie zuerst", noOverlap: "Noch kein Angreifer, den wir und eine Quelle gesehen haben", srcTableTitle: "Quellen im Vergleich", source: "Quelle", newPerDay: "Neu pro Tag", fetchFailed: "Abruf fehlgeschlagen", staleShort: "seit einem Tag kein Abruf", srcHeatTitle: "Wann Quellen Angreifer zuerst sehen", srcSankeyTitle: "Quelle, Angriffsart, Land", topReported: "Angreifer, die die meisten Quellen melden", seenBy: "Gesehen von", firstSeenBy: "Zuerst gesehen von", ourAttempts: "Unsere Versuche", usLabel: "Unsere Hosts", noSources: "Noch keine Quellen", noSourceData: "Keine Meldungen von Quellen in diesem Zeitraum", cat_ssh: "SSH-Anmeldungen", cat_web: "Web-Angriffe", cat_web_login: "Web-Anmeldeversuche", cat_shell: "Webshell-Aufrufe", trust_low: "Vertrauen niedrig", trust_medium: "Vertrauen mittel", trust_high: "Vertrauen hoch", trust: "Vertrauen", trustHint: "Niedrig: nur Analyse. Mittel und hoch: eine Anmeldung von oder eine Verbindung zu einer gemeldeten Adresse löst einen Alarm aus. Meldungen starten nie eine Gegenmaßnahme.", fedConnections: "Partnerverbindungen", connectionsSub: "Partner holen über das VPN mit eigenem Token ab. Von selbst wird nie etwas verschickt, und ein Partner kann hier nichts ändern.", networkName: "Dieses Netz", fingerprint: "Fingerabdruck", feedAddress: "Feed-Adresse", noListen: "Kein Feed: federation.listen in server.json setzen (eine VPN-Adresse).", copy: "Kopieren", sharesTitle: "Was wir teilen", noShares: "Noch nichts geteilt", newShare: "Mit einem Partner teilen", editShare: "Freigabe {name} ändern", partnerName: "Partner", period: "Zeitraum", daysN: "{n} Tage", detail: "Detail", withCountsLong: "Versuche und erstes/letztes Auftreten (sonst nur Adressen)", withUsersLong: "Versuchte SSH-Nutzernamen (Namen, die es auf unseren Hosts gibt, werden nie geteilt)", minHits: "Mindestzahl Versuche pro Adresse", partnerNets: "Eigene Netze des Partners (gehen nie an ihn)", shareEnabled: "Partner darf abholen", previewN: "Der Partner bekäme {n} Adressen von {network}, als Erstes diese:", neverShared: "Nie geteilt, egal was gewählt ist: Hostnamen, eigene und interne Adressen, Adressen mit erfolgreicher Anmeldung, Pfade, Prozesse und Alarmtexte.", createShare: "Freigabe und Token erstellen", save: "Speichern", cancel: "Abbrechen", edit: "Bearbeiten", rotateToken: "Neuer Token", tokenOnce: "Token für {name}. Er wird nur jetzt angezeigt; gib ihn dem Partner über einen privaten Weg.", confirmRotate: "Neuen Token erstellen? Der bisherige Token des Partners funktioniert sofort nicht mehr.", confirmShareDelete: "Teilen mit diesem Partner beenden?", withCounts: "mit Zahlen", addressesOnly: "nur Adressen", withUsers: "mit Nutzernamen", minHitsN: "ab {n} Versuchen", lastFetch: "letzter Abruf", neverFetched: "noch nicht abgeholt", sourcesTitle: "Was wir abholen", newSource: "Quelle hinzufügen", editSource: "Quelle {name} ändern", sourceName: "Name", partnerToken: "Token vom Partner", partnerFingerprint: "Fingerabdruck des Partners", tokenUnchanged: "unverändert", keepDaysLabel: "Meldungen behalten (Tage)", keepDays: "{n} Tage behalten", sourceEnabled: "Alle 15 Minuten abholen", addSource: "Quelle hinzufügen", fetchNow: "Jetzt abholen", confirmSourceDelete: "Diese Quelle und alles, was sie gemeldet hat, entfernen?",
   },
 };
 
@@ -351,7 +353,7 @@ function summary(data) {
 }
 
 // Tabler Icons (MIT, https://tabler.io/icons), outline paths.
-const ICONS = {"world": ["M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0", "M3.6 9h16.8", "M3.6 15h16.8", "M11.5 3a17 17 0 0 0 0 18", "M12.5 3a17 17 0 0 1 0 18"], "terminal-2": ["M8 9l3 3l-3 3", "M13 15l3 0", "M3 4m0 2a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2z"], "radar": ["M21 12h-8a1 1 0 1 0 -1 1v8a9 9 0 0 0 9 -9", "M16 9a5 5 0 1 0 -7 7", "M20.486 9a9 9 0 1 0 -11.482 11.495"], "key": ["M16.555 3.843l3.602 3.602a2.877 2.877 0 0 1 0 4.069l-2.643 2.643a2.877 2.877 0 0 1 -4.069 0l-.301 -.301l-6.558 6.558a2 2 0 0 1 -1.239 .578l-.175 .008h-1.172a1 1 0 0 1 -.993 -.883l-.007 -.117v-1.172a2 2 0 0 1 .467 -1.284l.119 -.13l.414 -.414h2v-2h2v-2l2.144 -2.144l-.301 -.301a2.877 2.877 0 0 1 0 -4.069l2.643 -2.643a2.877 2.877 0 0 1 4.069 0z", "M15 9h.01"], "book": ["M3 19a9 9 0 0 1 9 0a9 9 0 0 1 9 0", "M3 6a9 9 0 0 1 9 0a9 9 0 0 1 9 0", "M3 6l0 13", "M12 6l0 13", "M21 6l0 13"], "stack-2": ["M12 4l-8 4l8 4l8 -4l-8 -4", "M4 12l8 4l8 -4", "M4 16l8 4l8 -4"], "bell-off": ["M9.346 5.353c.21 -.129 .428 -.246 .654 -.353a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3m-1 3h-13a4 4 0 0 0 2 -3v-3a6.996 6.996 0 0 1 1.273 -3.707", "M9 17v1a3 3 0 0 0 6 0v-1", "M3 3l18 18"], "clock": ["M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0", "M12 7v5l3 3"], "user-x": ["M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0", "M6 21v-2a4 4 0 0 1 4 -4h3.5", "M22 22l-5 -5", "M17 22l5 -5"], "plus": ["M12 5l0 14", "M5 12l14 0"], "alert-triangle": ["M12 9v4", "M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z", "M12 16h.01"], "fish-hook": ["M16 9v6a5 5 0 0 1 -10 0v-4l3 3", "M16 7m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0", "M16 5v-2"], "layout-dashboard": ["M5 4h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1", "M5 16h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1", "M15 12h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1", "M15 4h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1"], "list-details": ["M13 5h8", "M13 9h5", "M13 15h8", "M13 19h5", "M3 4m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z", "M3 14m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z"], "logout": ["M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2", "M9 12h12l-3 -3", "M18 15l3 -3"], "server": ["M3 4m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z", "M3 12m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z", "M7 8l0 .01", "M7 16l0 .01"], "settings": ["M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z", "M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"], "shield-check": ["M11.46 20.846a12 12 0 0 1 -7.96 -14.846a12 12 0 0 0 8.5 -3a12 12 0 0 0 8.5 3a12 12 0 0 1 -.09 7.06", "M15 19l2 2l4 -4"]};
+const ICONS = {"affiliate": ["M5.931 6.936l1.275 4.249m5.607 5.609l4.251 1.275", "M11.683 12.317l5.759 -5.759", "M5.5 5.5m-1.5 0a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0 -3 0", "M18.5 5.5m-1.5 0a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0 -3 0", "M18.5 18.5m-1.5 0a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0 -3 0", "M8.5 15.5m-4.5 0a4.5 4.5 0 1 0 9 0a4.5 4.5 0 1 0 -9 0"], "world": ["M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0", "M3.6 9h16.8", "M3.6 15h16.8", "M11.5 3a17 17 0 0 0 0 18", "M12.5 3a17 17 0 0 1 0 18"], "terminal-2": ["M8 9l3 3l-3 3", "M13 15l3 0", "M3 4m0 2a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2z"], "radar": ["M21 12h-8a1 1 0 1 0 -1 1v8a9 9 0 0 0 9 -9", "M16 9a5 5 0 1 0 -7 7", "M20.486 9a9 9 0 1 0 -11.482 11.495"], "key": ["M16.555 3.843l3.602 3.602a2.877 2.877 0 0 1 0 4.069l-2.643 2.643a2.877 2.877 0 0 1 -4.069 0l-.301 -.301l-6.558 6.558a2 2 0 0 1 -1.239 .578l-.175 .008h-1.172a1 1 0 0 1 -.993 -.883l-.007 -.117v-1.172a2 2 0 0 1 .467 -1.284l.119 -.13l.414 -.414h2v-2h2v-2l2.144 -2.144l-.301 -.301a2.877 2.877 0 0 1 0 -4.069l2.643 -2.643a2.877 2.877 0 0 1 4.069 0z", "M15 9h.01"], "book": ["M3 19a9 9 0 0 1 9 0a9 9 0 0 1 9 0", "M3 6a9 9 0 0 1 9 0a9 9 0 0 1 9 0", "M3 6l0 13", "M12 6l0 13", "M21 6l0 13"], "stack-2": ["M12 4l-8 4l8 4l8 -4l-8 -4", "M4 12l8 4l8 -4", "M4 16l8 4l8 -4"], "bell-off": ["M9.346 5.353c.21 -.129 .428 -.246 .654 -.353a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3m-1 3h-13a4 4 0 0 0 2 -3v-3a6.996 6.996 0 0 1 1.273 -3.707", "M9 17v1a3 3 0 0 0 6 0v-1", "M3 3l18 18"], "clock": ["M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0", "M12 7v5l3 3"], "user-x": ["M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0", "M6 21v-2a4 4 0 0 1 4 -4h3.5", "M22 22l-5 -5", "M17 22l5 -5"], "plus": ["M12 5l0 14", "M5 12l14 0"], "alert-triangle": ["M12 9v4", "M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z", "M12 16h.01"], "fish-hook": ["M16 9v6a5 5 0 0 1 -10 0v-4l3 3", "M16 7m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0", "M16 5v-2"], "layout-dashboard": ["M5 4h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1", "M5 16h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1", "M15 12h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1", "M15 4h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1"], "list-details": ["M13 5h8", "M13 9h5", "M13 15h8", "M13 19h5", "M3 4m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z", "M3 14m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z"], "logout": ["M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2", "M9 12h12l-3 -3", "M18 15l3 -3"], "server": ["M3 4m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z", "M3 12m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z", "M7 8l0 .01", "M7 16l0 .01"], "settings": ["M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z", "M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"], "shield-check": ["M11.46 20.846a12 12 0 0 1 -7.96 -14.846a12 12 0 0 0 8.5 -3a12 12 0 0 0 8.5 3a12 12 0 0 1 -.09 7.06", "M15 19l2 2l4 -4"]};
 
 const SVG = "http://www.w3.org/2000/svg";
 function icon(name, viewBox = "0 0 24 24", paths = ICONS[name]) {
@@ -386,7 +388,7 @@ function logo() {
 
 const sections = [
   ["sectionOverview", [["overview", "#/", "layout-dashboard"]]],
-  ["sectionDetect", [["incidents", "#/incidents", "stack-2"], ["alerts", "#/alerts", "alert-triangle"], ["events", "#/events", "list-details"], ["sessions", "#/sessions", "terminal-2"], ["hunt", "#/hunt", "radar"], ["attacks", "#/attacks", "world"], ["canaries", "#/canaries", "fish-hook"],
+  ["sectionDetect", [["incidents", "#/incidents", "stack-2"], ["alerts", "#/alerts", "alert-triangle"], ["events", "#/events", "list-details"], ["sessions", "#/sessions", "terminal-2"], ["hunt", "#/hunt", "radar"], ["attacks", "#/attacks", "world"], ["sources", "#/sources", "affiliate"], ["canaries", "#/canaries", "fish-hook"],
     ["suppressions", "#/suppressions", "bell-off"]]],
   ["sectionSystem", [["rules", "#/rules", "book"], ["settings", "#/settings", "settings"]]],
 ];
@@ -1852,20 +1854,22 @@ function userCountryMatrix(m) {
   return h("div", { class: "scrollx" }, grid);
 }
 
-// Sankey: country -> user name -> account exists on the host or not
-function userSankey(flows) {
-  if (!flows.length) return h("div", { class: "empty small" }, t("noUserData"));
+// three-column Sankey of rows [a, b, c, count]. opts: labels (one per
+// column), mono (column shown in monospace), hot (third-column key drawn
+// strong), unit, empty, title
+function sankey3(rows, opts) {
+  if (!rows.length) return h("div", { class: "empty small" }, opts.empty);
   const W = 680, H = 340, NW = 10, GAP = 6, X = [140, 340, 520];
   const cols = [new Map(), new Map(), new Map()];
   const bump = (col, key, n) => cols[col].set(key, (cols[col].get(key) || 0) + n);
   const l1 = new Map(), l2 = new Map();
-  for (const f of flows) {
-    const acct = f.existing ? "yes" : "no";
-    bump(0, f.country, f.count); bump(1, f.user, f.count); bump(2, acct, f.count);
-    l1.set(f.country + "\n" + f.user, (l1.get(f.country + "\n" + f.user) || 0) + f.count);
-    l2.set(f.user + "\n" + acct, (l2.get(f.user + "\n" + acct) || 0) + f.count);
+  for (const [a, b, c, n] of rows) {
+    bump(0, a, n); bump(1, b, n); bump(2, c, n);
+    l1.set(a + "\n" + b, (l1.get(a + "\n" + b) || 0) + n);
+    l2.set(b + "\n" + c, (l2.get(b + "\n" + c) || 0) + n);
   }
-  const total = flows.reduce((a, f) => a + f.count, 0);
+  const total = rows.reduce((s, r) => s + r[3], 0);
+  const hot = opts.hot || (() => false);
   const nodes = cols.map((m) => {
     const keys = [...m.keys()].sort((a, b) => (a === "*") - (b === "*") || m.get(b) - m.get(a));
     const scale = (H - GAP * (keys.length - 1)) / total;
@@ -1874,13 +1878,13 @@ function userSankey(flows) {
     for (const k of keys) { const hgt = Math.max(1, m.get(k) * scale); out.set(k, { y, h: hgt, n: m.get(k), inY: y, outY: y }); y += hgt + GAP; }
     return { out, scale };
   });
-  const svg = sv("svg", { viewBox: "0 0 " + W + " " + H, class: "sankey", role: "img", "aria-label": t("sankeyTitle") });
+  const svg = sv("svg", { viewBox: "0 0 " + W + " " + H, class: "sankey", role: "img", "aria-label": opts.title });
   const band = (x0, y0, x1, y1, w) => {
     const mx = (x0 + x1) / 2;
     return "M" + x0 + "," + y0 + "C" + mx + "," + y0 + " " + mx + "," + y1 + " " + x1 + "," + y1 +
       "L" + x1 + "," + (y1 + w) + "C" + mx + "," + (y1 + w) + " " + mx + "," + (y0 + w) + " " + x0 + "," + (y0 + w) + "Z";
   };
-  const links = (map, a, b, labelA, labelB) => {
+  const links = (map, a, b) => {
     const order = [...map.entries()].sort((p, q) => {
       const [pa, pb] = p[0].split("\n"), [qa, qb] = q[0].split("\n");
       return nodes[a].out.get(pa).y - nodes[a].out.get(qa).y || nodes[b].out.get(pb).y - nodes[b].out.get(qb).y;
@@ -1889,27 +1893,33 @@ function userSankey(flows) {
       const [ka, kb] = key.split("\n");
       const na = nodes[a].out.get(ka), nb = nodes[b].out.get(kb);
       const w = n * nodes[a].scale;
-      const p = sv("path", { d: band(X[a] + NW, na.outY, X[b], nb.inY, w), class: "link" + (kb === "yes" ? " exist" : "") });
-      hoverTip(p, labelA(ka) + "  →  " + labelB(kb) + "  ·  " + num(n) + " " + t("attemptsN"));
+      const p = sv("path", { d: band(X[a] + NW, na.outY, X[b], nb.inY, w), class: "link" + (b === 2 && hot(kb) ? " exist" : "") });
+      hoverTip(p, opts.labels[a](ka) + "  →  " + opts.labels[b](kb) + "  ·  " + num(n) + " " + opts.unit);
       svg.append(p);
       na.outY += w; nb.inY += n * nodes[b].scale;
     }
   };
-  links(l1, 0, 1, ccLabel, userLabel);
-  links(l2, 1, 2, userLabel, (k) => k === "yes" ? t("accountExists") : t("accountMissing"));
-  const labels = [ccLabel, userLabel, (k) => k === "yes" ? t("accountExists") : t("accountMissing")];
+  links(l1, 0, 1);
+  links(l2, 1, 2);
   nodes.forEach((col, ci) => {
     for (const [k, nd] of col.out) {
-      svg.append(hoverTip(sv("rect", { x: X[ci], y: nd.y.toFixed(1), width: NW, height: nd.h.toFixed(1), rx: 2, class: "node" + (ci === 2 && k === "yes" ? " exist" : "") }),
-        labels[ci](k) + "  ·  " + num(nd.n)));
+      svg.append(hoverTip(sv("rect", { x: X[ci], y: nd.y.toFixed(1), width: NW, height: nd.h.toFixed(1), rx: 2, class: "node" + (ci === 2 && hot(k) ? " exist" : "") }),
+        opts.labels[ci](k) + "  ·  " + num(nd.n)));
       const left = ci === 0;
       if (nd.h >= 12) {
-        svg.append(sv("text", { x: left ? X[ci] - 6 : X[ci] + NW + 6, y: (nd.y + nd.h / 2).toFixed(1), "text-anchor": left ? "end" : "start", class: "nlabel" + (ci === 1 && k !== "*" ? " mono" : "") },
-          labels[ci](k)));
+        svg.append(sv("text", { x: left ? X[ci] - 6 : X[ci] + NW + 6, y: (nd.y + nd.h / 2).toFixed(1), "text-anchor": left ? "end" : "start", class: "nlabel" + (ci === opts.mono && k !== "*" ? " mono" : "") },
+          opts.labels[ci](k)));
       }
     }
   });
   return h("div", { class: "scrollx" }, svg);
+}
+
+// Sankey: country -> user name -> account exists on the host or not
+function userSankey(flows) {
+  const acct = (k) => k === "yes" ? t("accountExists") : t("accountMissing");
+  return sankey3(flows.map((f) => [f.country, f.user, f.existing ? "yes" : "no", f.count]),
+    { labels: [ccLabel, userLabel, acct], mono: 1, hot: (k) => k === "yes", unit: t("attemptsN"), empty: t("noUserData"), title: t("sankeyTitle") });
 }
 
 // squarified treemap (Bruls, Huizing, van Wijk) of items {v} in a rectangle
@@ -2098,6 +2108,294 @@ const netLabel = (a) => a.asn ? "AS" + a.asn + " " + (a.org || "") : "";
 const geoAttr = (geo) => geo && geo.enabled ? h("div", { class: "attr" }, h("a", { href: geo.attribution_url, target: "_blank", rel: "noopener" }, t("geoAttr"))) : null;
 
 let attackClass = "all";
+// ---- sources: allied networks and other software ------------------------
+// Everything a source reports is attacker-controlled text: names, users
+// and addresses only ever become text nodes.
+
+const catLabel = (c) => t("cat_" + c);
+const leadText = (hrs) => hrs == null ? "·" : Math.abs(hrs) < 1 ? t("leadSame")
+  : (hrs > 0 ? t("leadAhead") : t("leadBehind")).replace("{d}", Math.abs(hrs) >= 48 ? Math.round(Math.abs(hrs) / 24) + " d" : Math.round(Math.abs(hrs)) + " h");
+
+function sourceMatrix(st, name) {
+  const n = st.labels.length;
+  if (n < 2) return h("div", { class: "empty small" }, t("noSources"));
+  const max = Math.max(1, ...st.matrix.flat());
+  const grid = h("div", { class: "matrix", role: "table", "aria-label": t("overlapTitle") });
+  grid.style.gridTemplateColumns = "minmax(80px, 150px) repeat(" + n + ", minmax(44px, 1fr))";
+  grid.append(h("div", { class: "hlabel" }), ...st.labels.map((l) => h("div", { class: "mhead", title: name(l) }, name(l))));
+  st.labels.forEach((a, i) => {
+    grid.append(h("div", { class: "hlabel", title: name(a) }, name(a)));
+    st.matrix[i].forEach((v, j) => grid.append(hoverTip(heatCell(heatLevel(v, max), v ? num(v) : "", "mcell" + (i === j ? " diag" : "")),
+      i === j ? name(a) + "  ·  " + num(v) + " " + t("addresses") : name(a) + "  ∩  " + name(st.labels[j]) + "  ·  " + num(v) + " " + t("addresses"))));
+  });
+  return h("div", { class: "scrollx" }, grid);
+}
+
+// who saw the shared attackers first: from "we, a day ahead" on the left to
+// "the source, days ahead" on the right
+function leadStrip(st) {
+  const total = st.lead.reduce((a, b) => a + b, 0);
+  if (!total) return h("div", { class: "empty small" }, t("noOverlap"));
+  const max = Math.max(1, ...st.lead);
+  return h("div", null,
+    h("div", { class: "leadstrip" }, st.lead.map((v, i) => hoverTip(h("div", { class: "leadcell" + (i < 2 ? " ours" : i === 2 ? " same" : "") },
+      heatCell(heatLevel(v, max), v ? num(v) : ""), h("div", { class: "leadlabel" }, t("lb" + i))), t("lb" + i) + "  ·  " + num(v) + " " + t("addresses")))),
+    h("div", { class: "leadaxis muted small" }, h("span", null, "← " + t("weFirst")), h("span", null, t("theyFirst") + " →")));
+}
+
+function sourceHeatmap(st) {
+  const rows = st.sources.filter((s) => s.active).map((s) => ({ name: s.name, hours: localHours(s.hours) }));
+  if (!rows.length) return h("div", { class: "empty small" }, t("noSourceData"));
+  const max = Math.max(1, ...rows.flatMap((r) => r.hours));
+  const grid = h("div", { class: "heatgrid", role: "table", "aria-label": t("srcHeatTitle") });
+  grid.append(h("div", { class: "hlabel" }), ...Array.from({ length: 24 }, (_, i) => h("div", { class: "hhead" }, i % 3 === 0 ? String(i) : "")));
+  for (const r of rows) {
+    grid.append(h("div", { class: "hlabel", title: r.name }, r.name));
+    r.hours.forEach((n, i) => grid.append(hoverTip(heatCell(heatLevel(n, max)), r.name + "  ·  " + String(i).padStart(2, "0") + ":00  ·  " + num(n) + " " + t("addresses"))));
+  }
+  return h("div", { class: "scrollx" }, grid);
+}
+
+function sourceTable(st, days) {
+  if (!st.sources.length) return h("div", { class: "empty small" }, t("noSources"));
+  const max = Math.max(1, ...st.sources.map((s) => s.active));
+  return h("div", { class: "scrollx" }, h("table", { class: "usertable" },
+    h("thead", null, h("tr", null, [t("source"), t("reported"), t("overlapUs"), t("firstShare"), t("medianLead"), t("newPerDay"), t("status")].map((x) => h("th", null, x)))),
+    h("tbody", null, st.sources.map((s) => {
+      const bar = h("span", { class: "inbar-fill" });
+      bar.style.width = (100 * s.active / max).toFixed(1) + "%";
+      const share = s.overlap ? Math.round(100 * s.earlier / s.overlap) + " %" : "·";
+      return h("tr", null,
+        h("td", { class: "ucell" }, h("div", { class: "strong" }, s.name), h("div", { class: "muted small" }, [s.network, t("trust_" + s.trust)].filter(Boolean).join("  ·  "))),
+        h("td", { class: "barcell" }, h("span", { class: "inbar" }, bar), h("span", { class: "num-sm" }, num(s.active))),
+        h("td", { class: "num-sm" }, num(s.overlap)),
+        h("td", { class: "num-sm" }, share),
+        h("td", { class: "num-sm nowrap" }, leadText(s.lead_h)),
+        h("td", null, sparkline(s.new, s.name)),
+        h("td", { class: "small" }, !s.enabled ? h("span", { class: "muted" }, t("disabled"))
+          : s.last_err ? h("span", { class: "warn", title: s.last_err }, t("fetchFailed"))
+          : s.stale ? h("span", { class: "warn" }, t("staleShort"))
+          : h("span", { class: "chip" }, h("span", { class: "dot ok" }), timeEl(s.last_ok))));
+    }))));
+}
+
+function sourceTop(st, name) {
+  if (!st.top.length) return h("div", { class: "empty small" }, t("noSourceData"));
+  return h("div", { class: "tablewrap" }, h("table", { class: "evtable" },
+    h("thead", null, h("tr", null, [t("ip"), t("seenBy"), t("firstSeenBy"), t("country"), t("categories"), t("ourAttempts"), t("reported")].map((x) => h("th", null, x)))),
+    h("tbody", null, st.top.map((r) => h("tr", null,
+      h("td", { class: "mono nowrap" }, h("a", { href: pivotHref("ip", r.ip) }, r.ip)),
+      h("td", null, h("span", { class: "flex wrap" }, r.sources.map((id) => h("span", { class: "chip" + (id === "us" ? " us" : "") }, name(id))))),
+      h("td", { class: "nowrap" }, name(r.first_by), h("div", { class: "muted small" }, abs(r.first))),
+      h("td", null, r.country === "?" ? "·" : countryName(r.country)),
+      h("td", { class: "small" }, r.cats.map(catLabel).join(", ")),
+      h("td", { class: "num-sm" }, r.ours ? num(r.ours) : "·"),
+      h("td", { class: "num-sm" }, r.reported ? num(r.reported) : "·"))))));
+}
+
+async function sourcesView(params) {
+  const days = params.get("days") || "7";
+  const [st, cfg] = await Promise.all([api("/api/ui/sources/stats?days=" + encodeURIComponent(days)),
+    can("admin") ? api("/api/ui/sources") : Promise.resolve(null)]);
+  const names = { us: t("usLabel") };
+  st.sources.forEach((s) => { names[s.id] = s.name; });
+  const name = (id) => names[id] || id;
+  const daySel = h("div", { class: "tabs" }, [["1", t("day1")], ["7", t("days7")], ["30", t("days30").replace("{n}", 30)]].map(([k, l]) =>
+    h("button", { class: k === String(st.days) ? "on" : null, onclick: () => { location.hash = "#/sources?days=" + k; } }, l)));
+  const active = st.sources.filter((s) => s.enabled).length;
+  const reported = new Set(st.top.map((r) => r.ip)).size;
+  const sumActive = st.sources.reduce((a, s) => a + s.active, 0);
+  const tiles = h("div", { class: "grid metrics six" },
+    metric(null, "affiliate", t("sourcesTile"), active + " / " + st.sources.length, st.sources.some((s) => s.enabled && (s.last_err || s.stale)) ? "bad" : null,
+      st.sources.filter((s) => s.enabled && (s.last_err || s.stale)).length + " " + t("withProblems")),
+    metric(null, "world", t("reported"), num(sumActive), null, t("addressesN").replace("{n}", num(reported || 0)) + " " + t("inTop")),
+    metric(null, "radar", t("overlapUs"), num(st.shared), st.shared ? "bad" : null, st.us ? Math.round(100 * st.shared / st.us) + " % " + t("ofOurs").replace("{n}", num(st.us)) : t("noAttacks")),
+    metric(null, "clock", t("firstShare"), st.shared ? Math.round(100 * st.earlier / st.shared) + " %" : "·", null, t("earlyWarn")),
+    metric(null, "clock", t("medianLead"), leadText(st.lead_h), null, t("leadSub")),
+    metric(null, "stack-2", t("categories"), String(new Set(st.sources.flatMap((s) => Object.keys(s.cats))).size), null, Object.keys(st.sources.reduce((a, s) => Object.assign(a, s.cats), {})).map(catLabel).join(", ") || "·"));
+
+  mount(shell("sources",
+    h("h1", null, t("sources")),
+    h("div", { class: "crumbs" }, t("sourcesSub")),
+    h("div", { class: "flex toolbar" }, daySel),
+    tiles,
+    h("div", { class: "grid two mt" },
+      panel(t("overlapTitle"), t("addresses"), sourceMatrix(st, name)),
+      panel(t("leadTitle"), t("leadHint"), leadStrip(st))),
+    h("div", { class: "mt" }, panel(t("srcTableTitle"), null, sourceTable(st, st.days))),
+    h("div", { class: "grid two mt" },
+      panel(t("srcHeatTitle"), t("timezoneLocal"), sourceHeatmap(st)),
+      panel(t("srcSankeyTitle"), null, sankey3(st.flows.map((f) => [f.from, f.cat, f.to, f.n]),
+        { labels: [name, catLabel, ccLabel], unit: t("addresses"), empty: t("noSourceData"), title: t("srcSankeyTitle") }))),
+    h("h2", null, t("topReported")),
+    sourceTop(st, name),
+    cfg ? sourceAdmin(cfg) : null));
+}
+
+// ---- admin: what we share, what we fetch ----
+
+function copyField(value) {
+  const inp = h("input", { class: "mono", readonly: true, value });
+  return h("div", { class: "flex copyfield" }, inp,
+    h("button", { class: "btn small ghost", type: "button", onclick: () => { inp.select(); navigator.clipboard && navigator.clipboard.writeText(value); } }, t("copy")));
+}
+
+function sourceAdmin(cfg) {
+  const feedURL = cfg.listen ? "http://" + cfg.listen + cfg.path : "";
+  const ident = h("div", { class: "card" },
+    h("dl", { class: "kv" },
+      h("dt", null, t("networkName")), h("dd", null, cfg.network),
+      h("dt", null, t("fingerprint")), h("dd", null, copyField(cfg.fingerprint)),
+      h("dt", null, t("feedAddress")), h("dd", null, feedURL ? copyField(feedURL) : h("span", { class: "muted" }, t("noListen")))));
+  return h("div", null,
+    h("h2", null, t("fedConnections")),
+    h("div", { class: "muted small" }, t("connectionsSub")),
+    ident,
+    h("h2", null, t("sharesTitle")),
+    shareEditor(cfg),
+    h("div", { class: "list" }, cfg.shares.length ? cfg.shares.map((s) => shareRow(s)) : h("div", { class: "empty" }, t("noShares"))),
+    h("h2", null, t("sourcesTitle")),
+    sourceEditor(cfg),
+    h("div", { class: "list" }, cfg.sources.length ? cfg.sources.map((s) => sourceRow(s)) : h("div", { class: "empty" }, t("noSources"))));
+}
+
+let shareEdit = null; // the share being edited, or null for a new one
+let sourceEdit = null;
+let newToken = null; // {name, token} right after creating or rotating
+
+function shareRow(s) {
+  return h("div", { class: "row" },
+    h("span", { class: "chip" }, h("span", { class: "dot " + (s.enabled ? "ok" : "") }), s.enabled ? t("on") : t("off")),
+    h("div", null,
+      h("div", { class: "title" }, s.name),
+      h("div", { class: "sub" }, [s.cats.map(catLabel).join(", "), t("daysN").replace("{n}", s.days), s.counts ? t("withCounts") : t("addressesOnly"),
+        s.users ? t("withUsers") : null, s.min_hits ? t("minHitsN").replace("{n}", s.min_hits) : null].filter(Boolean).join("  ·  ")),
+      h("div", { class: "sub" }, s.pulls ? [t("lastFetch"), " ", timeEl(s.pulled), "  ·  " + (s.pulled_ip || "") + "  ·  " + t("addressesN").replace("{n}", num(s.sent))] : t("neverFetched"))),
+    h("div", { class: "meta" },
+      h("button", { class: "btn small ghost", onclick: () => { shareEdit = s; render(); } }, t("edit")),
+      h("button", { class: "btn small ghost", onclick: async () => {
+        if (!confirm(t("confirmRotate"))) return;
+        const r = await post("/api/ui/shares/" + s.id + "/rotate"); newToken = { name: s.name, token: r.token }; render();
+      } }, t("rotateToken")),
+      h("button", { class: "btn small ghost", onclick: async () => {
+        if (!confirm(t("confirmShareDelete"))) return;
+        await post("/api/ui/shares/" + s.id + "/delete"); render();
+      } }, t("remove"))));
+}
+
+function shareEditor(cfg) {
+  const s = shareEdit || { name: "", cats: ["ssh"], users: false, counts: true, days: 7, min_hits: 3, exclude: [], enabled: true };
+  const err = h("div", { class: "err" });
+  const nameIn = h("input", { value: s.name, maxlength: 64, required: true });
+  const cats = cfg.cats.map((c) => h("input", { type: "checkbox", value: c, checked: s.cats.includes(c) || null }));
+  const counts = h("input", { type: "checkbox", checked: s.counts || null });
+  const users = h("input", { type: "checkbox", checked: s.users || null });
+  const enabled = h("input", { type: "checkbox", checked: s.enabled || null });
+  const daysSel = h("select", null, [1, 3, 7, 14, 30].map((d) => h("option", { value: d, selected: d === s.days || null }, t("daysN").replace("{n}", d))));
+  const minHits = h("input", { type: "number", min: 0, value: s.min_hits });
+  const excl = h("textarea", { rows: 3, class: "mono", placeholder: "192.0.2.0/24" }, (s.exclude || []).join("\n"));
+  const preview = h("div", { class: "preview" });
+  const body = () => ({ id: shareEdit ? shareEdit.id : "", name: nameIn.value.trim() || "preview", cats: cats.filter((c) => c.checked).map((c) => c.value),
+    counts: counts.checked, users: users.checked, enabled: enabled.checked, days: +daysSel.value, min_hits: +minHits.value || 0,
+    exclude: excl.value.split(/\s+/).filter(Boolean) });
+  let timer = null, seq = 0;
+  const refresh = () => {
+    clearTimeout(timer);
+    timer = setTimeout(async () => {
+      const my = ++seq;
+      try {
+        const r = await post("/api/ui/shares", { ...body(), preview: true });
+        if (my !== seq) return;
+        preview.replaceChildren(
+          h("div", { class: "strong" }, t("previewN").replace("{n}", num(r.count)).replace("{network}", r.network)),
+          r.sample.length ? h("div", { class: "scrollx" }, h("table", { class: "usertable" },
+            h("thead", null, h("tr", null, [t("ip"), t("categories"), t("attemptsN"), t("triedUsers")].map((x) => h("th", null, x)))),
+            h("tbody", null, r.sample.map((e) => h("tr", null, h("td", { class: "mono" }, e.ip), h("td", { class: "small" }, e.c.map(catLabel).join(", ")),
+              h("td", { class: "num-sm" }, e.n != null ? num(e.n) : "·"), h("td", { class: "mono small" }, (e.u || []).join(", "))))))) : null,
+          h("div", { class: "muted small" }, t("neverShared")));
+      } catch (x) { if (my === seq) preview.replaceChildren(h("div", { class: "err" }, x.message)); }
+    }, 300);
+  };
+  const form = h("form", { class: "stack", oninput: refresh, onchange: refresh, onsubmit: async (e) => {
+    e.preventDefault();
+    err.textContent = "";
+    try {
+      const r = await post("/api/ui/shares", body());
+      if (r.token) newToken = { name: r.share.name, token: r.token };
+      shareEdit = null; render();
+    } catch (x) { err.textContent = x.message; }
+  } },
+    h("div", { class: "grid two" }, h("label", null, t("partnerName"), nameIn), h("label", null, t("period"), daysSel)),
+    h("fieldset", { class: "checks" }, h("legend", null, t("categories")), cats.map((c) => h("label", { class: "check" }, c, catLabel(c.value)))),
+    h("fieldset", { class: "checks" }, h("legend", null, t("detail")),
+      h("label", { class: "check" }, counts, t("withCountsLong")),
+      h("label", { class: "check" }, users, t("withUsersLong"))),
+    h("div", { class: "grid two" }, h("label", null, t("minHits"), minHits), h("label", null, t("partnerNets"), excl)),
+    h("label", { class: "check" }, enabled, t("shareEnabled")),
+    preview, err,
+    h("div", { class: "flex" }, h("button", { class: "btn", type: "submit" }, shareEdit ? t("save") : t("createShare")),
+      shareEdit ? h("button", { class: "btn ghost", type: "button", onclick: () => { shareEdit = null; render(); } }, t("cancel")) : null));
+  refresh();
+  const tok = newToken;
+  newToken = null;
+  return h("div", null,
+    tok ? h("div", { class: "card note" }, h("div", { class: "strong" }, t("tokenOnce").replace("{name}", tok.name)), copyField(tok.token)) : null,
+    h("div", { class: "card" }, h("h3", null, shareEdit ? t("editShare").replace("{name}", shareEdit.name) : t("newShare")), form));
+}
+
+function sourceRow(s) {
+  return h("div", { class: "row" },
+    h("span", { class: "chip" }, h("span", { class: "dot " + (!s.enabled ? "" : s.last_err ? "critical" : "ok") }), s.enabled ? t("on") : t("off")),
+    h("div", null,
+      h("div", { class: "title" }, s.name, s.network ? h("span", { class: "muted" }, "  ·  " + s.network) : null),
+      h("div", { class: "sub mono" }, s.url),
+      h("div", { class: "sub" }, [t("trust_" + s.trust), t("keepDays").replace("{n}", s.ttl_days), t("addressesN").replace("{n}", num(s.entries))].join("  ·  "),
+        s.last_ok && !s.last_ok.startsWith("0001") ? ["  ·  " + t("lastFetch") + " ", timeEl(s.last_ok)] : null),
+      s.last_err ? h("div", { class: "sub warn" }, s.last_err) : null),
+    h("div", { class: "meta" },
+      h("button", { class: "btn small ghost", onclick: async (e) => {
+        e.target.disabled = true;
+        await post("/api/ui/sources/" + s.id + "/pull").catch(() => {}); render();
+      } }, t("fetchNow")),
+      h("button", { class: "btn small ghost", onclick: () => { sourceEdit = s; render(); } }, t("edit")),
+      h("button", { class: "btn small ghost", onclick: async () => {
+        if (!confirm(t("confirmSourceDelete"))) return;
+        await post("/api/ui/sources/" + s.id + "/delete"); render();
+      } }, t("remove"))));
+}
+
+function sourceEditor() {
+  const s = sourceEdit || { name: "", url: "", fingerprint: "", trust: "medium", ttl_days: 30, enabled: true };
+  const err = h("div", { class: "err" });
+  const f = {
+    name: h("input", { value: s.name, maxlength: 64, required: true }),
+    url: h("input", { value: s.url, class: "mono", required: true, placeholder: "http://10.90.0.5:8472/api/federation/v1/feed" }),
+    token: h("input", { type: "password", class: "mono", autocomplete: "off", required: !sourceEdit || null, placeholder: sourceEdit ? t("tokenUnchanged") : "vfs_…" }),
+    fingerprint: h("input", { value: s.fingerprint, class: "mono", required: true, placeholder: "xxxx:xxxx:…" }),
+    trust: h("select", null, ["low", "medium", "high"].map((k) => h("option", { value: k, selected: k === s.trust || null }, t("trust_" + k)))),
+    ttl: h("input", { type: "number", min: 1, max: 90, value: s.ttl_days }),
+    enabled: h("input", { type: "checkbox", checked: s.enabled || null }),
+  };
+  const form = h("form", { class: "stack", onsubmit: async (e) => {
+    e.preventDefault();
+    err.textContent = "";
+    try {
+      await post("/api/ui/sources", { id: sourceEdit ? sourceEdit.id : "", name: f.name.value.trim(), url: f.url.value.trim(), token: f.token.value.trim(),
+        fingerprint: f.fingerprint.value.trim(), trust: f.trust.value, ttl_days: +f.ttl.value, enabled: f.enabled.checked });
+      sourceEdit = null; render();
+    } catch (x) { err.textContent = x.message; }
+  } },
+    h("div", { class: "grid two" }, h("label", null, t("sourceName"), f.name), h("label", null, t("feedAddress"), f.url)),
+    h("div", { class: "grid two" }, h("label", null, t("partnerToken"), f.token), h("label", null, t("partnerFingerprint"), f.fingerprint)),
+    h("div", { class: "grid two" }, h("label", null, t("trust"), f.trust), h("label", null, t("keepDaysLabel"), f.ttl)),
+    h("div", { class: "muted small" }, t("trustHint")),
+    h("label", { class: "check" }, f.enabled, t("sourceEnabled")),
+    err,
+    h("div", { class: "flex" }, h("button", { class: "btn", type: "submit" }, sourceEdit ? t("save") : t("addSource")),
+      sourceEdit ? h("button", { class: "btn ghost", type: "button", onclick: () => { sourceEdit = null; render(); } }, t("cancel")) : null));
+  return h("div", { class: "card" }, h("h3", null, sourceEdit ? t("editSource").replace("{name}", sourceEdit.name) : t("newSource")), form);
+}
+
 async function attacksView(params) {
   const days = params.get("days") || "7";
   const cc = params.get("country") || "";
@@ -2365,6 +2663,7 @@ async function render() {
     else if (parts[0] === "session") await sessionView(params);
     else if (parts[0] === "hunt") await huntView();
     else if (parts[0] === "attacks") await attacksView(params);
+    else if (parts[0] === "sources") await sourcesView(params);
     else if (parts[0] === "pivot" && parts[2]) await pivotView(parts[1], decodeURIComponent(parts.slice(2).join("/")), params);
     else if (parts[0] === "snapshot" && parts[1]) await snapshotView(parts[1], params);
     else if (parts[0] === "canaries") await canariesView();

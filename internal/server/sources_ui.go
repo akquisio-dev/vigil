@@ -2,6 +2,7 @@ package server
 
 import (
 	"crypto/ed25519"
+	"math"
 	"net/http"
 	"sort"
 	"strconv"
@@ -392,6 +393,9 @@ type srcFlow struct {
 type sourcesStats struct {
 	Days    int       `json:"days"`
 	Us      int       `json:"us"`
+	Shared  int       `json:"shared"`  // our attackers that a source reported too
+	Earlier int       `json:"earlier"` // of them, a source saw first
+	LeadH   *float64  `json:"lead_h"`  // median over all sources
 	Sources []srcStat `json:"sources"`
 	Labels  []string  `json:"labels"` // matrix order: "us", then source IDs
 	Matrix  [][]int   `json:"matrix"`
@@ -433,7 +437,7 @@ func (s *Server) sourcesStats(days int, now time.Time) *sourcesStats {
 	}
 	s.mu.Unlock()
 
-	st := &sourcesStats{Days: days, Us: len(ours), Labels: []string{"us"}}
+	st := &sourcesStats{Days: days, Us: len(ours), Labels: []string{"us"}, Sources: []srcStat{}, Top: []srcTop{}, Flows: []srcFlow{}}
 	for _, b := range leadBuckets {
 		st.Buckets = append(st.Buckets, b.label)
 	}
@@ -446,6 +450,7 @@ func (s *Server) sourcesStats(days int, now time.Time) *sourcesStats {
 		rep   int
 	}
 	hits := map[string]*hit{}
+	var allLeads []float64
 	flows := map[[3]string]int{}
 	geo := map[string]string{}
 	country := func(ip string) string {
@@ -501,6 +506,7 @@ func (s *Server) sourcesStats(days int, now time.Time) *sourcesStats {
 					row.Overlap++
 					lead := x.First.Sub(e.First).Hours()
 					leads = append(leads, lead)
+					allLeads = append(allLeads, lead)
 					if lead > 0 {
 						row.Earlier++
 					}
@@ -513,15 +519,7 @@ func (s *Server) sourcesStats(days int, now time.Time) *sourcesStats {
 				}
 			}
 		}
-		if len(leads) > 0 {
-			sort.Float64s(leads)
-			m := leads[len(leads)/2]
-			if len(leads)%2 == 0 {
-				m = (leads[len(leads)/2-1] + m) / 2
-			}
-			m = float64(int(m*10)) / 10
-			row.LeadH = &m
-		}
+		row.LeadH = median(leads)
 		st.Sources = append(st.Sources, row)
 	}
 	ss.mu.RUnlock()
@@ -554,6 +552,15 @@ func (s *Server) sourcesStats(days int, now time.Time) *sourcesStats {
 		}
 	}
 
+	st.LeadH = median(allLeads)
+	for ip, h := range hits {
+		if x := ours[ip]; x != nil {
+			st.Shared++
+			if h.first.Before(x.First) {
+				st.Earlier++
+			}
+		}
+	}
 	for ip, h := range hits {
 		t := srcTop{IP: ip, Sources: h.ids, Reported: h.rep, First: h.first, FirstBy: h.by}
 		if x := ours[ip]; x != nil {
@@ -628,4 +635,18 @@ func (s *Server) sourcesStats(days int, now time.Time) *sourcesStats {
 		return a.From+a.Cat+a.To < b.From+b.Cat+b.To
 	})
 	return st
+}
+
+// median rounded to a tenth, nil for none
+func median(v []float64) *float64 {
+	if len(v) == 0 {
+		return nil
+	}
+	sort.Float64s(v)
+	m := v[len(v)/2]
+	if len(v)%2 == 0 {
+		m = (v[len(v)/2-1] + m) / 2
+	}
+	m = math.Round(m*10) / 10
+	return &m
 }
