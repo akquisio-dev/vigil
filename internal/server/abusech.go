@@ -108,11 +108,17 @@ func (s *Server) intelSources() map[string][2]string {
 
 // checkIntelStale raises intel.stale for a source that has not been
 // downloaded for two days, and resolves it once it is again. A new
-// installation gets two days before the first complaint. Caller holds s.mu.
+// installation gets two days before the first complaint. A list that waits
+// for an abuse.ch key nobody configured is not stale: that is a choice, and
+// the dashboard says so. Caller holds s.mu.
 func (s *Server) checkIntelStale(now time.Time, sources map[string][2]string) []*Alert {
 	var fs []finding
 	for name, v := range sources {
 		key := "intel.stale|" + name
+		if v[1] == errNoAbuseKey.Error() {
+			s.resolveKey(key, "system")
+			continue
+		}
 		last, _ := time.Parse(time.RFC3339, v[0])
 		if !last.IsZero() && last.Year() > 1 && now.Sub(last) <= intelStaleAfter {
 			s.resolveKey(key, "system")

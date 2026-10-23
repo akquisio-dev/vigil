@@ -123,6 +123,9 @@ func TestIntelStale(t *testing.T) {
 		t.Fatal("a new installation gets two days")
 	}
 	s.started = now.Add(-72 * time.Hour)
+	if a := s.checkIntelStale(now, src(time.Time{}, errNoAbuseKey.Error())); len(a) != 0 {
+		t.Fatal("no key configured is a choice, not a stale list")
+	}
 	a := s.checkIntelStale(now, src(now.Add(-50*time.Hour), "HTTP 410"))
 	if len(a) != 1 || a[0].Rule != "intel.stale" || !strings.Contains(a[0].Title, "threatfox") || !strings.Contains(a[0].Title, "HTTP 410") {
 		t.Fatalf("stale: %+v", a)
