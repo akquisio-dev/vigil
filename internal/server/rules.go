@@ -376,6 +376,10 @@ func (s *Server) evaluate(a *AgentRec, r *Record) []finding {
 		}
 		a.StartedOnce = true
 		a.Stopped = false
+		// the name in the dashboard is the admin's; the host name follows the host
+		if h := clip(str(d, "hostname"), 100); h != "" {
+			a.Hostname = h
+		}
 		if v := str(d, "version"); v != "" {
 			a.Version = v
 		}

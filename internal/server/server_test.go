@@ -493,6 +493,19 @@ func TestIntelAndNetRules(t *testing.T) {
 	}
 }
 
+func TestHostnameFollowsTheHost(t *testing.T) {
+	s, err := New(&Config{DataDir: t.TempDir()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	a := &AgentRec{ID: "a1", Name: "Oracle 6GB - 192.0.2.1", Hostname: "temp1234"}
+	s.state.Agents[a.ID] = a
+	s.evaluate(a, &Record{Event: proto.Event{Type: "agent.started", TS: time.Now(), Data: map[string]any{"version": "v1", "hostname": "oracle-1"}}})
+	if a.Hostname != "oracle-1" || a.Name != "Oracle 6GB - 192.0.2.1" {
+		t.Fatalf("hostname %q, name %q", a.Hostname, a.Name)
+	}
+}
+
 func TestDpkgSidecarsAreNoFileAlerts(t *testing.T) {
 	s, err := New(&Config{DataDir: t.TempDir()})
 	if err != nil {
