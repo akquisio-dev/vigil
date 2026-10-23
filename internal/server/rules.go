@@ -128,6 +128,7 @@ var rules = map[string]ruleDef{
 	"chain.broken":               {"critical", "T1565.001", "Event chain broken: {error}", "Ereigniskette gebrochen: {error}"},
 	"selftest.failed":            {"high", "T1562.001", "Self test on {host} failed: {missing}", "Selbsttest auf {host} fehlgeschlagen: {missing}"},
 	"server.backup_stale":        {"high", "T1490", "No new backup in {dir} for {age}", "Keine neue Sicherung in {dir} seit {age}"},
+	"intel.stale":                {"medium", "", "Threat list {source} not updated for {age}: {error}", "Bedrohungsliste {source} seit {age} nicht aktualisiert: {error}"},
 	"notify.failed":              {"high", "", "Notifier {notifier} ({type}) failed: {error}", "Benachrichtigung {notifier} ({type}) fehlgeschlagen: {error}"},
 }
 

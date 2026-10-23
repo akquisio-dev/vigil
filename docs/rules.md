@@ -2,7 +2,7 @@
 
 # Detection rules
 
-vigil ships 104 rules. Every alert carries the rule id, so an alert can be looked up here.
+vigil ships 105 rules. Every alert carries the rule id, so an alert can be looked up here.
 
 Severity decides who is woken up: each notifier has a `min_severity`, `high` by default.
 
@@ -82,6 +82,7 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 | [`file.sshd`](#file-sshd) | medium | [T1098](https://attack.mitre.org/techniques/T1098/) |
 | [`file.systemd`](#file-systemd) | medium | [T1543.002](https://attack.mitre.org/techniques/T1543/002/) |
 | [`integrity.unowned`](#integrity-unowned) | medium | [T1554](https://attack.mitre.org/techniques/T1554/) |
+| [`intel.stale`](#intel-stale) | medium |  |
 | [`kernel.tainted`](#kernel-tainted) | medium | [T1014](https://attack.mitre.org/techniques/T1014/) |
 | [`net.tor`](#net-tor) | medium | [T1090.003](https://attack.mitre.org/techniques/T1090/003/) |
 | [`net.volume_spike`](#net-volume_spike) | medium | [T1048](https://attack.mitre.org/techniques/T1048/) |
@@ -1376,6 +1377,18 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 **Known false positives:** Deployments of a new service, a new image name or tag (`postgres:16` to `postgres:17`).
 
 **What to do:** Confirm the deployment was planned. If not, look at the container (`docker inspect`), stop it and find out who started it.
+
+### `intel.stale` {#intel-stale}
+
+**Severity:** medium
+
+**Alert:** `Threat list {source} not updated for {age}: {error}`
+
+**Fires when:** A threat list (`threat_intel`) or hash list (`hash_intel`) could not be downloaded for two days. vigil keeps using the last good copy, so new command and control addresses and new malware are missed. It resolves itself with the next good download.
+
+**Known false positives:** The list's site was down for a long time; since October 2026 abuse.ch (ThreatFox, MalwareBazaar) answers only with a free Auth-Key, see `abusech_key_file`.
+
+**What to do:** The alert names the source and the last error. Check outbound HTTPS from the server and, for abuse.ch, that `abusech_key_file` holds a valid key.
 
 ### `agent.dropped` {#agent-dropped}
 

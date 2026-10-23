@@ -251,8 +251,11 @@ func (s *Server) loop(ctx context.Context) {
 			}
 		case <-hourly.C:
 			s.daily()
+			sources := s.intelSources()
 			s.mu.Lock()
-			if fresh := s.checkBackupAge(time.Now()); len(fresh) > 0 {
+			fresh := s.checkBackupAge(time.Now())
+			fresh = append(fresh, s.checkIntelStale(time.Now(), sources)...)
+			if len(fresh) > 0 {
 				s.saveLocked()
 				s.notifyAlerts(fresh)
 			}

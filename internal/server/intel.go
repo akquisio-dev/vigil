@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -27,8 +28,10 @@ import (
 // downloads.
 
 type intelList struct {
-	Name     string
-	URL      string
+	Name string
+	URL  string
+	// Keyed lists take the abuse.ch Auth-Key in place of %s in URL.
+	Keyed    bool
 	Severity string // of a connection to a listed address
 	parse    func([]byte) []netip.Prefix
 }
@@ -53,9 +56,35 @@ func parseIPLines(b []byte) []netip.Prefix {
 
 var threatFoxIP = regexp.MustCompile(`^"[^"]*",\s*"[^"]*",\s*"([0-9a-fA-F.:\[\]]+):[0-9]+"`)
 
-// parseThreatFox reads the ip:port CSV export (the last 48 hours of IOCs).
+// parseThreatFox reads the JSON export of the last 48 hours of IOCs (ids
+// mapped to lists of {ioc_value, ioc_type}) and keeps the ip:port entries.
+// A copy saved before October 2026 is the older ip:port CSV export.
 func parseThreatFox(b []byte) []netip.Prefix {
 	var out []netip.Prefix
+	if t := bytes.TrimSpace(b); len(t) > 0 && t[0] == '{' {
+		var doc map[string][]struct {
+			Value string `json:"ioc_value"`
+			Type  string `json:"ioc_type"`
+		}
+		if json.Unmarshal(t, &doc) != nil {
+			return nil
+		}
+		for _, list := range doc {
+			for _, e := range list {
+				if e.Type != "ip:port" {
+					continue
+				}
+				host := e.Value
+				if h, _, err := net.SplitHostPort(e.Value); err == nil {
+					host = h
+				}
+				if a, err := netip.ParseAddr(strings.Trim(host, "[]")); err == nil {
+					out = append(out, netip.PrefixFrom(a, a.BitLen()))
+				}
+			}
+		}
+		return out
+	}
 	sc := bufio.NewScanner(bytes.NewReader(b))
 	for sc.Scan() {
 		if m := threatFoxIP.FindStringSubmatch(sc.Text()); m != nil {
@@ -84,10 +113,10 @@ func parseSpamhausJSON(b []byte) []netip.Prefix {
 }
 
 var intelLists = []intelList{
-	{"feodo", "https://feodotracker.abuse.ch/downloads/ipblocklist_recommended.txt", "critical", parseIPLines},
-	{"threatfox", "https://threatfox.abuse.ch/export/csv/ip-port/recent/", "critical", parseThreatFox},
-	{"spamhaus-drop", "https://www.spamhaus.org/drop/drop_v4.json", "high", parseSpamhausJSON},
-	{"tor-exit", "https://check.torproject.org/torbulkexitlist", "medium", parseIPLines},
+	{"feodo", "https://feodotracker.abuse.ch/downloads/ipblocklist_recommended.txt", false, "critical", parseIPLines},
+	{"threatfox", tfExport, true, "critical", parseThreatFox},
+	{"spamhaus-drop", "https://www.spamhaus.org/drop/drop_v4.json", false, "high", parseSpamhausJSON},
+	{"tor-exit", "https://check.torproject.org/torbulkexitlist", false, "medium", parseIPLines},
 }
 
 type intelSet struct {
@@ -152,7 +181,7 @@ func (s *intelSet) status() []intelStatus {
 	defer s.mu.RUnlock()
 	var out []intelStatus
 	for _, l := range intelLists {
-		out = append(out, intelStatus{Name: l.Name, URL: l.URL, Entries: len(s.entries[l.Name]), Updated: s.updated[l.Name], Error: s.errs[l.Name]})
+		out = append(out, intelStatus{Name: l.Name, URL: publicURL(l.URL), Entries: len(s.entries[l.Name]), Updated: s.updated[l.Name], Error: s.errs[l.Name]})
 	}
 	return out
 }
@@ -188,7 +217,18 @@ func (s *Server) refreshIntel() {
 			}
 			continue
 		}
-		b, err := download(client, l.URL)
+		url, key := l.URL, ""
+		err = nil // the Stat error above only meant "no copy yet"
+		if l.Keyed {
+			url, key, err = s.abuseURL(l.URL)
+		}
+		var b []byte
+		if err == nil {
+			b, err = download(client, url)
+			if err != nil {
+				err = errors.New(redactKey(err.Error(), key))
+			}
+		}
 		if err == nil {
 			if ps := l.parse(b); len(ps) == 0 {
 				err = fmt.Errorf("no entries")

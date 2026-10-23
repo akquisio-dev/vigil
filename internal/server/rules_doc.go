@@ -527,6 +527,11 @@ var ruleDocs = map[string]ruleDoc{
 		"The backup timer was stopped on purpose, or the machine was off.",
 		"Run `systemctl status vigil-server-backup.service` and `journalctl -u vigil-server-backup`. A full disk, a changed data directory or a broken `backup.recipient` are the usual causes. Without a fresh backup, losing this machine loses the alerts, incidents and accounts since the last one.",
 	},
+	"intel.stale": {
+		"A threat list (`threat_intel`) or hash list (`hash_intel`) could not be downloaded for two days. vigil keeps using the last good copy, so new command and control addresses and new malware are missed. It resolves itself with the next good download.",
+		"The list's site was down for a long time; since October 2026 abuse.ch (ThreatFox, MalwareBazaar) answers only with a free Auth-Key, see `abusech_key_file`.",
+		"The alert names the source and the last error. Check outbound HTTPS from the server and, for abuse.ch, that `abusech_key_file` holds a valid key.",
+	},
 	"notify.failed": {
 		"A notifier could not deliver a message after three attempts. The alert goes out through all other notifiers, whatever their `min_severity`, and resolves itself with the next successful delivery.",
 		"Short outages of the chat or mail service.",

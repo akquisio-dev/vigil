@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- abuse.ch retired its keyless downloads in October 2026: ThreatFox and MalwareBazaar answered 410 Gone and vigil kept using copies that no longer changed. New option `abusech_key_file` with a free Auth-Key; the exports are fetched from the new addresses with the key in the path, and the key is removed from every error before it reaches a log, the dashboard or an alert. Without a key these sources are not asked at all and show "needs an abuse.ch Auth-Key". Feodo Tracker needs no key.
+- New rule `intel.stale` (medium): a threat or hash list could not be downloaded for two days. It names the source and the last error and resolves itself with the next good download. Before, a failing list was only visible in the server log.
+
 ## v0.26.0
 
 - Agents count failed SSH logins per tried user name (`user_counts` in `ssh.failed`). The attack statistics keep them per day and hour; days from older agents share a total out evenly and are marked as estimated. Day files written before are rebuilt from the log on the first start, or kept as they are when the log no longer has the day.

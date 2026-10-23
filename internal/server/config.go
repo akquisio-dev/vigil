@@ -80,6 +80,9 @@ type Config struct {
 	// abuse.ch MalwareBazaar and ThreatFox (the full list once a week, about
 	// 45 MB, the newest every six hours). Only downloads; nothing is sent.
 	HashIntel bool `json:"hash_intel,omitempty"`
+	// AbuseCHKeyFile holds a free abuse.ch Auth-Key. ThreatFox (threat_intel,
+	// hash_intel) and MalwareBazaar (hash_intel) need it since October 2026.
+	AbuseCHKeyFile string `json:"abusech_key_file,omitempty"`
 	// YaraDir holds YARA rules (*.yar, *.yara) the agents scan suspicious
 	// programs with. A subset of the language is supported, see the docs.
 	YaraDir string `json:"yara_dir,omitempty"`
