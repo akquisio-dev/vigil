@@ -3,6 +3,7 @@
 ## Unreleased
 
 - `kernel.module` stays quiet for modules the host has loaded before. The agent remembered only what was loaded at the moment, so after every reboot the modules the kernel loads on demand (Docker networking, WireGuard, filesystems) were reported again. Out-of-tree and unsigned modules are still reported on every load. Agent state from older versions counts what is loaded now as known.
+- The copies dpkg and ucf keep next to configuration files during an upgrade (`/etc/pam.d/sshd.dpkg-new`, `/etc/sudoers.d/README.dpkg-new`) no longer raise `file.pam`, `file.sudo` and the like. Nothing reads files under these names; the events stay in the log.
 - `vuln.app_severe` and `vuln.app_exploited` come as one alert per lock file and ecosystem, naming the packages and the version that fixes each, instead of one per package. A project with 24 outdated dependencies raised 24 alerts. On the first start the per-package alerts close and the grouped ones open. `vuln.app_malicious` stays one alert per package.
 
 ## v0.27.0

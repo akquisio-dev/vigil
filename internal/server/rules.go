@@ -280,6 +280,9 @@ func (s *Server) evaluate(a *AgentRec, r *Record) []finding {
 		if cat == "ssh_keys" {
 			break // reported key by key
 		}
+		if dpkgSidecar(str(d, "path")) {
+			break // the event stays in the log
+		}
 		rule := "file." + cat
 		if _, ok := rules[rule]; !ok {
 			rule = "file.other"
@@ -617,6 +620,24 @@ var mkinitramfsRe = regexp.MustCompile(`^chmod 755 /var/tmp/mkinitramfs_[A-Za-z0
 
 func mkinitramfsDir(p map[string]string) bool {
 	return p["exe"] == "/usr/bin/chmod" && p["uid"] == "0" && mkinitramfsRe.MatchString(p["cmdline"])
+}
+
+// dpkgSidecar: a copy dpkg or ucf keeps next to a configuration file during
+// an upgrade (sshd.dpkg-new, README.dpkg-new). Nothing reads them: sudo
+// skips names with a dot in sudoers.d, PAM opens a service's exact name,
+// systemd loads no unit with that suffix, profile.d sources *.sh, sshd
+// includes *.conf. A backdoor under such a name would be inert.
+func dpkgSidecar(path string) bool {
+	if !strings.HasPrefix(path, "/etc/") {
+		return false
+	}
+	for _, s := range []string{".dpkg-new", ".dpkg-tmp", ".dpkg-dist", ".dpkg-old", ".dpkg-bak", ".dpkg-backup", ".dpkg-remove",
+		".ucf-new", ".ucf-old", ".ucf-dist"} {
+		if strings.HasSuffix(path, s) {
+			return true
+		}
+	}
+	return false
 }
 
 // procKey allows every port a named process opens with this protocol and

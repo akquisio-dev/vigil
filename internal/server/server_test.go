@@ -493,6 +493,32 @@ func TestIntelAndNetRules(t *testing.T) {
 	}
 }
 
+func TestDpkgSidecarsAreNoFileAlerts(t *testing.T) {
+	s, err := New(&Config{DataDir: t.TempDir()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	a := &AgentRec{ID: "a1", Name: "host"}
+	s.state.Agents[a.ID] = a
+	n := func(path, cat string) int {
+		d := map[string]any{"path": path, "category": cat}
+		return len(s.evaluate(a, &Record{Event: proto.Event{Type: "file.added", TS: time.Now(), Data: d}}))
+	}
+	// seen on the Oracle hosts during an upgrade
+	for _, c := range [][2]string{{"/etc/pam.d/sshd.dpkg-new", "pam"}, {"/etc/sudoers.d/README.dpkg-new", "sudo"},
+		{"/etc/systemd/system/x.service.ucf-dist", "systemd"}} {
+		if n(c[0], c[1]) != 0 {
+			t.Errorf("%s alerted", c[0])
+		}
+	}
+	for _, c := range [][2]string{{"/etc/pam.d/sshd", "pam"}, {"/etc/sudoers.d/dpkg-new", "sudo"}, {"/etc/pam.d/sshd.dpkg-new.conf", "pam"},
+		{"/root/.bashrc.dpkg-new", "shell_init"}} {
+		if n(c[0], c[1]) == 0 {
+			t.Errorf("%s let through", c[0])
+		}
+	}
+}
+
 func TestMkinitramfsIsNotDownloadExec(t *testing.T) {
 	s, err := New(&Config{DataDir: t.TempDir()})
 	if err != nil {
