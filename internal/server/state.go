@@ -155,8 +155,11 @@ type State struct {
 	Actions      []*ActionRec   `json:"actions,omitempty"`
 	SelfTests    []*SelfTest    `json:"selftests,omitempty"`
 	Snapshots    []*SnapshotReq `json:"snapshot_requests,omitempty"`
-	LastAnchor   time.Time      `json:"last_anchor"`
-	LastSummary  time.Time      `json:"last_summary,omitempty"`
+	// Shares are what partners may fetch; Sources are the feeds we fetch.
+	Shares      []*ShareRec  `json:"shares,omitempty"`
+	Sources     []*SourceRec `json:"sources,omitempty"`
+	LastAnchor  time.Time    `json:"last_anchor"`
+	LastSummary time.Time    `json:"last_summary,omitempty"`
 }
 
 const maxAlerts = 5000

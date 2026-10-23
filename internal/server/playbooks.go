@@ -49,6 +49,11 @@ func validatePlaybook(p Playbook) error {
 			return fmt.Errorf("playbook %s: action %q cannot run automatically", p.Name, t)
 		}
 	}
+	for _, r := range p.Rules {
+		if strings.HasPrefix(r, "source.") {
+			return fmt.Errorf("playbook %s: alerts from partner sources never start actions", p.Name)
+		}
+	}
 	if p.MinSeverity != "" && severityRank[p.MinSeverity] == 0 {
 		return fmt.Errorf("playbook %s: unknown min_severity", p.Name)
 	}
@@ -62,6 +67,10 @@ func (p Playbook) matches(al *Alert, host string) bool {
 	min := p.MinSeverity
 	if min == "" {
 		min = "high"
+	}
+	// What a partner reports is not ours to act on, whatever "*" says.
+	if strings.HasPrefix(al.Rule, "source.") {
+		return false
 	}
 	if severityRank[al.Severity] < severityRank[min] {
 		return false

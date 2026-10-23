@@ -33,6 +33,17 @@ type BackupConfig struct {
 	MaxAgeHours int `json:"max_age_hours,omitempty"`
 }
 
+type FederationConfig struct {
+	// Listen serves the feed to partners, on a VPN address only. Empty
+	// serves no feed; fetching sources works without it.
+	Listen string `json:"listen,omitempty"`
+	// Name is how this network calls itself in its feed.
+	Name string `json:"name,omitempty"`
+	// Never lists addresses and networks that are never named in a feed
+	// nor flagged from a source (offices, VPN exits, monitoring services).
+	Never []string `json:"never,omitempty"`
+}
+
 type Config struct {
 	// Listen serves the dashboard. Keep it on loopback behind a TLS proxy.
 	Listen string `json:"listen"`
@@ -98,6 +109,8 @@ type Config struct {
 	// MapHome is where the hosts stand, as [latitude, longitude], for the
 	// live view of the attack map. Without it the map shows no arcs.
 	MapHome *[2]float64 `json:"map_home,omitempty"`
+	// Federation exchanges attack data with allied networks, see the docs.
+	Federation *FederationConfig `json:"federation,omitempty"`
 	// FourEyes lists response action types that a second admin must approve
 	// (with a fresh TOTP code) before they reach the agent; "*" means all.
 	FourEyes []string `json:"four_eyes,omitempty"`

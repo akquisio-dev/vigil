@@ -482,6 +482,16 @@ var ruleDocs = map[string]ruleDoc{
 		"Backups to another machine, large deployments, a popular download.",
 		"Find who sent it: outbound connections in the timeline of that hour, the processes in an evidence snapshot.",
 	},
+	"source.login": {
+		"A successful SSH login from an address that a partner source (a federated vigil) reported as attacker. Only sources of trust medium or high raise it; addresses of our own hosts and of `federation.never` are never flagged. Playbooks never act on it.",
+		"A partner that reported one of the team's addresses, for instance a shared office or VPN exit. Add that network to `federation.never`.",
+		"Treat it like an attacker login: check the session in the timeline, what ran after it, and whether the key or password used must be changed. Ask the partner what they saw from that address.",
+	},
+	"source.outbound": {
+		"A host connected to an address that a partner source reported as attacker. Only sources of trust medium or high raise it. Playbooks never act on it.",
+		"Scanners that also run legitimate services, and cloud addresses that changed hands.",
+		"Look at the process and why it talks to that address. Compare with what the partner reports (Sources tab).",
+	},
 	"net.retro_hit": {
 		"A threat list now names an address that a host talked to (or that logged in, or sent web requests) in the last 30 days, before it was listed. Each address and list is reported once. Needs `threat_intel`.",
 		"Addresses of shared hosting or cloud providers that were listed for someone else later.",

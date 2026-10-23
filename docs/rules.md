@@ -2,7 +2,7 @@
 
 # Detection rules
 
-vigil ships 105 rules. Every alert carries the rule id, so an alert can be looked up here.
+vigil ships 107 rules. Every alert carries the rule id, so an alert can be looked up here.
 
 Severity decides who is woken up: each notifier has a `min_severity`, `high` by default.
 
@@ -61,6 +61,7 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 | [`secret.exposed`](#secret-exposed) | high | [T1552.001](https://attack.mitre.org/techniques/T1552/001/) |
 | [`selftest.failed`](#selftest-failed) | high | [T1562.001](https://attack.mitre.org/techniques/T1562/001/) |
 | [`server.backup_stale`](#server-backup_stale) | high | [T1490](https://attack.mitre.org/techniques/T1490/) |
+| [`source.login`](#source-login) | high | [T1078](https://attack.mitre.org/techniques/T1078/) |
 | [`ssh.attacker_login`](#ssh-attacker_login) | high | [T1110](https://attack.mitre.org/techniques/T1110/) |
 | [`ssh.key_added`](#ssh-key_added) | high | [T1098.004](https://attack.mitre.org/techniques/T1098/004/) |
 | [`ssh.password_login`](#ssh-password_login) | high | [T1078](https://attack.mitre.org/techniques/T1078/) |
@@ -93,6 +94,7 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 | [`process.decode_exec`](#process-decode_exec) | medium | [T1140](https://attack.mitre.org/techniques/T1140/) |
 | [`process.rare_child`](#process-rare_child) | medium | [T1059](https://attack.mitre.org/techniques/T1059/) |
 | [`process.tmp_exec`](#process-tmp_exec) | medium | [T1204.002](https://attack.mitre.org/techniques/T1204/002/) |
+| [`source.outbound`](#source-outbound) | medium | [T1071](https://attack.mitre.org/techniques/T1071/) |
 | [`ssh.new_source`](#ssh-new_source) | medium | [T1078](https://attack.mitre.org/techniques/T1078/) |
 | [`tls.expiring`](#tls-expiring) | medium |  |
 | [`updates.security_pending`](#updates-security_pending) | medium |  |
@@ -1342,6 +1344,18 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 
 **What to do:** Run `systemctl status vigil-server-backup.service` and `journalctl -u vigil-server-backup`. A full disk, a changed data directory or a broken `backup.recipient` are the usual causes. Without a fresh backup, losing this machine loses the alerts, incidents and accounts since the last one.
 
+### `source.login` {#source-login}
+
+**Severity:** high · **ATT&CK:** [T1078](https://attack.mitre.org/techniques/T1078/)
+
+**Alert:** `{user} logged in on {host} from {ip}, which {sources} reported as attacker`
+
+**Fires when:** A successful SSH login from an address that a partner source (a federated vigil) reported as attacker. Only sources of trust medium or high raise it; addresses of our own hosts and of `federation.never` are never flagged. Playbooks never act on it.
+
+**Known false positives:** A partner that reported one of the team's addresses, for instance a shared office or VPN exit. Add that network to `federation.never`.
+
+**What to do:** Treat it like an attacker login: check the session in the timeline, what ran after it, and whether the key or password used must be changed. Ask the partner what they saw from that address.
+
 ### `agent.update_failed` {#agent-update_failed}
 
 **Severity:** medium
@@ -1389,6 +1403,18 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 **Known false positives:** The list's site was down for a long time; since October 2026 abuse.ch (ThreatFox, MalwareBazaar) answers only with a free Auth-Key, see `abusech_key_file`.
 
 **What to do:** The alert names the source and the last error. Check outbound HTTPS from the server and, for abuse.ch, that `abusech_key_file` holds a valid key.
+
+### `source.outbound` {#source-outbound}
+
+**Severity:** medium · **ATT&CK:** [T1071](https://attack.mitre.org/techniques/T1071/)
+
+**Alert:** `{process} on {host} connected to {ip}:{port}, which {sources} reported as attacker`
+
+**Fires when:** A host connected to an address that a partner source reported as attacker. Only sources of trust medium or high raise it. Playbooks never act on it.
+
+**Known false positives:** Scanners that also run legitimate services, and cloud addresses that changed hands.
+
+**What to do:** Look at the process and why it talks to that address. Compare with what the partner reports (Sources tab).
 
 ### `agent.dropped` {#agent-dropped}
 

@@ -62,6 +62,10 @@ type Server struct {
 	groupDelay   time.Duration            // tests only; see groupWindow
 	latest       latestCache
 
+	fmu     sync.Mutex
+	fkey    ed25519.PrivateKey // federation.key, signs the feed only
+	sources sourceSet
+
 	beatWarned string // last reason the heartbeat was withheld, loop goroutine only
 }
 
@@ -160,6 +164,13 @@ func (s *Server) Run(ctx context.Context) error {
 	LoadSigma(s.cfg.SigmaDir)
 	s.startForwarders()
 	s.startAttacks()
+	s.loadSources()
+	go s.pullSources()
+	if f := s.cfg.Federation; f != nil {
+		if _, err := parsePrefixes(f.Never); err != nil {
+			log.Printf("federation.never: %v", err)
+		}
+	}
 	for _, pb := range s.cfg.Playbooks {
 		if err := validatePlaybook(pb); err != nil {
 			log.Printf("playbook: %v (not used)", err)
@@ -188,6 +199,9 @@ func (s *Server) Run(ctx context.Context) error {
 		servers = append(servers, newHTTPServer(s.cfg.Listen, mux))
 	} else {
 		servers = append(servers, newHTTPServer(s.cfg.Listen, ui), newHTTPServer(s.cfg.AgentListen, agentMux))
+	}
+	if f := s.cfg.Federation; f != nil && f.Listen != "" {
+		servers = append(servers, newHTTPServer(f.Listen, s.federationHandler()))
 	}
 
 	errc := make(chan error, len(servers))
@@ -225,6 +239,8 @@ func (s *Server) loop(ctx context.Context) {
 	dead := time.NewTicker(15 * time.Second)
 	beat := time.NewTicker(time.Minute)
 	hourly := time.NewTicker(time.Hour)
+	pull := time.NewTicker(sourcePullLoop)
+	defer pull.Stop()
 	defer dead.Stop()
 	defer beat.Stop()
 	defer hourly.Stop()
@@ -243,6 +259,8 @@ func (s *Server) loop(ctx context.Context) {
 			}
 			s.notifyAlerts(upd)
 			s.mu.Unlock()
+		case <-pull.C:
+			go s.pullSources()
 		case <-beat.C:
 			s.expireSuppressions()
 			s.checkSummary()

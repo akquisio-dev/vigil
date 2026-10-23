@@ -121,6 +121,8 @@ var rules = map[string]ruleDef{
 	"process.rare_child":         {"medium", "T1059", "{parent} started {exe} for the first time (uid {uid})", "{parent} hat zum ersten Mal {exe} gestartet (uid {uid})"},
 	"ssh.rare_time":              {"low", "T1078", "{user} logged in at {hour}:00 UTC, an hour without logins in {logins} before ({ip})", "{user} hat sich um {hour}:00 UTC angemeldet, eine Uhrzeit ohne Anmeldungen in {logins} bisherigen ({ip})"},
 	"net.volume_spike":           {"medium", "T1048", "{sent} sent in one hour, usually at most {usual}", "{sent} in einer Stunde gesendet, sonst höchstens {usual}"},
+	"source.login":               {"high", "T1078", "{user} logged in on {host} from {ip}, which {sources} reported as attacker", "{user} hat sich auf {host} von {ip} angemeldet, das {sources} als Angreifer gemeldet hat"},
+	"source.outbound":            {"medium", "T1071", "{process} on {host} connected to {ip}:{port}, which {sources} reported as attacker", "{process} auf {host} hat sich mit {ip}:{port} verbunden, das {sources} als Angreifer gemeldet hat"},
 	"net.retro_hit":              {"high", "T1071", "{process} talked to {ip} on {when}, now listed by {list}", "{process} hat am {when} mit {ip} gesprochen, jetzt gelistet von {list}"},
 	"malware.known":              {"critical", "T1204.002", "Known malware on this host: {path} (SHA-256 listed by {list})", "Bekannte Schadsoftware auf diesem Host: {path} (SHA-256 gelistet bei {list})"},
 	"malware.yara":               {"high", "T1204.002", "YARA rule {rules} matches {path} ({source})", "YARA-Regel {rules} trifft auf {path} ({source})"},
@@ -255,6 +257,9 @@ func (s *Server) evaluate(a *AgentRec, r *Record) []finding {
 		if n >= 3 && (other || pw) {
 			p2 := map[string]string{"user": user, "ip": ip, "failed": fmt.Sprint(n), "method": str(d, "method")}
 			add("ssh.attacker_login", k, p2)
+		}
+		if names := s.sourceHitsLocked(ip); names != "" {
+			add("source.login", k, map[string]string{"user": user, "ip": ip, "sources": names})
 		}
 		s.state.KnownLogins[k] = r.Event.TS
 	case "ssh.failed":
@@ -468,6 +473,10 @@ func (s *Server) evaluate(a *AgentRec, r *Record) []finding {
 			default:
 				add("net.blocklisted", key, p)
 			}
+		}
+		if names := s.sourceHitsLocked(ip); names != "" {
+			p2 := map[string]string{"ip": ip, "port": port, "process": proc, "exe": str(d, "exe"), "sources": names}
+			add("source.outbound", key, p2)
 		}
 		if netPublic(ip) {
 			if minerPorts[int(num(d, "remote_port"))] {
