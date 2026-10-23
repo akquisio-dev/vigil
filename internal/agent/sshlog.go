@@ -28,6 +28,13 @@ var (
 
 var trustedComm = map[string]bool{"sshd": true, "sshd-session": true, "sudo": true}
 
+// trustedExe are the programs that write under these identifiers without
+// being root: sudo logs with the uid of the user who ran it, and sshd's
+// unprivileged process for a session with that user's. _EXE is read by
+// journald from /proc; a copy of the program elsewhere does not match.
+var trustedExe = map[string]bool{"/usr/bin/sudo": true, "/usr/sbin/sshd": true,
+	"/usr/lib/openssh/sshd-session": true, "/usr/libexec/openssh/sshd-session": true}
+
 func clip(s string) string {
 	if len(s) > 300 {
 		return s[:300]
@@ -119,8 +126,9 @@ func (a *Agent) followJournal(ctx context.Context, bin string) error {
 		// for anyone). _COMM and _UID are set by journald and cannot be faked.
 		comm, _ := entry["_COMM"].(string)
 		uid, _ := entry["_UID"].(string)
-		if spoofedLog(uid, comm) {
-			if ident != "" && trustedComm[ident] {
+		exe, _ := entry["_EXE"].(string)
+		if use, spoofed := journalEntry(uid, comm, exe, ident); !use {
+			if spoofed {
 				a.emit(proto.NewEvent("log.spoofed", map[string]any{"identifier": ident, "comm": clip(comm), "uid": uid, "message": clip(msg)}))
 			}
 			continue
@@ -275,6 +283,20 @@ func atoi(s string) int {
 // for a connection closed before authentication often has. Only root can
 // send as uid 0, and root could as well name its program sshd, so uid 0
 // with an unknown name counts as genuine.
+// journalEntry decides on one entry: use it for logins, or drop it, and
+// whether dropping it is worth a log.spoofed. sudo run by a user and sshd's
+// process for a user's session write without being root; they are genuine,
+// but no login is read from them.
+func journalEntry(uid, comm, exe, ident string) (use, spoofed bool) {
+	if uid != "0" && trustedExe[exe] {
+		return false, false
+	}
+	if spoofedLog(uid, comm) {
+		return false, ident != "" && trustedComm[ident]
+	}
+	return true, false
+}
+
 func spoofedLog(uid, comm string) bool {
 	return uid != "0" || (comm != "" && !trustedComm[comm])
 }

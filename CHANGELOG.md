@@ -3,6 +3,7 @@
 ## Unreleased
 
 - abuse.ch retired its keyless downloads in October 2026: ThreatFox and MalwareBazaar answered 410 Gone and vigil kept using copies that no longer changed. New option `abusech_key_file` with a free Auth-Key; the exports are fetched from the new addresses with the key in the path, and the key is removed from every error before it reaches a log, the dashboard or an alert. Without a key these sources are not asked at all and show "needs an abuse.ch Auth-Key". Feodo Tracker needs no key.
+- `log.spoofed` no longer fires when a user other than root runs `sudo`, or logs in over SSH: both write to the journal with that user's uid. Such entries are recognised by the program journald saw (`/usr/bin/sudo`, `/usr/sbin/sshd`, `sshd-session`), and no login is read from them. Seen on a new host with the `ubuntu` user.
 - New rule `intel.stale` (medium): a threat or hash list could not be downloaded for two days. It names the source and the last error and resolves itself with the next good download. Before, a failing list was only visible in the server log.
 
 ## v0.26.0
