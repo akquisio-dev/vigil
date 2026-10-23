@@ -409,7 +409,7 @@ func (s *Server) evaluate(a *AgentRec, r *Record) []finding {
 				"cmd_miner": "process.miner", "service_shell": "process.service_shell", "cmd_download_exec": "process.download_exec",
 				"deleted_exe": "process.deleted_exe", "tmp_exe": "process.tmp_exec", "cmd_decode_exec": "process.decode_exec",
 				"memfd_exe": "process.memfd_exec", "ld_preload": "process.preload"}[sig]
-			if rule == "process.download_exec" && aptKeyHome(p) {
+			if rule == "process.download_exec" && (aptKeyHome(p) || mkinitramfsDir(p)) {
 				continue
 			}
 			if rule != "" && !seen[rule] {
@@ -608,6 +608,15 @@ var aptKeyHomeRe = regexp.MustCompile(`^chmod 700 /tmp/apt-key-gpghome\.[A-Za-z0
 
 func aptKeyHome(p map[string]string) bool {
 	return p["exe"] == "/usr/bin/chmod" && aptKeyHomeRe.MatchString(p["cmdline"])
+}
+
+// mkinitramfs (a kernel update) makes its build directory with mktemp in
+// /var/tmp and opens it up with chmod 755, as root. Like apt-key's home,
+// only that exact command is let through.
+var mkinitramfsRe = regexp.MustCompile(`^chmod 755 /var/tmp/mkinitramfs_[A-Za-z0-9]{6}$`)
+
+func mkinitramfsDir(p map[string]string) bool {
+	return p["exe"] == "/usr/bin/chmod" && p["uid"] == "0" && mkinitramfsRe.MatchString(p["cmdline"])
 }
 
 // procKey allows every port a named process opens with this protocol and

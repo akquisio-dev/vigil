@@ -493,6 +493,34 @@ func TestIntelAndNetRules(t *testing.T) {
 	}
 }
 
+func TestMkinitramfsIsNotDownloadExec(t *testing.T) {
+	s, err := New(&Config{DataDir: t.TempDir()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	a := &AgentRec{ID: "a1", Name: "host"}
+	s.state.Agents[a.ID] = a
+	rules := func(exe, cmdline, uid string) int {
+		d := map[string]any{"exe": exe, "cmdline": cmdline, "parent_comm": "mkinitramfs", "uid": uid, "signals": []any{"cmd_download_exec"}}
+		return len(s.evaluate(a, &Record{Event: proto.Event{Type: "process.exec", TS: time.Now(), Data: d}}))
+	}
+	// seen on the Oracle hosts during a kernel update
+	if n := rules("/usr/bin/chmod", "chmod 755 /var/tmp/mkinitramfs_vnXOCN", "0"); n != 0 {
+		t.Fatalf("mkinitramfs: %d findings", n)
+	}
+	for _, c := range [][3]string{
+		{"/usr/bin/chmod", "chmod 755 /var/tmp/mkinitramfs_vnXOCN", "1000"},
+		{"/usr/bin/chmod", "chmod +x /var/tmp/mkinitramfs_vnXOCN", "0"},
+		{"/usr/bin/chmod", "chmod 755 /var/tmp/mkinitramfs_vnXOCN/run", "0"},
+		{"/usr/bin/chmod", "chmod 755 /var/tmp/mkinitramfs_vnXOCN /tmp/x", "0"},
+		{"/tmp/chmod", "chmod 755 /var/tmp/mkinitramfs_vnXOCN", "0"},
+	} {
+		if rules(c[0], c[1], c[2]) == 0 {
+			t.Errorf("%v let through", c)
+		}
+	}
+}
+
 func TestAptKeyHomeIsNotDownloadExec(t *testing.T) {
 	s, err := New(&Config{DataDir: t.TempDir()})
 	if err != nil {
