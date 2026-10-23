@@ -46,6 +46,7 @@ type Agent struct {
 	flushNow      chan struct{}
 	procLimit     procLimiter
 	outSeen       map[string]bool   // remote network:port combinations already reported
+	listenSeen    map[int]time.Time // local TCP ports last seen listening
 	broken        map[string]string // collector -> why it stopped, for the self test
 	kernel        *KernelState      // main loop only
 	bpf           *BPFState         // main loop only

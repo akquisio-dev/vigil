@@ -1,6 +1,9 @@
 package agent
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 func TestSpoofedLog(t *testing.T) {
 	for _, c := range []struct {
@@ -41,5 +44,22 @@ func TestJournalEntry(t *testing.T) {
 		if use != c.use || spoofed != c.spoofed {
 			t.Errorf("%+v: use %v spoofed %v", c, use, spoofed)
 		}
+	}
+}
+
+func TestServicePortsOutliveARestart(t *testing.T) {
+	seen := map[int]time.Time{}
+	now := time.Now()
+	servicePorts(seen, map[int]bool{22: true}, now)
+	// sshd restarts: no listener on 22 for a moment, its sessions stay
+	in := servicePorts(seen, map[int]bool{}, now.Add(30*time.Second))
+	if !in(22) {
+		t.Fatal("connections to port 22 counted as outgoing while sshd restarted")
+	}
+	if in(40236) {
+		t.Fatal("a port that never listened is no service port")
+	}
+	if in := servicePorts(seen, map[int]bool{}, now.Add(listenGrace+time.Minute)); in(22) {
+		t.Fatal("a port gone for good stays a service port")
 	}
 }

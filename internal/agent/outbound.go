@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/akquisio-dev/vigil/internal/proto"
 )
@@ -112,11 +113,34 @@ func socketProcs(want map[string]bool) map[string]procID {
 
 const maxOutboundSeen = 5000
 
+// listenGrace keeps a port a service port for a while after its listener
+// went away: while a service restarts (sshd during a package upgrade), the
+// connections it accepted are still open, and they came in.
+const listenGrace = 10 * time.Minute
+
+// servicePort records the ports listening now and tells whether a local
+// port listens or did within listenGrace.
+func servicePorts(seen map[int]time.Time, listening map[int]bool, now time.Time) func(int) bool {
+	for p := range listening {
+		seen[p] = now
+	}
+	for p, t := range seen {
+		if now.Sub(t) > listenGrace {
+			delete(seen, p)
+		}
+	}
+	return func(p int) bool { _, ok := seen[p]; return ok }
+}
+
 func (a *Agent) scanOutbound() {
 	conns, listening := readEstablished()
 	if a.outSeen == nil {
 		a.outSeen = map[string]bool{}
 	}
+	if a.listenSeen == nil {
+		a.listenSeen = map[int]time.Time{}
+	}
+	inbound := servicePorts(a.listenSeen, listening, time.Now())
 	// first pass without process lookup: only walk /proc when something is new
 	type cand struct {
 		c   conn
@@ -125,7 +149,7 @@ func (a *Agent) scanOutbound() {
 	var fresh []cand
 	want := map[string]bool{}
 	for _, c := range conns {
-		if listening[c.lport] || !remoteWorthIt(c.remote) {
+		if inbound(c.lport) || !remoteWorthIt(c.remote) {
 			continue
 		}
 		k := netKey(c.remote) + ":" + strconv.Itoa(c.rport)
