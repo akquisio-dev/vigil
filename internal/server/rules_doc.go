@@ -438,12 +438,12 @@ var ruleDocs = map[string]ruleDoc{
 		"Treat the host as compromised if the package was ever installed: rotate the secrets the project and its user could read, from another machine. Remove the package, rebuild `node_modules` or the virtual environment from a clean lock file, and find out how it got in.",
 	},
 	"vuln.app_exploited": {
-		"A dependency named in a lock file has a vulnerability that is exploited in the wild (CISA KEV, through the CVE aliases of the OSV record), and a fixed version exists. One alert per package and version.",
+		"A dependency named in a lock file has a vulnerability that is exploited in the wild (CISA KEV, through the CVE aliases of the OSV record), and a fixed version exists. One alert per lock file and ecosystem, naming the packages.",
 		"The vulnerable code path may not be used by the project; that is rarely worth betting on.",
 		"Update the dependency to the fixed version (`npm update`, `pip install -U`, `go get`), deploy, and restart the service.",
 	},
 	"vuln.app_severe": {
-		"A dependency named in a lock file has vulnerabilities rated high or critical (GitHub's rating, or CVSS 3 when there is none) with a fixed version. One alert per package and version. Go records without any rating count in the summary but do not alert.",
+		"A dependency named in a lock file has vulnerabilities rated high or critical (GitHub's rating, or CVSS 3 when there is none) with a fixed version. One alert per lock file and ecosystem, naming the packages with the version that fixes each; a lock file is updated in one go. Go records without any rating count in the summary but do not alert.",
 		"Development dependencies in package-lock.json are included, since they sit on disk; projects checked out but not deployed (worktrees, old copies) count too. Set `app_roots` on the agent to limit where it looks.",
 		"Update the dependency to the fixed version and deploy; for an unused copy, delete it.",
 	},

@@ -1,6 +1,9 @@
 package agent
 
 import (
+	"os"
+	"sort"
+	"strings"
 	"testing"
 )
 
@@ -58,11 +61,36 @@ func TestKernelModules(t *testing.T) {
 		t.Fatal("hidden module reported again")
 	}
 
+	// A reboot: wireguard was dropped and comes back on demand. It was here
+	// before, so it is no news; an out-of-tree module is, every time.
+	a.kernelDiff(ks, parseModules([]byte("nf_tables 1 0 - Live 0x0\n")), []string{"nf_tables"}, 1<<12|1<<13)
+	eventTypes(a)
+	a.kernelDiff(ks, parseModules([]byte("nf_tables 1 0 - Live 0x0\nwireguard 3 0 - Live 0x0\nzfs 2 0 - Live 0x0 (POE)\nbtrfs 9 0 - Live 0x0\n")),
+		[]string{"nf_tables", "wireguard", "zfs", "btrfs"}, 1<<12|1<<13)
+	ev = eventTypes(a)
+	var got []string
+	for _, e := range ev["kernel.module_loaded"] {
+		got = append(got, e["name"].(string))
+	}
+	sort.Strings(got)
+	if strings.Join(got, ",") != "btrfs,zfs" {
+		t.Fatalf("after a reboot: %v, want btrfs (never seen) and zfs (out of tree)", got)
+	}
+
 	// The state survives a restart: nothing is new.
 	a.scanKernelWith(ks)
 	ks2 := loadKernelState(a.cfg.StateDir)
-	if !ks2.Baselined || ks2.Modules["wireguard"] != "" {
+	if !ks2.Baselined || ks2.Modules["wireguard"] != "" || !ks2.Known["wireguard"] || ks2.Known["zfs"] {
 		t.Fatalf("state not saved: %+v", ks2)
+	}
+}
+
+func TestKernelStateFromBeforeKnown(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(kernelStatePath(dir), []byte(`{"baselined":true,"modules":{"overlay":"","vboxdrv":"OE"},"tainted":0}`), 0o600)
+	ks := loadKernelState(dir)
+	if !ks.Known["overlay"] || ks.Known["vboxdrv"] {
+		t.Fatalf("known from an old state: %v", ks.Known)
 	}
 }
 

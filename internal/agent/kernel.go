@@ -25,7 +25,13 @@ type KernelState struct {
 	// Hidden counts consecutive scans that saw a module only in sysfs, so a
 	// module caught half loaded is not reported.
 	Hidden map[string]int `json:"hidden,omitempty"`
+	// Known are the in-tree modules ever loaded here. The kernel loads and
+	// drops modules on demand (Docker networking after every boot,
+	// WireGuard, filesystems); one it had before is not news.
+	Known map[string]bool `json:"known,omitempty"`
 }
+
+const kernelKnownMax = 4000
 
 // taintLetters follows the kernel's documentation of /proc/sys/kernel/tainted.
 const taintLetters = "PFSRMBUDAWCIOELKXTN"
@@ -89,6 +95,15 @@ func loadKernelState(dir string) *KernelState {
 	if ks.Hidden == nil {
 		ks.Hidden = map[string]int{}
 	}
+	if ks.Known == nil {
+		// state from before v0.28: what is loaded now was there before
+		ks.Known = map[string]bool{}
+		for n, taint := range ks.Modules {
+			if !outOfTree(taint) {
+				ks.Known[n] = true
+			}
+		}
+	}
 	return ks
 }
 
@@ -129,11 +144,14 @@ func (a *Agent) kernelDiff(ks *KernelState, mods map[string]module, sysfs []stri
 	if !ks.Baselined {
 		for n, m := range mods {
 			ks.Modules[n] = m.taint
+			if !outOfTree(m.taint) {
+				ks.Known[n] = true
+			}
 		}
 		ks.Tainted, ks.Baselined = tainted, true
 		var odd []string
 		for n, m := range mods {
-			if strings.ContainsAny(m.taint, "OEP") {
+			if outOfTree(m.taint) {
 				odd = append(odd, n+" ("+m.taint+")")
 			}
 		}
@@ -142,8 +160,15 @@ func (a *Agent) kernelDiff(ks *KernelState, mods map[string]module, sysfs []stri
 		changed = true
 	} else {
 		for n, m := range mods {
-			if _, known := ks.Modules[n]; !known {
-				a.emit(proto.NewEvent("kernel.module_loaded", map[string]any{"name": n, "taint": m.taint, "size": m.size}))
+			if _, loaded := ks.Modules[n]; !loaded {
+				// out-of-tree and unsigned modules are reported on every
+				// load: the name says nothing about what was loaded
+				if !ks.Known[n] || outOfTree(m.taint) {
+					a.emit(proto.NewEvent("kernel.module_loaded", map[string]any{"name": n, "taint": m.taint, "size": m.size}))
+				}
+				if !outOfTree(m.taint) && len(ks.Known) < kernelKnownMax {
+					ks.Known[n] = true
+				}
 				changed = true
 			}
 			if ks.Modules[n] != m.taint {
@@ -187,3 +212,6 @@ func (a *Agent) kernelDiff(ks *KernelState, mods map[string]module, sysfs []stri
 	}
 	return changed
 }
+
+// outOfTree: proprietary (P), out-of-tree (O) or unsigned (E).
+func outOfTree(taint string) bool { return strings.ContainsAny(taint, "OEP") }

@@ -471,8 +471,13 @@ func (s *Server) matchApps(a *AgentRec, inv *appInventory) []finding {
 		hits []AppHit
 	}
 	malicious, exploited, severe := map[string]*group{}, map[string]*group{}, map[string]*group{}
+	// malicious packages one by one; known flaws per lock file, which is
+	// what gets updated in one go
 	add := func(m map[string]*group, h AppHit) {
-		k := h.Ecosystem + "|" + h.Package + "|" + h.Installed
+		k := h.Ecosystem + "|" + h.Path
+		if h.Malicious {
+			k = h.Ecosystem + "|" + h.Package + "|" + h.Installed
+		}
 		if m[k] == nil {
 			m[k] = &group{}
 		}
@@ -501,12 +506,13 @@ func (s *Server) matchApps(a *AgentRec, inv *appInventory) []finding {
 			add(severe, h)
 		}
 	}
-	// One alert per package and version, as for system packages.
 	var conds []condition
-	perPackage := func(rule string, m map[string]*group) {
+	perGroup := func(rule string, m map[string]*group) {
 		for k, g := range m {
 			var ids []string
-			fixed := ""
+			type pv struct{ name, installed, fixed string }
+			var pkgs []*pv
+			byName := map[string]*pv{}
 			for i, h := range g.hits {
 				id := h.ID
 				if len(h.CVEs) > 0 {
@@ -517,18 +523,37 @@ func (s *Server) matchApps(a *AgentRec, inv *appInventory) []finding {
 				} else if i == 5 {
 					ids = append(ids, "…")
 				}
-				if c, ok := osv.Compare(h.Ecosystem, h.Fixed, fixed); h.Fixed != "" && (fixed == "" || (ok && c > 0)) {
-					fixed = h.Fixed
+				p := byName[h.Package+"|"+h.Installed]
+				if p == nil {
+					p = &pv{name: h.Package, installed: h.Installed}
+					byName[h.Package+"|"+h.Installed] = p
+					pkgs = append(pkgs, p)
+				}
+				// the highest fixed version covers all of the package's flaws
+				if c, ok := osv.Compare(h.Ecosystem, h.Fixed, p.fixed); h.Fixed != "" && (p.fixed == "" || (ok && c > 0)) {
+					p.fixed = h.Fixed
 				}
 			}
+			var list []string
+			for i, p := range pkgs {
+				if i == 4 {
+					list = append(list, fmt.Sprintf("%d more", len(pkgs)-4))
+					break
+				}
+				list = append(list, p.name+" "+p.installed+" (fixed in "+p.fixed+")")
+			}
 			h := g.hits[0]
-			conds = append(conds, condition{rule, k, map[string]string{"package": h.Package, "installed": h.Installed, "ecosystem": h.Ecosystem,
-				"path": h.Path, "fixed": fixed, "count": fmt.Sprint(len(g.hits)), "ids": strings.Join(ids, ", ")}})
+			params := map[string]string{"ecosystem": h.Ecosystem, "path": h.Path, "count": fmt.Sprint(len(g.hits)),
+				"ids": strings.Join(ids, ", "), "packages": strings.Join(list, ", "), "package_count": fmt.Sprint(len(pkgs))}
+			if rule == "vuln.app_malicious" || len(pkgs) == 1 {
+				params["package"], params["installed"], params["fixed"] = h.Package, h.Installed, pkgs[0].fixed
+			}
+			conds = append(conds, condition{rule, k, params})
 		}
 	}
-	perPackage("vuln.app_malicious", malicious)
-	perPackage("vuln.app_exploited", exploited)
-	perPackage("vuln.app_severe", severe)
+	perGroup("vuln.app_malicious", malicious)
+	perGroup("vuln.app_exploited", exploited)
+	perGroup("vuln.app_severe", severe)
 	sort.Slice(conds, func(i, j int) bool { return conds[i].rule+conds[i].key < conds[j].rule+conds[j].key })
 	a.AppVulns = sum
 	// An ecosystem without data (a failed download) keeps its open

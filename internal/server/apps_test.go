@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -102,9 +103,9 @@ func TestAppVulnMatching(t *testing.T) {
 	}
 	if len(fresh) != 4 ||
 		got["vuln.app_malicious critical"] != "Known malicious package evil-pkg 1.0.3 (npm) in /srv/app/package-lock.json; " ||
-		got["vuln.app_exploited critical"] != "express 4.18.2 (npm, /srv/app/package-lock.json): 1 vulnerabilities exploited in the wild (CVE-2026-9999), fixed in 4.20.0; " ||
-		!strings.Contains(got["vuln.app_severe high"], "lodash 4.17.21 (npm, /srv/app/package-lock.json): 1 high or critical vulnerabilities (CVE-2026-4800), fixed in 4.18.0") ||
-		!strings.Contains(got["vuln.app_severe high"], "flask-cors 3.0.8 (PyPI, ") {
+		got["vuln.app_exploited critical"] != "/srv/app/package-lock.json (npm): 1 vulnerabilities exploited in the wild (CVE-2026-9999) in express 4.18.2 (fixed in 4.20.0); " ||
+		!strings.Contains(got["vuln.app_severe high"], "/srv/app/package-lock.json (npm): 1 high or critical vulnerabilities in lodash 4.17.21 (fixed in 4.18.0)") ||
+		!strings.Contains(got["vuln.app_severe high"], "(PyPI): 1 high or critical vulnerabilities in flask-cors 3.0.8") {
 		t.Fatalf("alerts: %v", got)
 	}
 	// PYSEC and GHSA records of one flaw count once, with the rating.
@@ -221,5 +222,41 @@ func TestAppVulnMissingEcosystem(t *testing.T) {
 	}
 	if !open["vuln.app_malicious open"] || !open["vuln.app_severe resolved"] || len(a.AppVulns.Missing) != 1 {
 		t.Fatalf("alerts: %v, missing %v", open, a.AppVulns.Missing)
+	}
+}
+
+// Known flaws come as one alert per lock file: it is updated in one go.
+func TestAppVulnsOnePerLockFile(t *testing.T) {
+	osvRecords["npm/GHSA-mini-mini-mini"] = `{"id":"GHSA-mini-mini-mini","modified":"2026-10-17T02:56:15Z","aliases":["CVE-2026-5555"],"summary":"minimist prototype pollution",
+"affected":[{"package":{"name":"minimist","ecosystem":"npm"},"ranges":[{"type":"SEMVER","events":[{"introduced":"0"},{"fixed":"1.2.8"}]}]}],"database_specific":{"severity":"CRITICAL"}}`
+	t.Cleanup(func() { delete(osvRecords, "npm/GHSA-mini-mini-mini") })
+	osvDumps(t, nil)
+	s := &Server{cfg: &Config{VulnLookup: true, DataDir: t.TempDir()}, state: &State{Agents: map[string]*AgentRec{}, KnownLogins: map[string]time.Time{}}}
+	os.MkdirAll(s.vulnDir(), 0o700)
+	s.vdb.running.Store(true)
+	a := &AgentRec{ID: "a1", Name: "host", Baseline: map[string]bool{}, StartedOnce: true}
+	s.state.Agents[a.ID] = a
+	inv := &appInventory{Manifests: []appManifest{{Path: "/srv/a/package-lock.json"}, {Path: "/srv/b/package-lock.json"}},
+		Packages: []appPackage{{"npm", "lodash", "4.17.21", 0}, {"npm", "minimist", "1.2.5", 0}, {"npm", "lodash", "4.17.21", 1}}}
+	s.apps = map[string]*appInventory{"a1": inv}
+	s.refreshOSV()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	fresh := s.raise(s.matchApps(a, inv), a.ID, 1)
+	var titles []string
+	for _, al := range fresh {
+		titles = append(titles, al.Title)
+	}
+	sort.Strings(titles)
+	if len(fresh) != 2 ||
+		titles[0] != "/srv/a/package-lock.json (npm): 2 high or critical vulnerabilities in lodash 4.17.21 (fixed in 4.18.0), minimist 1.2.5 (fixed in 1.2.8)" &&
+			titles[0] != "/srv/a/package-lock.json (npm): 2 high or critical vulnerabilities in minimist 1.2.5 (fixed in 1.2.8), lodash 4.17.21 (fixed in 4.18.0)" ||
+		titles[1] != "/srv/b/package-lock.json (npm): 1 high or critical vulnerabilities in lodash 4.17.21 (fixed in 4.18.0)" {
+		t.Fatalf("alerts: %q", titles)
+	}
+	// one package updated: the lock file's alert stays, with the other
+	inv.Packages[0].Version = "4.18.0"
+	if fresh := s.raise(s.matchApps(a, inv), a.ID, 1); len(fresh) != 0 {
+		t.Fatalf("a smaller group is no new alert: %v", fresh)
 	}
 }

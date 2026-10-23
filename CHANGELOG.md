@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- `kernel.module` stays quiet for modules the host has loaded before. The agent remembered only what was loaded at the moment, so after every reboot the modules the kernel loads on demand (Docker networking, WireGuard, filesystems) were reported again. Out-of-tree and unsigned modules are still reported on every load. Agent state from older versions counts what is loaded now as known.
+- `vuln.app_severe` and `vuln.app_exploited` come as one alert per lock file and ecosystem, naming the packages and the version that fixes each, instead of one per package. A project with 24 outdated dependencies raised 24 alerts. On the first start the per-package alerts close and the grouped ones open. `vuln.app_malicious` stays one alert per package.
+
 ## v0.27.0
 
 - abuse.ch retired its keyless downloads in October 2026: ThreatFox and MalwareBazaar answered 410 Gone and vigil kept using copies that no longer changed. New option `abusech_key_file` with a free Auth-Key; the exports are fetched from the new addresses with the key in the path, and the key is removed from every error before it reaches a log, the dashboard or an alert. Without a key these sources are not asked at all and show "needs an abuse.ch Auth-Key". Feodo Tracker needs no key.

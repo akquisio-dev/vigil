@@ -822,9 +822,9 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 
 **Severity:** critical · **ATT&CK:** [T1190](https://attack.mitre.org/techniques/T1190/)
 
-**Alert:** `{package} {installed} ({ecosystem}, {path}): {count} vulnerabilities exploited in the wild ({ids}), fixed in {fixed}`
+**Alert:** `{path} ({ecosystem}): {count} vulnerabilities exploited in the wild ({ids}) in {packages}`
 
-**Fires when:** A dependency named in a lock file has a vulnerability that is exploited in the wild (CISA KEV, through the CVE aliases of the OSV record), and a fixed version exists. One alert per package and version.
+**Fires when:** A dependency named in a lock file has a vulnerability that is exploited in the wild (CISA KEV, through the CVE aliases of the OSV record), and a fixed version exists. One alert per lock file and ecosystem, naming the packages.
 
 **Known false positives:** The vulnerable code path may not be used by the project; that is rarely worth betting on.
 
@@ -858,9 +858,9 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 
 **Severity:** high
 
-**Alert:** `{package} {installed} ({ecosystem}, {path}): {count} high or critical vulnerabilities ({ids}), fixed in {fixed}`
+**Alert:** `{path} ({ecosystem}): {count} high or critical vulnerabilities in {packages}`
 
-**Fires when:** A dependency named in a lock file has vulnerabilities rated high or critical (GitHub's rating, or CVSS 3 when there is none) with a fixed version. One alert per package and version. Go records without any rating count in the summary but do not alert.
+**Fires when:** A dependency named in a lock file has vulnerabilities rated high or critical (GitHub's rating, or CVSS 3 when there is none) with a fixed version. One alert per lock file and ecosystem, naming the packages with the version that fixes each; a lock file is updated in one go. Go records without any rating count in the summary but do not alert.
 
 **Known false positives:** Development dependencies in package-lock.json are included, since they sit on disk; projects checked out but not deployed (worktrees, old copies) count too. Set `app_roots` on the agent to limit where it looks.
 
