@@ -1,7 +1,9 @@
 # Changelog
 
-## Unreleased
+## v0.28.0
 
+- Sources: allied vigil networks exchange attack data over a VPN, read-only. Each share decides per partner what may leave (categories, detail, period, minimum attempts, the partner's own networks), with a preview; host names, own addresses, logins, existing user names, paths and alert texts can never be shared. Fetched feeds are signed with their own key and pinned by fingerprint, normalised and bounded, never reach the threat lists or playbooks, and raise only `source.login` and `source.outbound` (trust medium or high). New tab with overlap matrix, lead time, comparison per source, heatmap, flow diagram and ranking. New option `federation`. Going back to an older server drops the shares and sources on its next save.
+- The agent also watches the `authorized_keys` of accounts whose home is neither under /home nor /root (service accounts such as /var/lib/postgresql or /srv/backup). Before, a key planted there went unnoticed, and a login with it showed as `ssh.unknown_key`. After the update, keys already in such files are reported once as added.
 - `kernel.module` stays quiet for modules the host has loaded before. The agent remembered only what was loaded at the moment, so after every reboot the modules the kernel loads on demand (Docker networking, WireGuard, filesystems) were reported again. Out-of-tree and unsigned modules are still reported on every load. Agent state from older versions counts what is loaded now as known.
 - The copies dpkg and ucf keep next to configuration files during an upgrade (`/etc/pam.d/sshd.dpkg-new`, `/etc/sudoers.d/README.dpkg-new`) no longer raise `file.pam`, `file.sudo` and the like. Nothing reads files under these names; the events stay in the log.
 - The host name shown under a host's name follows the host: it was only taken at enrollment. The name given in the dashboard stays.
@@ -13,10 +15,7 @@
 - `log.spoofed` no longer fires when a user other than root runs `sudo`, or logs in over SSH: both write to the journal with that user's uid. Such entries are recognised by the program journald saw (`/usr/bin/sudo`, `/usr/sbin/sshd`, `sshd-session`), and no login is read from them. Seen on a new host with the `ubuntu` user.
 - Connections to a service that is restarting are no longer reported as outgoing (`net.service_outbound`, `net.connection`): a port counts as a service port for ten minutes after its listener was last seen. During a package upgrade sshd stops listening for a moment while its sessions, including the pre-authentication ones of scanners, stay open; each of them was reported as sshd connecting out.
 - A kernel update no longer raises `process.download_exec`: `mkinitramfs` opens its build directory in /var/tmp with `chmod 755`. Only that exact command, as root, is let through.
-- The agent also watches the `authorized_keys` of accounts whose home is neither under /home nor /root (service accounts such as /var/lib/postgresql or /srv/backup). Before, a key planted there went unnoticed, and a login with it showed as `ssh.unknown_key`. After the update, keys already in such files are reported once as added.
 - New rule `intel.stale` (medium): a threat or hash list could not be downloaded for two days. It names the source and the last error and resolves itself with the next good download. A list waiting for an abuse.ch key that is not configured raises nothing. Before, a failing list was only visible in the server log.
-
-- Sources: allied vigil networks exchange attack data over a VPN, read-only. Each share decides per partner what may leave (categories, detail, period, minimum attempts, the partner's own networks), with a preview; host names, own addresses, logins, existing user names, paths and alert texts can never be shared. Fetched feeds are signed with their own key and pinned by fingerprint, normalised and bounded, never reach the threat lists or playbooks, and raise only `source.login` and `source.outbound` (trust medium or high). New tab with overlap matrix, lead time, comparison per source, heatmap, flow diagram and ranking. New option `federation`. Going back to an older server drops the shares and sources on its next save.
 
 ## v0.26.0
 
