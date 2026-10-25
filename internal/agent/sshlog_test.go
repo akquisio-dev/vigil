@@ -1,6 +1,9 @@
 package agent
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -61,5 +64,36 @@ func TestServicePortsOutliveARestart(t *testing.T) {
 	}
 	if in := servicePorts(seen, map[int]bool{}, now.Add(listenGrace+time.Minute)); in(22) {
 		t.Fatal("a port gone for good stays a service port")
+	}
+}
+
+func TestKeyFilesOutsideHome(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "passwd")
+	os.WriteFile(p, []byte(`root:x:0:0:root:/root:/bin/bash
+ubuntu:x:1001:1001::/home/ubuntu:/bin/bash
+offsite:x:997:997::/srv/offsite:/bin/sh
+postgres:x:114:120::/var/lib/postgresql:/bin/bash
+nobody:x:65534:65534:nobody:/nonexistent:/usr/sbin/nologin
+sync:x:4:65534:sync:/bin:/bin/sync
+odd:x:5:5::relative/home:/bin/sh
+glob:x:6:6::/srv/*:/bin/sh
+again:x:998:998::/srv/offsite/:/bin/sh
+`), 0o600)
+	got := strings.Join(keyFilesOutsideHome(p), " ")
+	for _, want := range []string{"/srv/offsite/.ssh/authorized_keys", "/srv/offsite/.ssh/authorized_keys2", "/var/lib/postgresql/.ssh/authorized_keys", "/bin/.ssh/authorized_keys"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("missing %s in %s", want, got)
+		}
+	}
+	for _, not := range []string{"/root/", "/home/", "/nonexistent", "relative", "*"} {
+		if strings.Contains(got, not) {
+			t.Errorf("%s must not be listed: %s", not, got)
+		}
+	}
+	if strings.Count(got, "/srv/offsite/.ssh/authorized_keys ") != 1 {
+		t.Errorf("a home shared by two accounts listed twice: %s", got)
+	}
+	if category("/srv/offsite/.ssh/authorized_keys") != "ssh_keys" {
+		t.Fatal("not read as a key file")
 	}
 }

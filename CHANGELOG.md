@@ -13,6 +13,7 @@
 - `log.spoofed` no longer fires when a user other than root runs `sudo`, or logs in over SSH: both write to the journal with that user's uid. Such entries are recognised by the program journald saw (`/usr/bin/sudo`, `/usr/sbin/sshd`, `sshd-session`), and no login is read from them. Seen on a new host with the `ubuntu` user.
 - Connections to a service that is restarting are no longer reported as outgoing (`net.service_outbound`, `net.connection`): a port counts as a service port for ten minutes after its listener was last seen. During a package upgrade sshd stops listening for a moment while its sessions, including the pre-authentication ones of scanners, stay open; each of them was reported as sshd connecting out.
 - A kernel update no longer raises `process.download_exec`: `mkinitramfs` opens its build directory in /var/tmp with `chmod 755`. Only that exact command, as root, is let through.
+- The agent also watches the `authorized_keys` of accounts whose home is neither under /home nor /root (service accounts such as /var/lib/postgresql or /srv/backup). Before, a key planted there went unnoticed, and a login with it showed as `ssh.unknown_key`. After the update, keys already in such files are reported once as added.
 - New rule `intel.stale` (medium): a threat or hash list could not be downloaded for two days. It names the source and the last error and resolves itself with the next good download. A list waiting for an abuse.ch key that is not configured raises nothing. Before, a failing list was only visible in the server log.
 
 ## v0.26.0

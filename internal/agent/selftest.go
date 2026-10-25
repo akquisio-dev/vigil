@@ -191,9 +191,36 @@ func (a *Agent) watched(path string) bool {
 func (a *Agent) watchGlobs() []string {
 	globs := a.cfg.WatchFiles
 	if len(globs) == 0 {
-		globs = DefaultWatch
+		globs = append(append([]string{}, DefaultWatch...), keyFilesOutsideHome("/etc/passwd")...)
 	}
 	return append(append([]string{}, globs...), a.cfg.ExtraWatch...)
+}
+
+// keyFilesOutsideHome lists the authorized_keys of accounts whose home is
+// neither under /home nor /root: service and system accounts
+// (/var/lib/postgresql, /srv/backup), where a planted key is as good a way
+// in and the /home glob does not look.
+func keyFilesOutsideHome(passwd string) []string {
+	data, err := os.ReadFile(passwd)
+	if err != nil {
+		return nil
+	}
+	seen := map[string]bool{}
+	var out []string
+	for _, line := range strings.Split(string(data), "\n") {
+		f := strings.Split(line, ":")
+		if len(f) < 7 {
+			continue
+		}
+		home := filepath.Clean(f[5])
+		if !filepath.IsAbs(home) || home == "/" || home == "/root" || home == "/nonexistent" || home == "/dev/null" ||
+			strings.HasPrefix(home, "/home/") || strings.ContainsAny(home, "*?[") || seen[home] {
+			continue
+		}
+		seen[home] = true
+		out = append(out, filepath.Join(home, ".ssh/authorized_keys"), filepath.Join(home, ".ssh/authorized_keys2"))
+	}
+	return out
 }
 
 // cleanSelfTests removes traces left by a test that was interrupted (agent
