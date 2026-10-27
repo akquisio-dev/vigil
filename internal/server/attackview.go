@@ -629,7 +629,8 @@ func topCounts(m map[string]int, n int) []geoCount {
 //   - success: it logged in over SSH after failing, or an attack request
 //     was answered with 2xx or reached a web shell
 //   - targeted: it tried accounts this host really has that are in no word
-//     list, or names from the host names or the brand
+//     list, or names from the host names or the brand, and never root:
+//     root is in every word list, so whoever tries it works through one
 //   - persistent: it came back on three or more days
 //   - noise: everything else, mass scanning that every server gets
 func classify(av *addrView, userIPs map[string]int, own []string, inCampaign bool) {
@@ -683,6 +684,12 @@ func classify(av *addrView, userIPs map[string]int, own []string, inCampaign boo
 	if words {
 		reasons = append(reasons, "wordlist")
 	}
+	for _, u := range av.Users {
+		if strings.ToLower(u) == "root" {
+			reasons = append(reasons, "root")
+			break
+		}
+	}
 	has := func(k string) bool {
 		for _, r := range reasons {
 			if r == k {
@@ -694,7 +701,7 @@ func classify(av *addrView, userIPs map[string]int, own []string, inCampaign boo
 	switch {
 	case has("login") || has("web_ok"):
 		av.Class = "success"
-	case has("own_account") || has("own_name"):
+	case (has("own_account") || has("own_name")) && !has("root"):
 		av.Class = "targeted"
 	case has("persistent"):
 		av.Class = "persistent"

@@ -192,7 +192,7 @@ paths tried, the time of day and the day. Each address is put in one class:
 | Class | Meaning |
 |---|---|
 | successful | it logged in over SSH after failing with other user names or with a password, or an attack request was answered with 2xx or reached a web shell (sites that answer every path with their start page also count here) |
-| aimed | it tried an account the host really has that is in no word list, or a name from the host names or the brand |
+| aimed | it tried an account the host really has that is in no word list, or a name from the host names or the brand, and never tried root (every word list has it) |
 | persistent | it came back on three or more days with 20 or more attempts |
 | noise | mass scanning every server on the internet gets |
 

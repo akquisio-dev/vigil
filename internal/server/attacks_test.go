@@ -321,3 +321,23 @@ func TestAttacksLive(t *testing.T) {
 		t.Fatalf("live: %+v", next)
 	}
 }
+
+// An address that tries root is never aimed: root is in every word
+// list, so even next to a real account it is not aimed at us.
+func TestClassifyRootIsNotTargeted(t *testing.T) {
+	aimed := &addrView{Users: []string{"joey"}, Existing: []string{"joey"}}
+	classify(aimed, map[string]int{"joey": 1}, nil, false)
+	if aimed.Class != "targeted" {
+		t.Fatalf("own account alone: %s %v", aimed.Class, aimed.Reasons)
+	}
+	withRoot := &addrView{Users: []string{"Root", "joey"}, Existing: []string{"joey", "root"}}
+	classify(withRoot, map[string]int{"joey": 1}, []string{"zypo"}, false)
+	if withRoot.Class != "noise" || !strings.Contains(strings.Join(withRoot.Reasons, ","), "root") {
+		t.Fatalf("with root: %s %v", withRoot.Class, withRoot.Reasons)
+	}
+	named := &addrView{Users: []string{"root", "zypoadmin"}}
+	classify(named, nil, []string{"zypo"}, false)
+	if named.Class == "targeted" {
+		t.Fatalf("own name with root: %s %v", named.Class, named.Reasons)
+	}
+}
