@@ -130,6 +130,14 @@ func (s *Server) uiHandler() http.Handler {
 	mux.HandleFunc("POST /api/ui/account/password", s.auth(s.handlePassword))
 	mux.HandleFunc("GET /api/ui/account/topology", s.auth(s.handleTopoLayout))
 	mux.HandleFunc("POST /api/ui/account/topology", s.auth(s.handleTopoLayoutSave))
+	mux.HandleFunc("GET /api/ui/map", s.auth(s.handleMap))
+	mux.HandleFunc("POST /api/ui/map/ops", s.auth(s.handleMapOps))
+	mux.HandleFunc("GET /api/ui/map/stream", s.auth(s.handleMapStream))
+	mux.HandleFunc("POST /api/ui/map/presence", s.auth(s.handleMapCursor))
+	mux.HandleFunc("GET /api/ui/map/history", s.auth(s.handleMapHistory))
+	mux.HandleFunc("POST /api/ui/map/undo", s.auth(s.handleMapUndo))
+	mux.HandleFunc("POST /api/ui/map/restore", s.adminOnly(s.handleMapRestore))
+	mux.HandleFunc("GET /api/ui/map/timeline", s.auth(s.handleMapTimeline))
 	mux.HandleFunc("POST /api/ui/account/passkeys/begin", s.auth(s.handlePasskeyBegin))
 	mux.HandleFunc("POST /api/ui/account/passkeys/finish", s.auth(s.handlePasskeyFinish))
 	mux.HandleFunc("POST /api/ui/account/passkeys/{id}/delete", s.auth(s.handlePasskeyDelete))
@@ -240,13 +248,13 @@ func (s *Server) uiHandler() http.Handler {
 // the embedded assets.
 func versionedIndex(static fs.FS) ([]byte, string) {
 	h := sha256.New()
-	for _, name := range []string{"app.js", "theme.js", "style.css", "favicon.svg", "world.js"} {
+	for _, name := range []string{"app.js", "map.js", "theme.js", "style.css", "favicon.svg", "world.js"} {
 		b, _ := fs.ReadFile(static, name)
 		h.Write(b)
 	}
 	version := hex.EncodeToString(h.Sum(nil))[:12]
 	index, _ := fs.ReadFile(static, "index.html")
-	for _, name := range []string{"app.js", "theme.js", "style.css", "favicon.svg"} {
+	for _, name := range []string{"app.js", "map.js", "theme.js", "style.css", "favicon.svg"} {
 		index = bytes.ReplaceAll(index, []byte(`"`+name+`"`), []byte(`"`+name+"?v="+version+`"`))
 	}
 	return index, version

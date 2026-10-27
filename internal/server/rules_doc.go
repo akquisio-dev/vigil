@@ -377,6 +377,11 @@ var ruleDocs = map[string]ruleDoc{
 		"Old certificates still on disk but no longer served. Remove them from the configuration.",
 		"Renew it (`certbot renew`) and reload the web server. Check why automatic renewal failed (`systemctl status certbot.timer`).",
 	},
+	"map.unplanned_link": {
+		"An active plan of the host map with alerts on saw a TCP link between two of its hosts that no \"allow\" arrow of the plan covers, or that a \"block\" arrow names. Links of the agents to the vigil server always count as planned. Checked every five minutes.",
+		"A plan that is not finished yet, a new service nobody drew, backups or updates that open links now and then.",
+		"Open the map with the plan, look at the link and its programs. Planned after all: draw an allow arrow (with the port). Not planned: find out which program opened it and why, then close it at the firewall.",
+	},
 	"perf.cpu_high": {
 		"The host's CPU (all cores together) stayed at or above `perf.cpu_pct` (90 %) for `perf.cpu_minutes` (15). The alert names the busiest program; the host page's performance tab shows who was busy at each minute. Ends after 10 minutes 10 points lower.",
 		"Builds, backups, game servers under load, a batch job.",

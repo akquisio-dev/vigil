@@ -2,7 +2,7 @@
 
 # Detection rules
 
-vigil ships 111 rules. Every alert carries the rule id, so an alert can be looked up here.
+vigil ships 112 rules. Every alert carries the rule id, so an alert can be looked up here.
 
 Severity decides who is woken up: each notifier has a `min_severity`, `high` by default.
 
@@ -86,6 +86,7 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 | [`integrity.unowned`](#integrity-unowned) | medium | [T1554](https://attack.mitre.org/techniques/T1554/) |
 | [`intel.stale`](#intel-stale) | medium |  |
 | [`kernel.tainted`](#kernel-tainted) | medium | [T1014](https://attack.mitre.org/techniques/T1014/) |
+| [`map.unplanned_link`](#map-unplanned_link) | medium |  |
 | [`net.tor`](#net-tor) | medium | [T1090.003](https://attack.mitre.org/techniques/T1090/003/) |
 | [`net.volume_spike`](#net-volume_spike) | medium | [T1048](https://attack.mitre.org/techniques/T1048/) |
 | [`perf.cpu_high`](#perf-cpu_high) | medium | [T1496](https://attack.mitre.org/techniques/T1496/) |
@@ -1457,6 +1458,18 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 **Known false positives:** The list's site was down for a long time; since October 2026 abuse.ch (ThreatFox, MalwareBazaar) answers only with a free Auth-Key, see `abusech_key_file`.
 
 **What to do:** The alert names the source and the last error. Check outbound HTTPS from the server and, for abuse.ch, that `abusech_key_file` holds a valid key.
+
+### `map.unplanned_link` {#map-unplanned_link}
+
+**Severity:** medium
+
+**Alert:** `{from} → {to} port {port} ({program}) is not in plan {plan}`
+
+**Fires when:** An active plan of the host map with alerts on saw a TCP link between two of its hosts that no "allow" arrow of the plan covers, or that a "block" arrow names. Links of the agents to the vigil server always count as planned. Checked every five minutes.
+
+**Known false positives:** A plan that is not finished yet, a new service nobody drew, backups or updates that open links now and then.
+
+**What to do:** Open the map with the plan, look at the link and its programs. Planned after all: draw an allow arrow (with the port). Not planned: find out which program opened it and why, then close it at the firewall.
 
 ### `source.outbound` {#source-outbound}
 

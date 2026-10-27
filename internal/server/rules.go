@@ -107,6 +107,7 @@ var rules = map[string]ruleDef{
 	"perf.cpu_high":              {"medium", "T1496", "CPU of {host} at {cpu} % for {minutes} minutes (busiest: {program})", "CPU von {host} seit {minutes} Minuten bei {cpu} % (am meisten: {program})"},
 	"perf.disk_full":             {"high", "", "Disk of {host} at {disk} %, full in {days} days by the trend", "Platte von {host} bei {disk} %, nach dem Trend in {days} Tagen voll"},
 	"perf.mem_pressure":          {"medium", "", "Memory of {host} at {mem} %, swap grew by {rise} points to {swap} %", "Speicher von {host} bei {mem} %, Swap um {rise} Punkte auf {swap} % gewachsen"},
+	"map.unplanned_link":         {"medium", "", "{from} → {to} port {port} ({program}) is not in plan {plan}", "{from} → {to} Port {port} ({program}) steht nicht im Plan {plan}"},
 	"perf.host_down_load":        {"medium", "", "Traffic of {host} dropped to {now} (normal {normal})", "Verkehr von {host} auf {now} gefallen (normal {normal})"},
 	"backup.missing":             {"high", "T1490", "Backup {name}: no file matches {path}", "Backup {name}: keine Datei passt zu {path}"},
 	"backup.stale":               {"high", "T1490", "Backup {name} is {age} hours old (limit {max})", "Backup {name} ist {age} Stunden alt (Grenze {max})"},

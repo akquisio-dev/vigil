@@ -42,14 +42,65 @@ connections between them, read from the agents' connection lists every
 minute. Each group of hosts sits on a coloured area, the vigil server's group
 in the middle, the internet on top. The map pans by dragging the background
 and zooms with Ctrl and the wheel, two fingers or the buttons; in full screen
-the wheel zooms too. Boxes can be dragged and keep their place per account
-(`GET`/`POST /api/ui/account/topology`, any role, only the own layout;
-"Reset layout" goes back to the automatic one). A click on a host lists its
-links with port, service and programs and its busiest internet ports with
-programs and countries (`ext_top` on `/api/ui/hosts`, from the agents' 64
-busiest peers); a click on a link lists both directions; a double click opens
-the host. Links of the agents to the vigil server and the internet links can
-be hidden.
+the wheel zooms too. A click on a host lists its links with port, service and
+programs and its busiest internet ports with programs and countries
+(`ext_top` on `/api/ui/hosts`, from the agents' 64 busiest peers); a click on
+a link lists both directions; a double click opens the host. Links of the
+agents to the vigil server and the internet links can be hidden. `?` lists
+the keyboard shortcuts.
+
+**One map for everyone, live.** Everyone looking at the map sees the same
+map and every change at once, along with who else is looking (and, unless
+turned off, their pointers). Admins (the base role, not an admin of a group)
+edit it; every account may comment. What can be on it:
+
+- the boxes where someone put them; "My layout" keeps a layout of one's own
+  (`/api/ui/account/topology`) that no one else sees, and admins can hand it
+  to everyone;
+- notes, zones (a zone carries what lies in it when it moves), text, symbols
+  (firewall, database, router and others), external nodes (a service without
+  an agent) and planned hosts, which offer to give their place, comments,
+  tasks and arrows to a host that enrols with the planned hostname;
+- arrows between hosts, objects or free points: data flow, planned, allowed
+  (with ports) and to be blocked;
+- comments on a host, a link, an object or any spot, with replies,
+  `@account` mentions and a "done" mark;
+- a note per host (purpose, who looks after it, services, links);
+- tasks with an assignee, a due date and a state, on a host or object or on
+  their own. "For me" lists one's mentions and tasks.
+
+**Plans** are layers over the current state: what is drawn in a plan shows
+only while that plan is shown. Compared with the current state, a plan marks
+links between its hosts that no "allow" arrow covers, or that a "block" arrow
+names, as unplanned, and allowed links nobody uses as missing. An active plan
+with alerts on raises [`map.unplanned_link`](rules.md#map-unplanned_link)
+every five minutes for each such link.
+
+**History.** Every change is kept in `map-log.jsonl` (20 000 changes, 90 days
+at most). Ctrl+Z and Ctrl+Y undo and redo one's own changes as long as no
+one changed the same thing since; admins can put the whole map back to how it
+was after any change. Changes are audited as `map.edit`, `map.undo` and
+`map.restore`, at most one `map.edit` per account and minute.
+
+**More views.** The time slider replays the links of the last seven days
+(kept every five minutes in `flows/`); "new since" marks links first seen in
+the last 24 hours or 7 days. Boxes can be coloured by CPU, memory, disk, open
+alerts, updates or weaknesses. "Impact" lights up every host that depends on
+one, through the links seen and the arrows of the plan shown. Hosts of new
+alerts flash, attacks can run as arcs from the internet, and admins set
+maintenance from the menu of a host. The map exports as PNG, SVG or JSON
+(admins can read a JSON file back in), and "Share" copies a link to the
+current view, plan and selection.
+
+The API: `GET /api/ui/map` (the document), `POST /api/ui/map/ops`
+(`{ops: [{op: "put"|"del", c, id, v}]}`, one revision per call, at most 500
+changes), `GET /api/ui/map/stream` (server-sent events: `hello`, `ops`,
+`presence`, `cursor`, `alert`), `POST /api/ui/map/presence`,
+`GET /api/ui/map/history`, `POST /api/ui/map/undo` (`{redo}`),
+`POST /api/ui/map/restore` (`{rev}`, admin) and
+`GET /api/ui/map/timeline?from=&to=`. Behind a proxy the stream needs no
+buffering; vigil sends `X-Accel-Buffering: no` and a ping every 20 seconds,
+which nginx honours without further settings.
 
 ### The host list
 

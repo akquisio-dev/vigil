@@ -69,6 +69,12 @@ type Server struct {
 	sources sourceSet
 
 	beatWarned string // last reason the heartbeat was withheld, loop goroutine only
+
+	maps     *mapStore // the shared host map, own lock
+	maphub   *mapHub
+	mapAud   sync.Mutex
+	mapAudAt map[string]time.Time
+	flowHist flowHistory
 }
 
 func New(cfg *Config) (*Server, error) {
@@ -87,8 +93,12 @@ func New(cfg *Config) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
+	maps, err := openMapStore(cfg.DataDir)
+	if err != nil {
+		return nil, err
+	}
 	return &Server{
-		cfg: cfg, store: store, key: key, state: st,
+		cfg: cfg, store: store, key: key, state: st, maps: maps, maphub: &mapHub{},
 		sessions: map[string]*session{},
 		limit:    &limiter{fails: map[string][]time.Time{}},
 		forged:   &limiter{fails: map[string][]time.Time{}},
@@ -267,6 +277,7 @@ func (s *Server) loop(ctx context.Context) {
 			go s.pullSources()
 		case <-beat.C:
 			s.saveMetrics(false)
+			s.mapTick(time.Now())
 			s.expireSuppressions()
 			s.checkSummary()
 			if s.cfg.HeartbeatURL != "" {
@@ -406,6 +417,7 @@ func (s *Server) checkDeadman() {
 // notifyAlerts expects s.mu held (it reads agent names).
 func (s *Server) notifyAlerts(fresh []*Alert) {
 	s.forwardAlerts(fresh)
+	s.mapAlerts(fresh)
 	for _, al := range fresh {
 		s.notifyGrouped(al)
 	}
