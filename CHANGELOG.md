@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.33.2
+
+- Attackers: ubuntu, debian and linux count like root: an address that tries one of these standard users is never counted as aimed. The reason now reads "tried a standard user (root, ubuntu, debian, linux)".
+
 ## v0.33.1
 
 - Performance tab: the busiest and largest programs of a span within the last day come from the minutes even before the first hour with programs exists (right after the update to v0.33.0 the lists stayed empty).

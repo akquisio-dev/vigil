@@ -29,7 +29,7 @@ var attackReportText = map[string]map[string]string{
 		"class_success": "successful", "class_targeted": "aimed", "class_persistent": "persistent", "class_noise": "noise",
 		"r_login": "logged in after failing", "r_web_ok": "attack request answered with 2xx", "r_own_account": "tried an account that exists here",
 		"r_own_name": "tried a name of these hosts", "r_persistent": "came back on several days", "r_listed": "on a threat list",
-		"r_tor": "Tor exit", "r_campaign": "part of a campaign", "r_wordlist": "only word list names", "r_root": "tried root",
+		"r_tor": "Tor exit", "r_campaign": "part of a campaign", "r_wordlist": "only word list names", "r_standard_user": "tried a standard user (root, ubuntu, debian, linux)",
 	},
 	"de": {
 		"title": "Angriffsbericht", "period": "Zeitraum", "hosts": "Hosts", "made": "Erstellt", "figures": "Kennzahlen",
@@ -46,7 +46,7 @@ var attackReportText = map[string]map[string]string{
 		"class_success": "erfolgreich", "class_targeted": "gezielt", "class_persistent": "hartnäckig", "class_noise": "Rauschen",
 		"r_login": "nach Fehlversuchen angemeldet", "r_web_ok": "Angriffsanfrage mit 2xx beantwortet", "r_own_account": "hat ein hier existierendes Konto versucht",
 		"r_own_name": "hat einen Namen dieser Hosts versucht", "r_persistent": "an mehreren Tagen wiedergekommen", "r_listed": "auf einer Bedrohungsliste",
-		"r_tor": "Tor-Ausgang", "r_campaign": "Teil einer Kampagne", "r_wordlist": "nur Namen aus Wortlisten", "r_root": "hat root versucht",
+		"r_tor": "Tor-Ausgang", "r_campaign": "Teil einer Kampagne", "r_wordlist": "nur Namen aus Wortlisten", "r_standard_user": "hat einen Standardnutzer versucht (root, ubuntu, debian, linux)",
 	},
 }
 

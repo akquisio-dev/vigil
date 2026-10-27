@@ -153,7 +153,7 @@ type attackView struct {
 var commonUsers = map[string]bool{}
 
 func init() {
-	for _, u := range strings.Fields(`root admin administrator user test test1 test2 testuser guest ubuntu debian centos ec2-user pi
+	for _, u := range strings.Fields(`root admin administrator user test test1 test2 testuser guest ubuntu debian linux centos ec2-user pi
 		oracle postgres mysql git gitlab ftp ftpuser ftp_user www www-data nginx apache tomcat jenkins hadoop elastic es kafka redis
 		docker ansible deploy deployer dev developer devops demo support info sales operator service system sysadmin backup nagios
 		zabbix minecraft steam ts3 teamspeak sol solana validator node nodejs user1 user2 ubnt admin1 oracle1 postgres1 odoo
@@ -164,6 +164,10 @@ func init() {
 		commonUsers[u] = true
 	}
 }
+
+// standardUsers come with the system and are in every word list; an address
+// that tries one is never aimed, whatever else it tries.
+var standardUsers = map[string]bool{"root": true, "ubuntu": true, "debian": true, "linux": true}
 
 // ownTokens are words from the host names and the dashboard's brand: an
 // attacker who tries them knows whom they are attacking.
@@ -629,8 +633,9 @@ func topCounts(m map[string]int, n int) []geoCount {
 //   - success: it logged in over SSH after failing, or an attack request
 //     was answered with 2xx or reached a web shell
 //   - targeted: it tried accounts this host really has that are in no word
-//     list, or names from the host names or the brand, and never root:
-//     root is in every word list, so whoever tries it works through one
+//     list, or names from the host names or the brand, and never a
+//     standard user (root, ubuntu, debian, linux): every word list has them,
+//     so whoever tries one works through a list
 //   - persistent: it came back on three or more days
 //   - noise: everything else, mass scanning that every server gets
 func classify(av *addrView, userIPs map[string]int, own []string, inCampaign bool) {
@@ -685,8 +690,8 @@ func classify(av *addrView, userIPs map[string]int, own []string, inCampaign boo
 		reasons = append(reasons, "wordlist")
 	}
 	for _, u := range av.Users {
-		if strings.ToLower(u) == "root" {
-			reasons = append(reasons, "root")
+		if standardUsers[strings.ToLower(u)] {
+			reasons = append(reasons, "standard_user")
 			break
 		}
 	}
@@ -701,7 +706,7 @@ func classify(av *addrView, userIPs map[string]int, own []string, inCampaign boo
 	switch {
 	case has("login") || has("web_ok"):
 		av.Class = "success"
-	case (has("own_account") || has("own_name")) && !has("root"):
+	case (has("own_account") || has("own_name")) && !has("standard_user"):
 		av.Class = "targeted"
 	case has("persistent"):
 		av.Class = "persistent"

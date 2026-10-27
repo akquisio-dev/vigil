@@ -322,9 +322,9 @@ func TestAttacksLive(t *testing.T) {
 	}
 }
 
-// An address that tries root is never aimed: root is in every word
+// An address that tries a standard user is never aimed: they are in every word
 // list, so even next to a real account it is not aimed at us.
-func TestClassifyRootIsNotTargeted(t *testing.T) {
+func TestClassifyStandardUserIsNotTargeted(t *testing.T) {
 	aimed := &addrView{Users: []string{"joey"}, Existing: []string{"joey"}}
 	classify(aimed, map[string]int{"joey": 1}, nil, false)
 	if aimed.Class != "targeted" {
@@ -332,12 +332,14 @@ func TestClassifyRootIsNotTargeted(t *testing.T) {
 	}
 	withRoot := &addrView{Users: []string{"Root", "joey"}, Existing: []string{"joey", "root"}}
 	classify(withRoot, map[string]int{"joey": 1}, []string{"zypo"}, false)
-	if withRoot.Class != "noise" || !strings.Contains(strings.Join(withRoot.Reasons, ","), "root") {
+	if withRoot.Class != "noise" || !strings.Contains(strings.Join(withRoot.Reasons, ","), "standard_user") {
 		t.Fatalf("with root: %s %v", withRoot.Class, withRoot.Reasons)
 	}
-	named := &addrView{Users: []string{"root", "zypoadmin"}}
-	classify(named, nil, []string{"zypo"}, false)
-	if named.Class == "targeted" {
-		t.Fatalf("own name with root: %s %v", named.Class, named.Reasons)
+	for _, std := range []string{"root", "Ubuntu", "debian", "linux"} {
+		named := &addrView{Users: []string{std, "zypoadmin"}}
+		classify(named, nil, []string{"zypo"}, false)
+		if named.Class == "targeted" || !strings.Contains(strings.Join(named.Reasons, ","), "standard_user") {
+			t.Fatalf("own name with %s: %s %v", std, named.Class, named.Reasons)
+		}
 	}
 }
