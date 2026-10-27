@@ -128,6 +128,14 @@ const T = {
     origin: "Origin", network: "Network", classLabel: "Class", country: "Country", activity30: "Activity, 30 days",
     attackReport: "Report (Markdown)", attackPrint: "Report to print / PDF", loggedInAs: "logged in as", unknown: "unknown", timezoneLocal: "local time",
     sources: "Sources", sourcesSub: "Threat data from allied networks and other software, and what we share with them", sourcesTile: "Sources active", withProblems: "with problems", reported: "Reported", inTop: "in the ranking", overlapUs: "Also attacked us", ofOurs: "of our {n} attackers", firstShare: "Seen first by a source", earlyWarn: "early warnings among the shared attackers", medianLead: "Median lead", leadSub: "how much earlier a source saw our attackers", categories: "Categories", leadSame: "same hour", leadAhead: "{d} ahead", leadBehind: "{d} behind", overlapTitle: "Overlap", leadTitle: "Who saw them first", leadHint: "attackers we share", lb0: "we, over a day ahead", lb1: "we, up to a day ahead", lb2: "within an hour", lb3: "source, up to 6 h ahead", lb4: "source, 6 to 24 h ahead", lb5: "source, 1 to 3 days ahead", lb6: "source, over 3 days ahead", weFirst: "we saw them first", theyFirst: "the source saw them first", noOverlap: "No attacker seen by us and a source yet", srcTableTitle: "Sources compared", source: "Source", newPerDay: "New per day", fetchFailed: "fetch failed", staleShort: "no fetch for a day", srcHeatTitle: "When sources see attackers first", srcSankeyTitle: "Source, kind of attack, country", topReported: "Attackers reported by the most sources", seenBy: "Seen by", firstSeenBy: "First seen by", ourAttempts: "Our attempts", usLabel: "Our hosts", noSources: "No sources yet", noSourceData: "No reports from sources in this period", cat_ssh: "SSH logins", cat_web: "Web attacks", cat_web_login: "Web login attempts", cat_shell: "Web shell requests", trust_low: "trust low", trust_medium: "trust medium", trust_high: "trust high", trust: "Trust", trustHint: "Low: analytics only. Medium and high: a login from or a connection to a reported address raises an alert. Reports never start a response action.", fedConnections: "Partner connections", connectionsSub: "Partners fetch over the VPN with their own token. Nothing is ever sent on its own, and a partner cannot change anything here.", networkName: "This network", fingerprint: "Fingerprint", feedAddress: "Feed address", noListen: "No feed served: set federation.listen in server.json (a VPN address).", copy: "Copy", sharesTitle: "What we share", noShares: "Nothing shared yet", newShare: "Share with a partner", editShare: "Change share {name}", partnerName: "Partner", period: "Period", daysN: "{n} days", detail: "Detail", withCountsLong: "Attempts and first/last seen (otherwise addresses only)", withUsersLong: "Tried SSH user names (names that exist on our hosts are never shared)", minHits: "Minimum attempts per address", partnerNets: "The partner's own networks (never sent to them)", shareEnabled: "Partner may fetch", previewN: "The partner would get {n} addresses from {network}, these first:", neverShared: "Never shared, whatever is chosen: host names, our own and internal addresses, addresses that logged in, paths, processes and alert texts.", createShare: "Create share and token", save: "Save", cancel: "Cancel", edit: "Edit", rotateToken: "New token", tokenOnce: "Token for {name}. It is shown only now; pass it to the partner over a private channel.", confirmRotate: "Make a new token? The partner's current token stops working at once.", confirmShareDelete: "Stop sharing with this partner?", withCounts: "with counts", addressesOnly: "addresses only", withUsers: "with user names", minHitsN: "from {n} attempts", lastFetch: "last fetch", neverFetched: "not fetched yet", sourcesTitle: "What we fetch", newSource: "Add a source", editSource: "Change source {name}", sourceName: "Name", partnerToken: "Token from the partner", partnerFingerprint: "Fingerprint of the partner", tokenUnchanged: "unchanged", keepDaysLabel: "Keep reports (days)", keepDays: "kept {n} days", sourceEnabled: "Fetch every 15 minutes", addSource: "Add source", fetchNow: "Fetch now", confirmSourceDelete: "Remove this source and everything it reported?",
+    hostsSub: "Load, memory, disks and the connections between the hosts", topology: "Connections", topologySub: "TCP between the hosts right now, the dots run from client to server. UDP (games, WireGuard) only counts as interface traffic.",
+    internet: "Internet", cpu: "CPU", memory: "Memory", swap: "Swap", disk: "Disk", disks: "Disks", load: "Load", traffic: "Network", diskIO: "Disk I/O",
+    netIn: "in", netOut: "out", readL: "read", writeL: "write", connections: "Connections", connIn: "incoming", connOut: "outgoing", upFor: "up for", cores: "cores",
+    topProcs: "Busiest processes", interfaces: "Interfaces", peers: "Connections by remote", noMetrics: "No load data yet. Agents from v0.29.0 send it once a minute.",
+    performance: "Performance", lastHour: "last hour", avgCpu: "CPU average", memUsed: "Memory used", throughput: "Throughput", hostLinks: "Between hosts",
+    vigilServer: "vigil server", iowait: "waiting for disk", steal: "taken by the hypervisor", fullest: "fullest file system", used: "used", mount: "Mount", size: "Size",
+    remote: "Remote", program: "Program", direction: "Direction", outgoing: "outgoing", incoming: "incoming", legendTcp: "TCP connection, line width by count",
+    legendNet: "connections to the internet", asOf: "data from", noData: "No data in this period", loadPerCore: "per core", processes: "processes", ofTotal: "of",
   },
   de: {
     overview: "Lage", alerts: "Alarme", events: "Ereignisse", canaries: "Köder", settings: "Einstellungen",
@@ -253,6 +261,14 @@ const T = {
     origin: "Herkunft", network: "Netz", classLabel: "Einstufung", country: "Land", activity30: "Aktivität, 30 Tage",
     attackReport: "Bericht (Markdown)", attackPrint: "Bericht drucken / PDF", loggedInAs: "angemeldet als", unknown: "unbekannt", timezoneLocal: "Ortszeit",
     sources: "Quellen", sourcesSub: "Bedrohungsdaten von verbündeten Netzen und anderer Software, und was wir mit ihnen teilen", sourcesTile: "Aktive Quellen", withProblems: "mit Problemen", reported: "Gemeldet", inTop: "in der Rangliste", overlapUs: "Griffen auch uns an", ofOurs: "unserer {n} Angreifer", firstShare: "Zuerst von einer Quelle gesehen", earlyWarn: "Frühwarnungen unter den gemeinsamen Angreifern", medianLead: "Vorlauf (Median)", leadSub: "wie viel früher eine Quelle unsere Angreifer sah", categories: "Kategorien", leadSame: "gleiche Stunde", leadAhead: "{d} früher", leadBehind: "{d} später", overlapTitle: "Überschneidung", leadTitle: "Wer sah sie zuerst", leadHint: "gemeinsame Angreifer", lb0: "wir, über einen Tag früher", lb1: "wir, bis einen Tag früher", lb2: "innerhalb einer Stunde", lb3: "Quelle, bis 6 h früher", lb4: "Quelle, 6 bis 24 h früher", lb5: "Quelle, 1 bis 3 Tage früher", lb6: "Quelle, über 3 Tage früher", weFirst: "wir sahen sie zuerst", theyFirst: "die Quelle sah sie zuerst", noOverlap: "Noch kein Angreifer, den wir und eine Quelle gesehen haben", srcTableTitle: "Quellen im Vergleich", source: "Quelle", newPerDay: "Neu pro Tag", fetchFailed: "Abruf fehlgeschlagen", staleShort: "seit einem Tag kein Abruf", srcHeatTitle: "Wann Quellen Angreifer zuerst sehen", srcSankeyTitle: "Quelle, Angriffsart, Land", topReported: "Angreifer, die die meisten Quellen melden", seenBy: "Gesehen von", firstSeenBy: "Zuerst gesehen von", ourAttempts: "Unsere Versuche", usLabel: "Unsere Hosts", noSources: "Noch keine Quellen", noSourceData: "Keine Meldungen von Quellen in diesem Zeitraum", cat_ssh: "SSH-Anmeldungen", cat_web: "Web-Angriffe", cat_web_login: "Web-Anmeldeversuche", cat_shell: "Webshell-Aufrufe", trust_low: "Vertrauen niedrig", trust_medium: "Vertrauen mittel", trust_high: "Vertrauen hoch", trust: "Vertrauen", trustHint: "Niedrig: nur Analyse. Mittel und hoch: eine Anmeldung von oder eine Verbindung zu einer gemeldeten Adresse löst einen Alarm aus. Meldungen starten nie eine Gegenmaßnahme.", fedConnections: "Partnerverbindungen", connectionsSub: "Partner holen über das VPN mit eigenem Token ab. Von selbst wird nie etwas verschickt, und ein Partner kann hier nichts ändern.", networkName: "Dieses Netz", fingerprint: "Fingerabdruck", feedAddress: "Feed-Adresse", noListen: "Kein Feed: federation.listen in server.json setzen (eine VPN-Adresse).", copy: "Kopieren", sharesTitle: "Was wir teilen", noShares: "Noch nichts geteilt", newShare: "Mit einem Partner teilen", editShare: "Freigabe {name} ändern", partnerName: "Partner", period: "Zeitraum", daysN: "{n} Tage", detail: "Detail", withCountsLong: "Versuche und erstes/letztes Auftreten (sonst nur Adressen)", withUsersLong: "Versuchte SSH-Nutzernamen (Namen, die es auf unseren Hosts gibt, werden nie geteilt)", minHits: "Mindestzahl Versuche pro Adresse", partnerNets: "Eigene Netze des Partners (gehen nie an ihn)", shareEnabled: "Partner darf abholen", previewN: "Der Partner bekäme {n} Adressen von {network}, als Erstes diese:", neverShared: "Nie geteilt, egal was gewählt ist: Hostnamen, eigene und interne Adressen, Adressen mit erfolgreicher Anmeldung, Pfade, Prozesse und Alarmtexte.", createShare: "Freigabe und Token erstellen", save: "Speichern", cancel: "Abbrechen", edit: "Bearbeiten", rotateToken: "Neuer Token", tokenOnce: "Token für {name}. Er wird nur jetzt angezeigt; gib ihn dem Partner über einen privaten Weg.", confirmRotate: "Neuen Token erstellen? Der bisherige Token des Partners funktioniert sofort nicht mehr.", confirmShareDelete: "Teilen mit diesem Partner beenden?", withCounts: "mit Zahlen", addressesOnly: "nur Adressen", withUsers: "mit Nutzernamen", minHitsN: "ab {n} Versuchen", lastFetch: "letzter Abruf", neverFetched: "noch nicht abgeholt", sourcesTitle: "Was wir abholen", newSource: "Quelle hinzufügen", editSource: "Quelle {name} ändern", sourceName: "Name", partnerToken: "Token vom Partner", partnerFingerprint: "Fingerabdruck des Partners", tokenUnchanged: "unverändert", keepDaysLabel: "Meldungen behalten (Tage)", keepDays: "{n} Tage behalten", sourceEnabled: "Alle 15 Minuten abholen", addSource: "Quelle hinzufügen", fetchNow: "Jetzt abholen", confirmSourceDelete: "Diese Quelle und alles, was sie gemeldet hat, entfernen?",
+    hostsSub: "Last, Speicher, Platten und die Verbindungen zwischen den Hosts", topology: "Verbindungen", topologySub: "TCP zwischen den Hosts in diesem Moment, die Punkte laufen vom Client zum Server. UDP (Spiele, WireGuard) zählt nur im Schnittstellenverkehr.",
+    internet: "Internet", cpu: "CPU", memory: "Arbeitsspeicher", swap: "Swap", disk: "Platte", disks: "Platten", load: "Last", traffic: "Netzwerk", diskIO: "Platten-E/A",
+    netIn: "ein", netOut: "aus", readL: "lesen", writeL: "schreiben", connections: "Verbindungen", connIn: "eingehend", connOut: "ausgehend", upFor: "läuft seit", cores: "Kerne",
+    topProcs: "Aktivste Prozesse", interfaces: "Schnittstellen", peers: "Verbindungen nach Gegenstelle", noMetrics: "Noch keine Lastdaten. Agents ab v0.29.0 senden sie einmal pro Minute.",
+    performance: "Leistung", lastHour: "letzte Stunde", avgCpu: "CPU im Schnitt", memUsed: "Speicher belegt", throughput: "Durchsatz", hostLinks: "Zwischen Hosts",
+    vigilServer: "vigil-Server", iowait: "wartet auf Platte", steal: "vom Hypervisor belegt", fullest: "vollstes Dateisystem", used: "belegt", mount: "Einhängepunkt", size: "Größe",
+    remote: "Gegenstelle", program: "Programm", direction: "Richtung", outgoing: "ausgehend", incoming: "eingehend", legendTcp: "TCP-Verbindung, Linienstärke nach Anzahl",
+    legendNet: "Verbindungen ins Internet", asOf: "Stand", noData: "Keine Daten in diesem Zeitraum", loadPerCore: "pro Kern", processes: "Prozesse", ofTotal: "von",
   },
 };
 
@@ -387,7 +403,7 @@ function logo() {
 // ---------- shell ----------
 
 const sections = [
-  ["sectionOverview", [["overview", "#/", "layout-dashboard"]]],
+  ["sectionOverview", [["overview", "#/", "layout-dashboard"], ["hosts", "#/hosts", "server"]]],
   ["sectionDetect", [["incidents", "#/incidents", "stack-2"], ["alerts", "#/alerts", "alert-triangle"], ["events", "#/events", "list-details"], ["sessions", "#/sessions", "terminal-2"], ["hunt", "#/hunt", "radar"], ["attacks", "#/attacks", "world"], ["sources", "#/sources", "affiliate"], ["canaries", "#/canaries", "fish-hook"],
     ["suppressions", "#/suppressions", "bell-off"]]],
   ["sectionSystem", [["rules", "#/rules", "book"], ["settings", "#/settings", "settings"]]],
@@ -970,9 +986,10 @@ async function alertDetail(id) {
 }
 
 async function hostView(id) {
-  const [d, actions, tests] = await Promise.all([api("/api/ui/agents/" + encodeURIComponent(id)), api("/api/ui/actions?agent=" + encodeURIComponent(id)),
-    api("/api/ui/selftests?agent=" + encodeURIComponent(id))]);
+  const [d, actions, tests, hostsData] = await Promise.all([api("/api/ui/agents/" + encodeURIComponent(id)), api("/api/ui/actions?agent=" + encodeURIComponent(id)),
+    api("/api/ui/selftests?agent=" + encodeURIComponent(id)), api("/api/ui/hosts").catch(() => null)]);
   const a = d.agent;
+  const perf = await performanceSection(a, hostsData);
   selftestOpen = tests.some((x) => x.status === "pending" || x.status === "running");
   const stErr = h("div", { class: "err" });
   const stDot = { passed: "ok", warning: "medium", failed: "critical", pending: "stopped", running: "stopped", ok: "ok", suppressed: "medium", skipped: "medium", missing: "critical", waiting: "stopped" };
@@ -1027,8 +1044,8 @@ async function hostView(id) {
     } }, t("updateAgent")), updErr);
   const minutesSel = h("select", null, [30, 60, 120, 240].map((m) => h("option", { value: m }, m + " " + t("minutes"))));
 
-  mount(shell("overview",
-    h("div", { class: "crumbs" }, h("a", { href: "#/" }, t("overview")), " / ", t("hosts")),
+  mount(shell("hosts",
+    h("div", { class: "crumbs" }, h("a", { href: "#/hosts" }, t("hosts")), " / ", a.name),
     h("h1", null, a.name),
     h("div", { class: "grid two" },
       h("div", { class: "card" },
@@ -1056,6 +1073,7 @@ async function hostView(id) {
           h("a", { class: "btn ghost", href: "#/sessions?agent=" + a.id }, t("sessions")),
           h("a", { class: "btn ghost", href: "#/alerts" }, t("alerts")),
           h("button", { class: "btn danger", onclick: async () => { if (confirm(t("confirmDelete"))) { await post("/api/ui/agents/" + a.id + "/delete"); location.hash = "#/"; } } }, t("deleteHost"))))),
+    perf,
     a.updates ? h("div", { class: "card mt" }, h("h3", null, t("updates")), h("dl", { class: "kv" },
       h("dt", null, t("updates")), h("dd", null, updatesCell(a.updates)),
       h("dt", null, t("securityPackages")), h("dd", { class: "mono" }, (a.updates.security_packages || []).join("  ") || "·"),
@@ -2642,10 +2660,353 @@ async function causingEvents(a) {
 
 // ---------- router ----------
 
+// ---------- hosts: load, memory, disks, connections ----------
+const fmtBytes = (b) => {
+  b = Number(b) || 0;
+  const u = ["B", "KB", "MB", "GB", "TB"];
+  let i = 0;
+  while (b >= 1024 && i < u.length - 1) { b /= 1024; i++; }
+  return (b >= 100 || i === 0 ? Math.round(b) : b.toFixed(1)).toLocaleString(lang) + " " + u[i];
+};
+const fmtRate = (b) => fmtBytes(b) + "/s";
+const fmtPct = (v) => (Math.round((Number(v) || 0) * 10) / 10).toLocaleString(lang) + " %";
+const pctOf = (used, total) => total ? used / total * 100 : 0;
+function fmtUptime(sec) {
+  sec = Number(sec) || 0;
+  const d = Math.floor(sec / 86400), hh = Math.floor((sec % 86400) / 3600), mm = Math.floor((sec % 3600) / 60);
+  return d ? d + " d " + hh + " h" : hh ? hh + " h " + mm + " min" : mm + " min";
+}
+// level names the state of a share; it is always shown with its number
+const level = (p) => p >= 90 ? "critical" : p >= 70 ? "medium" : "ok";
+const PORT_NAMES = { 22: "SSH", 25: "SMTP", 53: "DNS", 80: "HTTP", 443: "HTTPS", 3306: "MySQL", 5432: "PostgreSQL", 6379: "Redis",
+  27017: "MongoDB", 9200: "Elasticsearch", 5672: "AMQP", 11211: "memcached", 2049: "NFS", 873: "rsync", 9090: "Prometheus", 3001: "Uptime Kuma" };
+const portName = (p, agentPort) => p === agentPort ? "vigil" : PORT_NAMES[p] || String(p);
+
+function meter(label, p, sub) {
+  const fill = h("span", { class: "meter-fill " + level(p) });
+  fill.style.width = Math.min(100, Math.max(0, p)) + "%";
+  return h("div", { class: "meter" },
+    h("div", { class: "meter-head" }, h("span", { class: "meter-label" }, label), h("span", { class: "meter-value" }, fmtPct(p))),
+    h("div", { class: "meter-bar", role: "meter", "aria-valuemin": 0, "aria-valuemax": 100, "aria-valuenow": Math.round(p), "aria-label": label }, fill),
+    sub ? h("div", { class: "meter-sub" }, sub) : null);
+}
+
+// lineChart draws up to three series over time in one scale. The plot is
+// stretched to the card's width, so its lines keep their width with
+// non-scaling-stroke and the labels live in HTML around it. A gap of more
+// than a few steps (the host was off) breaks the line.
+function lineChart(opts) {
+  const { title, points, series, fmt = (v) => String(v), max: fixedMax, step = 60, compact, ref } = opts;
+  const W = 600, H = compact ? 44 : 150;
+  const wrap = h("div", { class: "lc" + (compact ? " compact" : "") });
+  if (!compact) {
+    wrap.append(h("div", { class: "chart-head" }, h("h3", null, title),
+      series.length > 1 ? h("div", { class: "lc-legend" }, series.map((s, i) => h("span", { class: "chip" }, h("span", { class: "lc-key s" + (i + 1) }), s.label))) : null));
+  }
+  if (!points.length) {
+    wrap.append(h("div", { class: "empty small" }, t("noData")));
+    return compact ? wrap : h("div", { class: "card" }, wrap);
+  }
+  const t0 = points[0].t, t1 = Math.max(points[points.length - 1].t, t0 + step);
+  const vals = series.flatMap((s) => points.map((p) => Number(s.get(p)) || 0));
+  const max = fixedMax || Math.max(ref || 0, ...vals) * 1.1 || 1;
+  const X = (tt) => (tt - t0) / (t1 - t0) * W, Y = (v) => H - 2 - Math.min(1, v / max) * (H - 4);
+  const svg = sv("svg", { viewBox: "0 0 " + W + " " + H, preserveAspectRatio: "none", class: "lc-plot", role: "img",
+    "aria-label": title + ": " + series.map((s) => s.label + " " + fmt(s.get(points[points.length - 1]))).join(", ") });
+  if (!compact) for (const f of [0.25, 0.5, 0.75]) svg.append(sv("line", { x1: 0, x2: W, y1: H * f, y2: H * f, class: "lc-grid" }));
+  if (ref) svg.append(sv("line", { x1: 0, x2: W, y1: Y(ref), y2: Y(ref), class: "lc-ref" }));
+  series.forEach((s, i) => {
+    let d = "", prev = null, area = "", runStart = null;
+    for (const p of points) {
+      const x = X(p.t).toFixed(1), y = Y(Number(s.get(p)) || 0).toFixed(1);
+      const brk = prev && p.t - prev.t > step * 3;
+      if (!prev || brk) {
+        if (runStart !== null && i === 0) area += "L" + X(prev.t).toFixed(1) + "," + H + "L" + runStart + "," + H + "Z";
+        d += "M" + x + "," + y; runStart = x;
+        if (i === 0) area += "M" + x + "," + H + "L" + x + "," + y;
+      } else {
+        d += "L" + x + "," + y;
+        if (i === 0) area += "L" + x + "," + y;
+      }
+      prev = p;
+    }
+    if (i === 0 && series.length === 1) {
+      area += "L" + X(prev.t).toFixed(1) + "," + H + "L" + runStart + "," + H + "Z";
+      svg.append(sv("path", { d: area, class: "lc-area s1" }));
+    }
+    svg.append(sv("path", { d, class: "lc-line s" + (i + 1), "vector-effect": "non-scaling-stroke" }));
+  });
+  const cross = sv("line", { x1: 0, x2: 0, y1: 0, y2: H, class: "lc-cross", "vector-effect": "non-scaling-stroke", visibility: "hidden" });
+  svg.append(cross);
+  const when = (tt) => new Date(tt * 1000).toLocaleString(lang, step >= 3600 ? { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" } : { hour: "2-digit", minute: "2-digit" });
+  svg.addEventListener("mousemove", (e) => {
+    const r = svg.getBoundingClientRect();
+    const tt = t0 + (e.clientX - r.left) / r.width * (t1 - t0);
+    let best = points[0];
+    for (const p of points) if (Math.abs(p.t - tt) < Math.abs(best.t - tt)) best = p;
+    cross.setAttribute("x1", X(best.t)); cross.setAttribute("x2", X(best.t)); cross.setAttribute("visibility", "visible");
+    tip(e, when(best.t) + "  ·  " + series.map((s) => (series.length > 1 || compact ? s.label + " " : "") + fmt(s.get(best))).join("  ·  "));
+  });
+  svg.addEventListener("mouseleave", (e) => { cross.setAttribute("visibility", "hidden"); tip(e, null); });
+  const plot = h("div", { class: "lc-frame" }, svg);
+  if (!compact) plot.append(h("span", { class: "lc-max" }, fmt(max)));
+  wrap.append(plot);
+  if (!compact) wrap.append(h("div", { class: "axis" }, h("span", null, when(t0)), h("span", null, when((t0 + t1) / 2)), h("span", null, when(t1))));
+  return compact ? wrap : h("div", { class: "card" }, wrap);
+}
+
+// topology lays the hosts around the one running the vigil server, the
+// internet above them, and draws every TCP link as a curve whose dots run
+// from client to server. It is drawn at the real width of the page, so its
+// text stays readable on a phone.
+function topology(d) {
+  const hosts = d.hosts;
+  const box = document.querySelector("main.content");
+  const W = Math.max(320, Math.min(1180, (box ? box.clientWidth : window.innerWidth) - 34));
+  const narrow = W < 620;
+  const nw = narrow ? Math.min(150, W / 2 - 16) : 184, nh = 80;
+  const pos = {};
+  const centre = hosts.find((x) => x.server) || hosts[0];
+  const others = hosts.filter((x) => x !== centre);
+  const cx = W / 2, cy = narrow ? 140 : 200;
+  if (centre) pos[centre.id] = [cx, cy];
+  let H;
+  if (narrow) {
+    // a phone: the others in two columns below the centre
+    others.forEach((x, i) => { pos[x.id] = [i % 2 ? W - nw / 2 - 8 : nw / 2 + 8, cy + 150 + Math.floor(i / 2) * 140 + (i % 2) * 40]; });
+    H = (others.length ? cy + 150 + Math.floor((others.length - 1) / 2) * 140 + (others.length > 1 ? 40 : 0) : cy) + nh / 2 + 30;
+  } else {
+    const rx = Math.max(nw * 0.9, W / 2 - nw / 2 - 12), ry = others.length ? 170 : 0;
+    others.forEach((x, i) => {
+      const th = Math.PI - Math.PI * (i + 0.5) / others.length;
+      pos[x.id] = [cx + rx * Math.cos(th), cy + ry * Math.sin(th) * (others.length > 2 ? 1 : 0.85)];
+    });
+    H = cy + ry + nh / 2 + (centre && centre.server ? 34 : 20);
+  }
+  const net = [cx, 34];
+  const svg = sv("svg", { viewBox: "0 0 " + W + " " + H, width: W, height: H, class: "topo", role: "img", "aria-label": t("topology") });
+  const still = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const edges = sv("g"), labels = sv("g"), nodes = sv("g");
+  svg.append(edges, labels, nodes);
+  const byId = Object.fromEntries(hosts.map((x) => [x.id, x]));
+
+  // links to addresses that are none of our hosts
+  for (const x of hosts) {
+    const n = (x.ext_in || 0) + (x.ext_out || 0);
+    if (!pos[x.id] || !x.metrics) continue;
+    const [x1, y1] = pos[x.id];
+    const ln = hoverTip(sv("line", { x1, y1: y1 - nh / 2, x2: net[0], y2: net[1] + 14, class: "edge ext", "stroke-width": n ? 1 + Math.log10(1 + n) : 1 }),
+      x.name + "  ·  " + t("internet") + ": " + (x.ext_in || 0) + " " + t("connIn") + ", " + (x.ext_out || 0) + " " + t("connOut"));
+    edges.append(ln);
+  }
+
+  // one curve per pair of hosts, the flows of both directions on it
+  const pairs = {};
+  for (const f of d.flows) {
+    if (!pos[f.from] || !pos[f.to]) continue;
+    const k = [f.from, f.to].sort().join("|");
+    (pairs[k] = pairs[k] || []).push(f);
+  }
+  let pid = 0;
+  for (const [k, flows] of Object.entries(pairs)) {
+    const [a, b] = k.split("|");
+    const [x1, y1] = pos[a], [x2, y2] = pos[b];
+    const mx = (x1 + x2) / 2, my = (y1 + y2) / 2, len = Math.hypot(x2 - x1, y2 - y1) || 1;
+    const bend = Math.min(60, len * 0.18);
+    const qx = mx - (y2 - y1) / len * bend, qy = my + (x2 - x1) / len * bend;
+    const id = "tp" + (pid++);
+    const n = flows.reduce((s, f) => s + f.n, 0);
+    const path = sv("path", { id, d: "M" + x1 + "," + y1 + " Q" + qx + "," + qy + " " + x2 + "," + y2, class: "edge", "stroke-width": (1.5 + Math.log2(1 + n)).toFixed(1) });
+    const text = flows.map((f) => portName(f.port, d.agent_port) + " ×" + f.n).join("  ·  ");
+    const detail = flows.map((f) => (byId[f.from] || {}).name + " → " + (byId[f.to] || {}).name + "  " + portName(f.port, d.agent_port) + " (" + f.port + ")  ·  " + f.n + "  " +
+      [f.client_proc, f.server_proc].filter(Boolean).join(" → ")).join("\n");
+    edges.append(hoverTip(path, detail));
+    if (!still) {
+      for (const f of flows) {
+        const forward = f.from === a;
+        const dots = Math.min(3, 1 + Math.floor(Math.log2(f.n)));
+        for (let i = 0; i < dots; i++) {
+          const dur = 3.2;
+          edges.append(sv("circle", { r: 3, class: "particle" + (f.port === d.agent_port ? " vigil" : "") },
+            sv("animateMotion", { dur: dur + "s", repeatCount: "indefinite", begin: (-dur * i / dots).toFixed(2) + "s",
+              keyPoints: forward ? "0;1" : "1;0", keyTimes: "0;1", calcMode: "linear" }, sv("mpath", { href: "#" + id }))));
+        }
+      }
+    }
+    // label at the curve's middle
+    const lx = (x1 + 2 * qx + x2) / 4, ly = (y1 + 2 * qy + y2) / 4;
+    const tw = Math.min(narrow ? 132 : 220, text.length * 6.4 + 14);
+    const shown = text.length * 6.4 + 14 > tw ? text.slice(0, Math.floor((tw - 20) / 6.4)) + "…" : text;
+    const covers = Object.values(pos).some(([nx, ny]) => Math.abs(nx - lx) < nw / 2 + tw / 2 && Math.abs(ny - ly) < nh / 2 + 10);
+    if (!covers) labels.append(hoverTip(sv("g", { class: "elabel" },
+      sv("rect", { x: lx - tw / 2, y: ly - 10, width: tw, height: 20, rx: 10 }),
+      sv("text", { x: lx, y: ly + 4, "text-anchor": "middle" }, shown)), detail));
+  }
+
+  // the internet
+  const extIn = hosts.reduce((s, x) => s + (x.ext_in || 0), 0), extOut = hosts.reduce((s, x) => s + (x.ext_out || 0), 0);
+  nodes.append(hoverTip(sv("g", { class: "netnode" },
+    sv("rect", { x: net[0] - 62, y: net[1] - 16, width: 124, height: 32, rx: 16 }),
+    sv("text", { x: net[0], y: net[1] + 4, "text-anchor": "middle" }, t("internet"))),
+    t("internet") + ": " + extIn + " " + t("connIn") + ", " + extOut + " " + t("connOut")));
+
+  for (const x of hosts) {
+    const [px, py] = pos[x.id];
+    const m = x.metrics;
+    const cpu = m ? m.cpu : 0, mem = m ? pctOf(m.mem_used, m.mem_total) : 0;
+    const g = sv("g", { class: "node" + (x.server ? " server" : "") + (x.status !== "online" || x.stale ? " off" : ""), tabindex: 0, role: "link", "aria-label": x.name });
+    g.append(sv("rect", { x: px - nw / 2, y: py - nh / 2, width: nw, height: nh, rx: 10, class: "nbox" }));
+    g.append(sv("circle", { cx: px - nw / 2 + 15, cy: py - nh / 2 + 16, r: 4, class: "ndot " + x.status }));
+    const name = x.name.length > (narrow ? 14 : 19) ? x.name.slice(0, narrow ? 13 : 18) + "…" : x.name;
+    g.append(sv("text", { x: px - nw / 2 + 24, y: py - nh / 2 + 20, class: "nname" }, name));
+    if (m) {
+      const bw = nw - 26;
+      [[t("cpu"), cpu, 0], [narrow ? "RAM" : t("memory"), mem, 1]].forEach(([lab, v, i]) => {
+        const y = py - nh / 2 + 40 + i * 21;
+        g.append(sv("text", { x: px - nw / 2 + 13, y, class: "nsub" }, lab));
+        g.append(sv("text", { x: px + nw / 2 - 13, y, class: "nsub strong", "text-anchor": "end" }, Math.round(v) + " %"));
+        g.append(sv("rect", { x: px - nw / 2 + 13, y: y + 5, width: bw, height: 4, rx: 2, class: "ntrack" }));
+        g.append(sv("rect", { x: px - nw / 2 + 13, y: y + 5, width: Math.max(2, bw * Math.min(100, v) / 100), height: 4, rx: 2, class: "nfill " + level(v) }));
+      });
+    } else {
+      g.append(sv("text", { x: px - nw / 2 + 13, y: py + 12, class: "nsub" }, x.status === "online" ? "·" : t(x.status)));
+    }
+    if (x.server) g.append(sv("text", { x: px, y: py + nh / 2 + 16, "text-anchor": "middle", class: "nbadge" }, t("vigilServer")));
+    const info = [x.name, x.hostname, m && x.stale ? t("asOf") + " " + ago(m.ts) : "", m ? t("cpu") + " " + fmtPct(cpu) + "  ·  " + t("memory") + " " + fmtPct(mem) + "  ·  " + t("disk") + " " + fmtPct(m.disk_pct) : "",
+      m ? t("load") + " " + m.load.map((v) => v.toFixed(2)).join(" ") + "  ·  ↓ " + fmtRate(m.rx) + "  ↑ " + fmtRate(m.tx) : "",
+      m ? t("upFor") + " " + fmtUptime(m.uptime) : ""].filter(Boolean).join("\n");
+    hoverTip(g, info);
+    const go = () => { location.hash = "#/hosts/" + x.id; };
+    g.addEventListener("click", go);
+    g.addEventListener("keydown", (e) => { if (e.key === "Enter") go(); });
+    nodes.append(g);
+  }
+  return h("div", { class: "topo-wrap" }, svg);
+}
+
+function hostCard(x, agentPort) {
+  const m = x.metrics;
+  const head = h("div", { class: "hc-head" },
+    h("a", { href: "#/hosts/" + x.id, class: "strong" }, x.name), statusChip(x.status),
+    x.server ? h("span", { class: "pill" }, t("vigilServer")) : null,
+    h("span", { class: "muted right" }, x.version || "·"));
+  if (!m) return h("div", { class: "card hostcard" }, head, h("div", { class: "empty small" }, t("noMetrics")));
+  const mem = pctOf(m.mem_used, m.mem_total);
+  const sp = x.spark;
+  const top = (m.top || []).slice(0, 3);
+  return h("div", { class: "card hostcard" + (x.stale ? " stale" : "") },
+    head,
+    x.stale ? h("div", { class: "pill warn" }, t("asOf") + " " + ago(m.ts)) : null,
+    h("div", { class: "hc-sub" }, [x.hostname, m.cores + " " + t("cores"), t("upFor") + " " + fmtUptime(m.uptime), m.procs + " " + t("processes")].join("  ·  ")),
+    h("div", { class: "hc-meters" },
+      meter(t("cpu"), m.cpu, t("load") + " " + m.load.map((v) => v.toFixed(2)).join(" ")),
+      meter(t("memory"), mem, fmtBytes(m.mem_used) + " " + t("ofTotal") + " " + fmtBytes(m.mem_total)),
+      meter(t("disk"), m.disk_pct, t("fullest")),
+      m.swap_total ? meter(t("swap"), pctOf(m.swap_used, m.swap_total), fmtBytes(m.swap_used) + " " + t("ofTotal") + " " + fmtBytes(m.swap_total)) : null),
+    h("div", { class: "hc-sparks" },
+      h("div", null, h("div", { class: "hc-label" }, t("cpu") + ", " + t("lastHour")), lineChart({ title: t("cpu"), points: sp, compact: true, max: 100, series: [{ label: t("cpu"), get: (p) => p.cpu }], fmt: fmtPct })),
+      h("div", null, h("div", { class: "hc-label" }, t("memory")), lineChart({ title: t("memory"), points: sp, compact: true, max: 100, series: [{ label: t("memory"), get: (p) => p.mem }], fmt: fmtPct })),
+      h("div", null, h("div", { class: "hc-label" }, t("traffic")), lineChart({ title: t("traffic"), points: sp, compact: true, series: [{ label: "↓", get: (p) => p.rx }, { label: "↑", get: (p) => p.tx }], fmt: fmtRate }))),
+    h("div", { class: "hc-facts" },
+      h("span", null, h("span", { class: "muted" }, t("traffic") + " "), "↓ " + fmtRate(m.rx) + "  ↑ " + fmtRate(m.tx)),
+      h("span", null, h("span", { class: "muted" }, t("connections") + " "), m.conn_in + " " + t("netIn") + "  ·  " + m.conn_out + " " + t("netOut"))),
+    top.length ? h("div", { class: "hc-procs" }, top.map((p) => h("div", { class: "hc-proc", title: p.exe || "" },
+      h("span", { class: "mono" }, p.comm), h("span", { class: "muted" }, fmtPct(p.cpu) + "  ·  " + fmtBytes(p.rss))))) : null);
+}
+
+async function hostsView() {
+  const d = await api("/api/ui/hosts");
+  const hosts = d.hosts;
+  const withM = hosts.filter((x) => x.metrics);
+  const online = hosts.filter((x) => x.status === "online").length;
+  const sum = (f) => withM.reduce((s, x) => s + f(x.metrics), 0);
+  const cores = sum((m) => m.cores);
+  const cpuAvg = cores ? sum((m) => m.cpu * m.cores) / cores : 0;
+  const memUsed = sum((m) => m.mem_used), memTotal = sum((m) => m.mem_total);
+  const conns = sum((m) => m.conn_in + m.conn_out);
+  const tiles = h("div", { class: "grid metrics six" },
+    metric(null, "server", t("hosts"), online + " / " + hosts.length, online === hosts.length ? null : "bad", t("online")),
+    metric(null, "layout-dashboard", t("avgCpu"), withM.length ? fmtPct(cpuAvg) : "·", cpuAvg >= 90 ? "bad" : null, cores + " " + t("cores")),
+    metric(null, "stack-2", t("memUsed"), withM.length ? fmtPct(pctOf(memUsed, memTotal)) : "·", pctOf(memUsed, memTotal) >= 90 ? "bad" : null, fmtBytes(memUsed) + " " + t("ofTotal") + " " + fmtBytes(memTotal)),
+    metric(null, "world", t("throughput"), withM.length ? fmtRate(sum((m) => m.rx + m.tx)) : "·", null, "↓ " + fmtRate(sum((m) => m.rx)) + "  ↑ " + fmtRate(sum((m) => m.tx))),
+    metric(null, "affiliate", t("hostLinks"), d.flows.length, null, d.flows.reduce((s, f) => s + f.n, 0) + " " + t("connections").toLowerCase()),
+    metric(null, "terminal-2", t("connections"), withM.length ? conns.toLocaleString(lang) : "·", null, sum((m) => m.conn_in) + " " + t("netIn") + "  ·  " + sum((m) => m.conn_out) + " " + t("netOut")));
+  mount(shell("hosts",
+    h("h1", null, t("hosts")),
+    h("div", { class: "crumbs" }, t("hostsSub")),
+    tiles,
+    hosts.length ? null : h("div", { class: "card empty" }, t("noHosts"))));
+  if (!hosts.length) return;
+  // the graph needs the content's real width, known once the page is mounted
+  const content = document.querySelector("main.content");
+  content.append(
+    h("div", { class: "card mt topo-card" },
+      h("div", { class: "panel-head" }, h("h3", null, t("topology")), h("span", { class: "panel-extra" }, t("topologySub"))),
+      topology(d),
+      h("div", { class: "topo-legend" },
+        h("span", { class: "chip" }, h("span", { class: "lg-line" }), t("legendTcp")),
+        h("span", { class: "chip" }, h("span", { class: "lg-line ext" }), t("legendNet")),
+        h("span", { class: "chip" }, h("span", { class: "lg-dot" }), "vigil"))),
+    h("div", { class: "hostgrid mt" }, hosts.map((x) => hostCard(x, d.agent_port))));
+}
+
+const RANGES = ["1h", "6h", "24h", "7d", "30d"];
+let hostRange = store("vigil.hostRange") || "6h";
+async function performanceSection(a, hostsData) {
+  const r = RANGES.includes(hostRange) ? hostRange : "6h";
+  const d = await api("/api/ui/agents/" + encodeURIComponent(a.id) + "/metrics?range=" + r);
+  const pts = d.points, step = d.step, m = d.latest;
+  const pick = h("div", { class: "rangepick" }, RANGES.map((x) => h("button", { class: "btn small" + (x === r ? "" : " ghost"), onclick: () => { hostRange = x; store("vigil.hostRange", x); render(); } }, x)));
+  const cores = m ? m.cores : 0;
+  const owner = {};
+  for (const x of (hostsData && hostsData.hosts) || []) for (const f of (x.metrics && x.metrics.ifaces) || []) for (const ip of f.addrs || []) owner[ip] = x.name;
+  const out = [h("div", { class: "flex mt" }, h("h2", null, t("performance")), h("div", { class: "right" }, pick))];
+  if (!pts.length && !m) return [...out, h("div", { class: "card empty" }, t("noMetrics"))];
+  out.push(h("div", { class: "grid perfgrid" },
+    lineChart({ title: t("cpu"), points: pts, step, max: 100, fmt: fmtPct, series: [{ label: t("cpu"), get: (p) => p.cpu }, { label: t("iowait"), get: (p) => p.iow }, { label: t("steal"), get: (p) => p.st }] }),
+    lineChart({ title: t("memory"), points: pts, step, max: 100, fmt: fmtPct, series: [{ label: t("memory"), get: (p) => p.mem }, { label: t("swap"), get: (p) => p.swap }] }),
+    lineChart({ title: t("load") + (cores ? "  (" + cores + " " + t("cores") + ")" : ""), points: pts, step, ref: cores, fmt: (v) => (Number(v) || 0).toFixed(2), series: [{ label: t("load"), get: (p) => p.l1 }] }),
+    lineChart({ title: t("traffic"), points: pts, step, fmt: fmtRate, series: [{ label: t("netIn"), get: (p) => p.rx }, { label: t("netOut"), get: (p) => p.tx }] }),
+    lineChart({ title: t("diskIO"), points: pts, step, fmt: fmtRate, series: [{ label: t("readL"), get: (p) => p.dr }, { label: t("writeL"), get: (p) => p.dw }] }),
+    lineChart({ title: t("connections"), points: pts, step, fmt: (v) => Math.round(Number(v) || 0).toLocaleString(lang), series: [{ label: t("connIn"), get: (p) => p.ci }, { label: t("connOut"), get: (p) => p.co }] })));
+  if (!m) return out;
+  const usage = (used, total) => {
+    const fill = h("span", { class: "meter-fill " + level(pctOf(used, total)) });
+    fill.style.width = Math.min(100, pctOf(used, total)) + "%";
+    return h("div", { class: "usage" }, h("div", { class: "meter-bar" }, fill), h("span", { class: "muted nowrap" }, fmtPct(pctOf(used, total))));
+  };
+  out.push(h("div", { class: "grid two mt" },
+    h("div", null, h("h3", null, t("disks")), h("div", { class: "tablewrap" }, h("table", null,
+      h("thead", null, h("tr", null, [t("mount"), "FS", t("size"), t("used")].map((x) => h("th", null, x)))),
+      h("tbody", null, (m.disks || []).map((x) => h("tr", null, h("td", { class: "mono" }, x.mount), h("td", null, x.fs), h("td", { class: "nowrap" }, fmtBytes(x.total)), h("td", null, usage(x.used, x.total)))))))),
+    h("div", null, h("h3", null, t("interfaces")), h("div", { class: "tablewrap" }, h("table", null,
+      h("thead", null, h("tr", null, ["", t("ip"), "↓", "↑"].map((x) => h("th", null, x)))),
+      h("tbody", null, (m.ifaces || []).map((x) => h("tr", null, h("td", { class: "mono" }, x.name), h("td", { class: "mono" }, (x.addrs || []).join("  ")),
+        h("td", { class: "nowrap" }, fmtRate(x.rx)), h("td", { class: "nowrap" }, fmtRate(x.tx))))))))));
+  out.push(h("h3", { class: "mt" }, t("topProcs")), h("div", { class: "tablewrap" }, h("table", null,
+    h("thead", null, h("tr", null, [t("program"), "PID", t("cpu"), t("memory")].map((x) => h("th", null, x)))),
+    h("tbody", null, (m.top || []).map((p) => h("tr", null, h("td", null, h("span", { class: "strong" }, p.comm), " ", h("span", { class: "muted mono" }, p.exe || "")),
+      h("td", { class: "mono" }, p.pid), h("td", { class: "nowrap" }, fmtPct(p.cpu)), h("td", { class: "nowrap" }, fmtBytes(p.rss))))))));
+  const peers = (m.peers || []).slice().sort((x, y) => (owner[y.ip] ? 1 : 0) - (owner[x.ip] ? 1 : 0) || y.n - x.n);
+  if (peers.length) out.push(h("h3", { class: "mt" }, t("peers")), h("div", { class: "tablewrap" }, h("table", null,
+    h("thead", null, h("tr", null, [t("remote"), "Port", t("direction"), "n", t("program")].map((x) => h("th", null, x)))),
+    h("tbody", null, peers.map((p) => h("tr", null,
+      h("td", null, owner[p.ip] ? h("span", { class: "strong" }, owner[p.ip] + " ") : null, h("span", { class: "mono" }, entityLink("ip", p.ip) || p.ip)),
+      h("td", { class: "nowrap" }, portName(p.port, hostsData && hostsData.agent_port) + (PORT_NAMES[p.port] || p.port === (hostsData && hostsData.agent_port) ? " (" + p.port + ")" : "")),
+      h("td", null, t(p.out ? "outgoing" : "incoming")), h("td", null, p.n), h("td", { class: "mono" }, p.process || "")))))));
+  return out;
+}
+
 let refreshTimer = null;
 let selftestOpen = false;
+let lastHash = null;
 async function render() {
   clearTimeout(refreshTimer);
+  // a page refreshing itself keeps where the reader was
+  const box = document.querySelector("main.content");
+  const keep = lastHash === location.hash && box ? box.scrollTop : 0;
+  lastHash = location.hash;
+  tip(null, null);
   if (!me) {
     try { me = await api("/api/ui/me"); } catch { me = null; }
     if (!me) return loginView();
@@ -2657,6 +3018,7 @@ async function render() {
     if (parts[0] === "alerts" && parts[1]) await alertDetail(parts[1]);
     else if (parts[0] === "alerts") await alertsView();
     else if (parts[0] === "hosts" && parts[1]) await hostView(parts[1]);
+    else if (parts[0] === "hosts") await hostsView();
     else if (parts[0] === "events") await eventsView(params);
     else if (parts[0] === "timeline") await timelineView(params);
     else if (parts[0] === "sessions") await sessionsView(params);
@@ -2673,11 +3035,12 @@ async function render() {
     else if (parts[0] === "incidents") await incidentsView();
     else if (parts[0] === "settings") await settingsView();
     else await overview();
+    if (keep) { const b = document.querySelector("main.content"); if (b) b.scrollTop = keep; }
   } catch (x) {
     if (x.message !== "unauthorized") { console.error(x); mount(shell("", h("div", { class: "card err" }, x.message))); }
   }
   // The overview and alert list refresh themselves; forms are left alone.
-  if (!parts.length || (parts[0] === "alerts" && !parts[1])) refreshTimer = setTimeout(render, 30000);
+  if (!parts.length || (parts[0] === "alerts" && !parts[1]) || (parts[0] === "hosts" && !parts[1])) refreshTimer = setTimeout(render, 30000);
   // A running self test finishes within minutes; follow it on the host page.
   if (parts[0] === "hosts" && selftestOpen) refreshTimer = setTimeout(render, 10000);
 }

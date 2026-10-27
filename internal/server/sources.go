@@ -212,6 +212,13 @@ func (s *Server) neverList() []netip.Prefix {
 			out = append(out, netip.PrefixFrom(ip, ip.BitLen()))
 		}
 	}
+	// the interface addresses from the load samples (metrics.mu before s.mu
+	// is never held together)
+	for _, list := range s.metricsAddrs() {
+		for _, ip := range list {
+			add(ip)
+		}
+	}
 	s.mu.Lock()
 	for _, a := range s.state.Agents {
 		add(a.LastIP)

@@ -125,6 +125,9 @@ type Config struct {
 	Yara *bool `json:"yara,omitempty"`
 	// Volume reports bytes sent and received per hour.
 	Volume *bool `json:"volume,omitempty"`
+	// Metrics reports CPU, memory, disk and network load once a minute,
+	// with the busiest processes and the hosts this one talks to.
+	Metrics *bool `json:"metrics,omitempty"`
 	// WebLogs are access logs to watch for scans and attacks.
 	WebLogs []WebLog `json:"web_logs,omitempty"`
 

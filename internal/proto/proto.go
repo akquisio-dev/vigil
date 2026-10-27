@@ -54,6 +54,77 @@ type Batch struct {
 	SentAt        time.Time `json:"sent_at"`
 	ConfigVersion int64     `json:"config_version"`
 	Events        []Event   `json:"events"`
+	// Metrics are the load samples taken since the last batch. They travel
+	// beside the events, so a backlog of them never pushes a security event
+	// out of the agent's queue, and the server keeps them out of the event
+	// store. A server before v0.29.0 ignores the field.
+	Metrics []Metrics `json:"metrics,omitempty"`
+}
+
+// Metrics is one sample of a host's load, taken once a minute. Rates are per
+// second over the minute before TS. The detail lists (disks, interfaces,
+// processes, peers) are only filled on the newest sample of a batch.
+type Metrics struct {
+	TS        time.Time  `json:"ts"`
+	Cores     int        `json:"cores"`
+	CPU       float64    `json:"cpu"` // percent busy, all cores together
+	IOWait    float64    `json:"iowait"`
+	Steal     float64    `json:"steal"`
+	Load      [3]float64 `json:"load"`
+	MemTotal  uint64     `json:"mem_total"`
+	MemUsed   uint64     `json:"mem_used"` // total minus available
+	MemCache  uint64     `json:"mem_cache"`
+	SwapTotal uint64     `json:"swap_total"`
+	SwapUsed  uint64     `json:"swap_used"`
+	RX        float64    `json:"rx"` // bytes per second, physical and VPN interfaces
+	TX        float64    `json:"tx"`
+	DiskRead  float64    `json:"disk_read"` // bytes per second, whole disks
+	DiskWrite float64    `json:"disk_write"`
+	DiskPct   float64    `json:"disk_pct"` // fullest file system
+	Procs     int        `json:"procs"`
+	Uptime    int64      `json:"uptime"`   // seconds
+	ConnIn    int        `json:"conn_in"`  // established TCP to a listening port
+	ConnOut   int        `json:"conn_out"` // established TCP this host opened
+
+	Disks  []DiskUse   `json:"disks,omitempty"`
+	Ifaces []IfaceRate `json:"ifaces,omitempty"`
+	Top    []ProcLoad  `json:"top,omitempty"`
+	Peers  []Peer      `json:"peers,omitempty"`
+}
+
+type DiskUse struct {
+	Mount string `json:"mount"`
+	FS    string `json:"fs"`
+	Total uint64 `json:"total"`
+	Used  uint64 `json:"used"`
+}
+
+type IfaceRate struct {
+	Name  string   `json:"name"`
+	RX    float64  `json:"rx"`
+	TX    float64  `json:"tx"`
+	Addrs []string `json:"addrs,omitempty"`
+}
+
+// ProcLoad names a busy process by its program only; command lines can
+// hold secrets and never leave the host this way.
+type ProcLoad struct {
+	PID  int     `json:"pid"`
+	Comm string  `json:"comm"`
+	Exe  string  `json:"exe,omitempty"`
+	CPU  float64 `json:"cpu"` // percent of one core
+	RSS  uint64  `json:"rss"`
+}
+
+// Peer counts established TCP connections with one remote address. Inbound
+// ones are keyed by the local listening port, outbound ones by the remote
+// port, so both ends of a connection between two hosts name the same port.
+type Peer struct {
+	IP      string `json:"ip"`
+	Port    int    `json:"port"`
+	Out     bool   `json:"out"`
+	N       int    `json:"n"`
+	Process string `json:"process,omitempty"`
 }
 
 // BatchResponse returns the signed agent configuration whenever the agent's

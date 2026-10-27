@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"math"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -191,6 +192,7 @@ func TestWriteDemoData(t *testing.T) {
 	}
 	s.state.Canaries["demo-canary"].Triggers = 1
 	s.state.Canaries["demo-canary"].LastTrigg = day(5, 2).Add(6 * time.Minute)
+	demoMetrics(s, hosts, now, rng)
 	if err := s.state.Save(dir); err != nil {
 		t.Fatal(err)
 	}
@@ -217,4 +219,67 @@ func demoPorts(host int) []map[string]any {
 			"process": p[3], "key": fmt.Sprintf("listen/%s/%s:%d", p[0], p[1], port)})
 	}
 	return out
+}
+
+// demoMetrics writes a week of load samples: a daily rhythm, the web host
+// running the vigil server, and the three hosts talking over a VPN.
+func demoMetrics(s *Server, hosts []*AgentRec, now time.Time, rng *rand.Rand) {
+	hosts[0].LastIP = "127.0.0.1"
+	hosts[1].LastIP, hosts[2].LastIP = "10.90.0.2", "10.90.0.3"
+	type shape struct {
+		cpu, mem, net float64
+		cores         int
+		mem_total     uint64
+	}
+	shapes := []shape{{18, 55, 900e3, 4, 8 << 30}, {42, 71, 300e3, 8, 16 << 30}, {12, 86, 150e3, 4, 32 << 30}}
+	ifs := [][]proto.IfaceRate{
+		{{Name: "eth0", Addrs: []string{"192.0.2.10"}}, {Name: "wg0", Addrs: []string{"10.90.0.1"}}},
+		{{Name: "eth0", Addrs: []string{"192.0.2.20"}}, {Name: "wg0", Addrs: []string{"10.90.0.2"}}},
+		{{Name: "eth0", Addrs: []string{"198.51.100.7"}}, {Name: "wg0", Addrs: []string{"10.90.0.3"}}},
+	}
+	peers := [][]proto.Peer{
+		{{IP: "10.90.0.2", Port: 8080, Out: true, N: 6, Process: "nginx"}, {IP: "10.90.0.2", Port: 8471, N: 1, Process: "vigil-server"}, {IP: "10.90.0.3", Port: 8471, N: 1, Process: "vigil-server"}},
+		{{IP: "10.90.0.1", Port: 8080, N: 6, Process: "java"}, {IP: "10.90.0.3", Port: 5432, Out: true, N: 12, Process: "java"}, {IP: "10.90.0.1", Port: 8471, Out: true, N: 1, Process: "vigil-agent"}, {IP: "10.90.0.3", Port: 22, Out: true, N: 1, Process: "ssh"}},
+		{{IP: "10.90.0.2", Port: 5432, N: 12, Process: "postgres"}, {IP: "10.90.0.1", Port: 8471, Out: true, N: 1, Process: "vigil-agent"}},
+	}
+	tops := [][]proto.ProcLoad{
+		{{PID: 812, Comm: "nginx", Exe: "/usr/sbin/nginx", CPU: 6.2, RSS: 96 << 20}, {PID: 1201, Comm: "node", Exe: "/usr/bin/node", CPU: 11.8, RSS: 610 << 20}, {PID: 640, Comm: "vigil-server", Exe: "/usr/local/bin/vigil-server", CPU: 0.4, RSS: 88 << 20}},
+		{{PID: 2210, Comm: "java", Exe: "/usr/lib/jvm/java-21/bin/java", CPU: 88.5, RSS: 5 << 30}, {PID: 990, Comm: "redis-server", Exe: "/usr/bin/redis-server", CPU: 2.1, RSS: 410 << 20}},
+		{{PID: 1500, Comm: "postgres", Exe: "/usr/lib/postgresql/16/bin/postgres", CPU: 14.0, RSS: 21 << 30}},
+	}
+	s.metrics.hosts = map[string]*hostMetrics{}
+	for i, a := range hosts {
+		hm := &hostMetrics{}
+		sh := shapes[i]
+		end := a.LastSeen
+		for ts := now.Add(-7 * 24 * time.Hour); !ts.After(end); ts = ts.Add(time.Minute) {
+			hour := float64(ts.Hour()) + float64(ts.Minute())/60
+			wave := 0.6 + 0.4*math.Sin((hour-9)/24*2*math.Pi)
+			cpu := math.Min(100, sh.cpu*wave*(0.8+0.4*rng.Float64())+rng.Float64()*3)
+			if i == 1 && ts.Hour() == 3 && ts.Minute() < 20 {
+				cpu = 92 + rng.Float64()*6 // the nightly batch job
+			}
+			memPct := sh.mem + 4*math.Sin(float64(ts.Unix())/86400) + rng.Float64()
+			m := proto.Metrics{TS: ts, Cores: sh.cores, CPU: cpu, IOWait: cpu * 0.05 * rng.Float64(), Steal: rng.Float64() * 0.8,
+				Load:     [3]float64{cpu / 100 * float64(sh.cores), cpu / 110 * float64(sh.cores), cpu / 120 * float64(sh.cores)},
+				MemTotal: sh.mem_total, MemUsed: uint64(float64(sh.mem_total) * memPct / 100), MemCache: sh.mem_total / 5,
+				SwapTotal: 2 << 30, SwapUsed: uint64(rng.Float64() * float64(200<<20)),
+				RX: sh.net * wave * (0.7 + 0.6*rng.Float64()), TX: sh.net * 0.6 * wave * (0.7 + 0.6*rng.Float64()),
+				DiskRead: 2e6 * wave * rng.Float64(), DiskWrite: 4e6 * wave * rng.Float64(), DiskPct: []float64{41, 63, 78}[i],
+				Procs: 180 + 40*i, Uptime: int64(ts.Sub(now.Add(-30 * 24 * time.Hour)).Seconds()),
+				ConnIn: []int{140, 9, 13}[i] + rng.Intn(20), ConnOut: []int{8, 15, 2}[i]}
+			hm.add(m)
+		}
+		last := *hm.Last
+		last.Ifaces = ifs[i]
+		for j := range last.Ifaces {
+			last.Ifaces[j].RX, last.Ifaces[j].TX = last.RX*(0.8-0.6*float64(j)), last.TX*(0.8-0.6*float64(j))
+		}
+		last.Disks = []proto.DiskUse{{Mount: "/", FS: "ext4", Total: 160 << 30, Used: uint64(float64(160<<30) * last.DiskPct / 100)}, {Mount: "/boot", FS: "ext4", Total: 1 << 30, Used: 300 << 20}}
+		last.Top, last.Peers = tops[i], peers[i]
+		hm.Latest, hm.Last = &last, &last
+		s.metrics.hosts[a.ID] = hm
+	}
+	s.metrics.dirty = true
+	s.saveMetrics(true)
 }

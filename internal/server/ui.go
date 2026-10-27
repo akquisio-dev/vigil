@@ -158,6 +158,8 @@ func (s *Server) uiHandler() http.Handler {
 	mux.HandleFunc("GET /api/ui/session", s.auth(s.handleSession))
 	mux.HandleFunc("POST /api/ui/agents/{id}/snapshot", s.analyst(s.handleSnapshotRequest))
 	mux.HandleFunc("GET /api/ui/agents/{id}", s.auth(s.handleAgent))
+	mux.HandleFunc("GET /api/ui/agents/{id}/metrics", s.auth(s.handleAgentMetrics))
+	mux.HandleFunc("GET /api/ui/hosts", s.auth(s.handleHosts))
 	mux.HandleFunc("POST /api/ui/agents/{id}/{action}", s.adminOnly(s.handleAgentAction))
 	mux.HandleFunc("GET /api/ui/release/latest", s.adminOnly(s.handleLatestRelease))
 	mux.HandleFunc("POST /api/ui/tokens", s.adminOnly(s.handleToken))

@@ -36,6 +36,7 @@ type Agent struct {
 	mu            sync.Mutex
 	queue         []proto.Event
 	dropped       int
+	metrics       []proto.Metrics // load samples waiting for the next batch
 	keyNames      map[string]keyRef
 	sshFails      map[string]*failures
 	sshConns      map[string]int // "ip port" -> connection state, per batch
@@ -178,6 +179,9 @@ func (a *Agent) Run(ctx context.Context) error {
 	if on(a.cfg.Volume) {
 		go a.runVolume(ctx)
 	}
+	if on(a.cfg.Metrics) {
+		go a.runMetrics(ctx)
+	}
 	if on(a.cfg.Yara) {
 		a.loadYaraState()
 		go a.runTmpScan(ctx.Done())
@@ -279,6 +283,8 @@ func (a *Agent) send(ctx context.Context) {
 	a.queue = rest
 	dropped := a.dropped
 	a.dropped = 0
+	metrics := a.metrics
+	a.metrics = nil
 	a.mu.Unlock()
 	for _, typ := range tooBig {
 		events = append(events, proto.NewEvent("agent.warning", map[string]any{"collector": "send", "error": "event " + typ + " too large to send, dropped"}))
@@ -293,7 +299,7 @@ func (a *Agent) send(ctx context.Context) {
 		events = []proto.Event{}
 	}
 
-	b := proto.Batch{AgentID: a.id.AgentID, Seq: a.nextSeq(), SentAt: time.Now().UTC(), ConfigVersion: a.state.ConfigVersion, Events: events}
+	b := proto.Batch{AgentID: a.id.AgentID, Seq: a.nextSeq(), SentAt: time.Now().UTC(), ConfigVersion: a.state.ConfigVersion, Events: events, Metrics: metrics}
 	resp, err := a.post(ctx, "/api/agent/events", b)
 	if ctx.Err() == nil {
 		a.fallback.result(err, time.Now())
@@ -307,6 +313,11 @@ func (a *Agent) send(ctx context.Context) {
 			a.queue = a.queue[over:]
 			a.dropped += over
 		}
+		// Samples taken meanwhile are newer; the older ones lose their detail.
+		for _, m := range a.metrics {
+			metrics = keepMetrics(metrics, m)
+		}
+		a.metrics = metrics
 		a.mu.Unlock()
 		return
 	}

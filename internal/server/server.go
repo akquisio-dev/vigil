@@ -61,6 +61,7 @@ type Server struct {
 	incNotes     map[string]*incidentNote // guarded by mu
 	groupDelay   time.Duration            // tests only; see groupWindow
 	latest       latestCache
+	metrics      metricsSet // load samples, own lock, never inside it take s.mu
 
 	fmu     sync.Mutex
 	fkey    ed25519.PrivateKey // federation.key, signs the feed only
@@ -158,6 +159,7 @@ func (s *Server) Run(ctx context.Context) error {
 	go s.refreshGeo()
 	s.loadPackages()
 	s.loadApps()
+	s.loadMetrics()
 	go s.refreshVulns()
 	s.loadYara()
 	go s.refreshHashes()
@@ -223,6 +225,7 @@ func (s *Server) Run(ctx context.Context) error {
 	}
 	s.record("server", "", "", proto.NewEvent("server.stopping", nil))
 	s.saveState()
+	s.saveMetrics(true)
 	return nil
 }
 
@@ -262,6 +265,7 @@ func (s *Server) loop(ctx context.Context) {
 		case <-pull.C:
 			go s.pullSources()
 		case <-beat.C:
+			s.saveMetrics(false)
 			s.expireSuppressions()
 			s.checkSummary()
 			if s.cfg.HeartbeatURL != "" {
@@ -520,6 +524,7 @@ func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 	back := a.Silent
 	a.Silent = false
 	s.mu.Unlock()
+	s.metricsReceived(a.ID, b.Metrics)
 
 	recs := make([]*Record, 0, len(b.Events)+1)
 	if back {

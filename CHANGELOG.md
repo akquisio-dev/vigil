@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- New tab **Hosts**: every host with CPU (with waiting for disk and time taken by the hypervisor), memory, swap, the fullest file system, load, network and disk throughput, connections and its busiest processes, and a graph of the hosts with the TCP links between them, per port and program, the vigil server in the middle and the internet above. The host page gets a performance section with graphs for 1 hour to 30 days, disks, interfaces, processes and connections by remote host. UDP (games, WireGuard) only shows as interface traffic.
+- Agents send a load sample once a minute (`metrics`, on by default) beside the events, not in them: a backlog never pushes a security event out of the queue, and the samples stay out of the event log. The server keeps them in `metrics.json`, a minute ring for a day and hourly averages with peaks for 30 days. Processes are named by program only, never by command line. A server before this version ignores the samples, so roll out the server first.
+- The interface addresses from the load samples join the addresses a feed never names.
+
 ## v0.28.0
 
 - Sources: allied vigil networks exchange attack data over a VPN, read-only. Each share decides per partner what may leave (categories, detail, period, minimum attempts, the partner's own networks), with a preview; host names, own addresses, logins, existing user names, paths and alert texts can never be shared. Fetched feeds are signed with their own key and pinned by fingerprint, normalised and bounded, never reach the threat lists or playbooks, and raise only `source.login` and `source.outbound` (trust medium or high). New tab with overlap matrix, lead time, comparison per source, heatmap, flow diagram and ranking. New option `federation`. Going back to an older server drops the shares and sources on its next save.
