@@ -234,6 +234,7 @@ func (s *Store) Head() (uint64, string) {
 
 type Query struct {
 	Agent  string
+	Agents map[string]bool // a group of hosts; nil means any
 	Prefix string
 	Before uint64
 	Limit  int
@@ -252,7 +253,7 @@ func (s *Store) Recent(q Query) []Record {
 		if q.Before > 0 && r.Seq >= q.Before {
 			continue
 		}
-		if q.Agent != "" && r.Agent != q.Agent {
+		if q.Agent != "" && r.Agent != q.Agent || q.Agents != nil && !q.Agents[r.Agent] {
 			continue
 		}
 		if q.Prefix != "" && !strings.HasPrefix(r.Event.Type, q.Prefix) {

@@ -11,6 +11,7 @@ import (
 type AgentRec struct {
 	ID        string    `json:"id"`
 	Name      string    `json:"name"`
+	Tags      []string  `json:"tags,omitempty"` // groups set in the dashboard (owner, role, place)
 	Hostname  string    `json:"hostname"`
 	PublicKey string    `json:"public_key"`
 	Version   string    `json:"version"`

@@ -104,7 +104,7 @@ type loginView struct {
 // alerts per day by severity, ATT&CK tactics, top rules, attacking addresses,
 // recent logins and the time until a person looked at an alert.
 // The caller holds s.mu.
-func (s *Server) dashboard(now time.Time, events []Record) map[string]any {
+func (s *Server) dashboard(now time.Time, events []Record, in map[string]bool) map[string]any {
 	dayStart := now.Truncate(24 * time.Hour).Add(-6 * 24 * time.Hour)
 	perDay := make([]map[string]int, 7)
 	for i := range perDay {
@@ -114,6 +114,9 @@ func (s *Server) dashboard(now time.Time, events []Record) map[string]any {
 	ruleCount := map[string]int{}
 	var ackTimes []time.Duration
 	for _, al := range s.state.Alerts {
+		if !inScope(in, al.Agent) {
+			continue
+		}
 		if al.Acked != nil && now.Sub(*al.Acked) < 30*24*time.Hour {
 			ackTimes = append(ackTimes, al.Acked.Sub(al.Created))
 		}

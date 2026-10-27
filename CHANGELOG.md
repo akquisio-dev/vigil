@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- One host or one group everywhere: a selector at the top of the overview, hosts, alerts, incidents, events, sessions and attackers narrows them, holds across pages and reloads, and comes with links as `?host=` or `?group=`. API: `agent` and `group` on `/api/ui/overview`, `/api/ui/alerts`, `/api/ui/incidents`, `/api/ui/events`, `agent` on `/api/ui/attacks` (the addresses that tried that host).
+- Host groups: up to eight tags per host (owner, role, place), set on the host page by admins and shown on the hosts tab, host cards and host table.
+- The alert list filters by severity, rule, period and text and groups by rule or host. Analysts acknowledge or resolve everything shown at once (`POST /api/ui/alerts/bulk`, each alert audited). `/api/ui/alerts` takes `severity`, `rule`, `q` and `days` and returns up to 1000 alerts instead of 500.
+- The hosts tab has a table next to the cards, sortable by CPU, memory, disk, load, network, open alerts, updates and version, and filters by state, critical or high alerts and pending reboot. Hosts outside the filter are dimmed in the graph.
+- Pages that refresh themselves wait while someone types into a filter.
+
 ## v0.29.1
 
 - `log.spoofed` no longer fires when a user other than root logs out over SSH. The process sshd runs for the session often exits before journald reads its program, so its last two lines (`Received disconnect from`, `Disconnected from user`) came without one and were taken for a fake. Without the program, only these two lines from a process named sshd are let through, and no login is ever read from them. Seen on every logout of `ubuntu` on the Oracle hosts.

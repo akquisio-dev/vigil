@@ -50,6 +50,7 @@ func TestWriteDemoData(t *testing.T) {
 		}
 		s.state.Agents[a.ID] = a
 	}
+	hosts[0].Tags, hosts[1].Tags, hosts[2].Tags = []string{"E", "web"}, []string{"M", "app"}, []string{"M", "db"}
 	hosts[2].Silent, hosts[2].LastSeen = true, now.Add(-47*time.Minute)
 	hosts[1].Containers = []*Container{
 		{ID: "4f1c2a9b0d11", Name: "app-api-1", Image: "registry.example.com/app/api:2.4.1", Project: "app"},

@@ -97,7 +97,7 @@ type attackRollup struct {
 	upTo  uint64 // records up to this seq are counted by the build at start
 	keep  int    // days kept: 30, or retention_days when shorter
 	ready bool
-	cache map[int]attackCache
+	cache map[string]attackCache // by "days|agent"
 }
 
 func addUnique(list []string, v string, max int) []string {

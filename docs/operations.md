@@ -14,6 +14,27 @@ of a new one.
 
 Every alert names its rule. The [rule catalogue](rules.md) explains each one.
 
+### One host or one group
+
+The selector at the top of the overview, hosts, alerts, incidents, events,
+sessions and attackers pages narrows them to one host or one group of hosts.
+The choice holds across pages and reloads; links can carry it as `?host=ID`
+or `?group=NAME`. Groups are tags set on the host page (owner, role, place),
+up to eight per host. The attackers page narrows to one host only: it then
+lists the addresses that tried that host, with their counts over every host;
+hours of day and tried user names are kept for all hosts together and are
+left out.
+
+The API takes the same filter as `agent=ID` or `group=NAME` on
+`/api/ui/overview`, `/api/ui/alerts`, `/api/ui/incidents` and `/api/ui/events`
+(`/api/ui/attacks` takes `agent` only). `/api/ui/alerts` also takes
+`severity` (comma separated), `rule` (prefix), `q` (text in title, rule or
+host) and `days`.
+
+The alert list filters by severity, rule, period and text, and groups by rule
+or host. Analysts can acknowledge or resolve everything the filter shows at
+once (`POST /api/ui/alerts/bulk`, at most 1000, each audited).
+
 ## Investigating
 
 Every alert tied to a host has a **timeline**: everything the host reported

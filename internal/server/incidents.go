@@ -152,10 +152,14 @@ func (s *Server) handleIncidents(w http.ResponseWriter, r *http.Request, sess *s
 	status := r.URL.Query().Get("status")
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	in := s.scopeLocked(r.URL.Query())
 	out := []incidentView{}
 	var closeTimes []time.Duration
 	for i := len(s.state.Incidents) - 1; i >= 0; i-- {
 		c := s.state.Incidents[i]
+		if !inScope(in, c.Agent) {
+			continue
+		}
 		if c.Closed != nil && time.Since(*c.Closed) < 30*24*time.Hour {
 			closeTimes = append(closeTimes, c.Closed.Sub(c.Created))
 		}

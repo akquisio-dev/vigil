@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
+	"net/url"
 	"path/filepath"
 	"slices"
 	"sort"
@@ -134,6 +135,7 @@ func (s *Server) uiHandler() http.Handler {
 	mux.HandleFunc("POST /api/ui/users/{name}/{action}", s.adminOnly(s.handleUserAction))
 	mux.HandleFunc("GET /api/ui/overview", s.auth(s.handleOverview))
 	mux.HandleFunc("GET /api/ui/alerts", s.auth(s.handleAlerts))
+	mux.HandleFunc("POST /api/ui/alerts/bulk", s.analyst(s.handleAlertsBulk))
 	mux.HandleFunc("POST /api/ui/alerts/{id}/{action}", s.analyst(s.handleAlertAction))
 	mux.HandleFunc("GET /api/ui/events", s.auth(s.handleEventsList))
 	mux.HandleFunc("GET /api/ui/timeline", s.auth(s.handleTimeline))
@@ -283,6 +285,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 type agentView struct {
 	ID             string          `json:"id"`
 	Name           string          `json:"name"`
+	Tags           []string        `json:"tags"`
 	Hostname       string          `json:"hostname"`
 	Version        string          `json:"version"`
 	Status         string          `json:"status"`
@@ -320,7 +323,7 @@ func (s *Server) viewAgent(a *AgentRec) agentView {
 	case a.Stopped:
 		status = "stopped"
 	}
-	v := agentView{ID: a.ID, Name: a.Name, Hostname: a.Hostname, Version: a.Version, Status: status,
+	v := agentView{ID: a.ID, Name: a.Name, Tags: append([]string{}, a.Tags...), Hostname: a.Hostname, Version: a.Version, Status: status,
 		LastSeen: a.LastSeen, LastIP: a.LastIP, Enrolled: a.Enrolled, Ports: len(a.Ports),
 		CanaryRoots: a.CanaryRoots, CanaryReadable: a.CanaryReadable, ConfigSync: a.AckedVersion >= a.ConfigVersion, OpenBySev: map[string]int{}, Updates: a.Updates, Posture: a.Posture, Contain: a.Contain, ResponseTypes: append([]string{}, a.ResponseTypes...), Vulns: a.Vulns, AppVulns: a.AppVulns, Containers: a.Containers, DockerGroup: a.DockerGroup, SelfTest: a.SelfTest, SelfUpdate: a.SelfUpdate, Update: a.Update}
 	if time.Now().Before(a.MaintenanceUntil) {
@@ -365,7 +368,11 @@ func (s *Server) handleOverview(w http.ResponseWriter, r *http.Request, sess *se
 	var hours [24]int
 	var sshFailed [24]int
 	var window []Record
+	in := s.scope(r.URL.Query())
 	s.store.Each(func(rec Record) {
+		if in != nil && !in[rec.Agent] {
+			return
+		}
 		window = append(window, rec)
 		age := hourStart.Sub(rec.Time.Truncate(time.Hour))
 		idx := 23 - int(age/time.Hour)
@@ -382,14 +389,16 @@ func (s *Server) handleOverview(w http.ResponseWriter, r *http.Request, sess *se
 	defer s.mu.Unlock()
 	agents := []agentView{}
 	for _, a := range s.state.Agents {
-		agents = append(agents, s.viewAgent(a))
+		if inScope(in, a.ID) {
+			agents = append(agents, s.viewAgent(a))
+		}
 	}
 	sort.Slice(agents, func(i, j int) bool { return agents[i].Name < agents[j].Name })
 	bySev := map[string]int{}
 	recent := []alertView{}
 	for i := len(s.state.Alerts) - 1; i >= 0; i-- {
 		al := s.state.Alerts[i]
-		if al.Status == "open" {
+		if al.Status == "open" && inScope(in, al.Agent) {
 			bySev[al.Severity]++
 			if len(recent) < 8 {
 				recent = append(recent, s.viewAlert(al, lang(r)))
@@ -404,13 +413,16 @@ func (s *Server) handleOverview(w http.ResponseWriter, r *http.Request, sess *se
 	}
 	canaries, triggered := 0, 0
 	for _, c := range s.state.Canaries {
+		if !inScope(in, c.AgentID) {
+			continue
+		}
 		canaries++
 		if c.Triggers > 0 {
 			triggered++
 		}
 	}
 	seq, head := s.store.Head()
-	out := s.dashboard(now, window)
+	out := s.dashboard(now, window, in)
 	for k, v := range map[string]any{
 		"agents": agents, "open_by_severity": bySev, "recent_alerts": recent,
 		"events_per_hour": hours, "ssh_failed_per_hour": sshFailed,
@@ -424,17 +436,14 @@ func (s *Server) handleOverview(w http.ResponseWriter, r *http.Request, sess *se
 }
 
 func (s *Server) handleAlerts(w http.ResponseWriter, r *http.Request, sess *session) {
-	q := r.URL.Query()
-	status, agent := q.Get("status"), q.Get("agent")
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	f := s.alertFilterLocked(r.URL.Query())
 	out := []alertView{}
-	for i := len(s.state.Alerts) - 1; i >= 0 && len(out) < 500; i-- {
-		al := s.state.Alerts[i]
-		if (status != "" && al.Status != status) || (agent != "" && al.Agent != agent) {
-			continue
+	for i := len(s.state.Alerts) - 1; i >= 0 && len(out) < 1000; i-- {
+		if v := s.viewAlert(s.state.Alerts[i], lang(r)); f.match(v) {
+			out = append(out, v)
 		}
-		out = append(out, s.viewAlert(al, lang(r)))
 	}
 	writeJSON(w, out)
 }
@@ -473,7 +482,11 @@ func (s *Server) handleEventsList(w http.ResponseWriter, r *http.Request, sess *
 	q := r.URL.Query()
 	before, _ := strconv.ParseUint(q.Get("before"), 10, 64)
 	limit, _ := strconv.Atoi(q.Get("limit"))
-	recs := s.store.Recent(Query{Agent: q.Get("agent"), Prefix: q.Get("type"), Before: before, Limit: limit})
+	var group map[string]bool
+	if q.Get("group") != "" {
+		group = s.scope(url.Values{"group": {q.Get("group")}})
+	}
+	recs := s.store.Recent(Query{Agent: q.Get("agent"), Agents: group, Prefix: q.Get("type"), Before: before, Limit: limit})
 	names := s.agentNames()
 	role := s.roleFor(sess)
 	out := make([]viewRecord, len(recs))
@@ -510,10 +523,11 @@ func (s *Server) handleAgent(w http.ResponseWriter, r *http.Request, sess *sessi
 func (s *Server) handleAgentAction(w http.ResponseWriter, r *http.Request, sess *session) {
 	id, action := r.PathValue("id"), r.PathValue("action")
 	var req struct {
-		Name    string `json:"name"`
-		Key     string `json:"key"`
-		Minutes int    `json:"minutes"`
-		Version string `json:"version"`
+		Name    string   `json:"name"`
+		Key     string   `json:"key"`
+		Minutes int      `json:"minutes"`
+		Version string   `json:"version"`
+		Tags    []string `json:"tags"`
 	}
 	if !decode(r, w, &req) {
 		return
@@ -597,6 +611,10 @@ func (s *Server) handleAgentAction(w http.ResponseWriter, r *http.Request, sess 
 			return
 		}
 		data["version"], data["from"] = req.Version, a.Version
+	case "tags":
+		data["old"] = a.Tags
+		a.Tags = cleanTags(req.Tags)
+		data["new"] = a.Tags
 	case "forget-port":
 		delete(a.Baseline, req.Key)
 		data["key"] = req.Key

@@ -136,6 +136,12 @@ const T = {
     vigilServer: "vigil server", iowait: "waiting for disk", steal: "taken by the hypervisor", fullest: "fullest file system", used: "used", mount: "Mount", size: "Size",
     remote: "Remote", program: "Program", direction: "Direction", outgoing: "outgoing", incoming: "incoming", legendTcp: "TCP connection, line width by count",
     legendNet: "connections to the internet", asOf: "data from", noData: "No data in this period", loadPerCore: "per core", processes: "processes", ofTotal: "of",
+    hostScope: "Hosts shown", group: "Group", groups: "Groups", searchL: "Search", allRules: "All rules", anyTime: "Any time", noGrouping: "No grouping",
+    byRule: "By rule", byHost: "By host", grouping: "Grouping", searchAlerts: "Title, rule or host", bulkAck: "Acknowledge all shown", bulkResolve: "Resolve all shown",
+    confirmBulkAck: "Acknowledge {n} alerts?", confirmBulkResolve: "Resolve {n} alerts?", resetFilters: "Reset filters", cards: "Cards", table: "Table",
+    allStates: "Any state", notOnline: "not online", onlyCritical: "critical or high alerts", onlyReboot: "reboot pending", noHostsFilter: "No host matches the filter",
+    onlyScope: "Only {s}", attacksOnHost: "Addresses that tried {h}", attacksNoGroup: "Attacks can be narrowed to one host, not to a group. Shown for all hosts.",
+    attacksHostNote: "Counts per address cover every host it tried. Hours of day and tried user names are kept for all hosts together and are left out here.",
   },
   de: {
     overview: "Lage", alerts: "Alarme", events: "Ereignisse", canaries: "Köder", settings: "Einstellungen",
@@ -269,6 +275,12 @@ const T = {
     vigilServer: "vigil-Server", iowait: "wartet auf Platte", steal: "vom Hypervisor belegt", fullest: "vollstes Dateisystem", used: "belegt", mount: "Einhängepunkt", size: "Größe",
     remote: "Gegenstelle", program: "Programm", direction: "Richtung", outgoing: "ausgehend", incoming: "eingehend", legendTcp: "TCP-Verbindung, Linienstärke nach Anzahl",
     legendNet: "Verbindungen ins Internet", asOf: "Stand", noData: "Keine Daten in diesem Zeitraum", loadPerCore: "pro Kern", processes: "Prozesse", ofTotal: "von",
+    hostScope: "Angezeigte Hosts", group: "Gruppe", groups: "Gruppen", searchL: "Suche", allRules: "Alle Regeln", anyTime: "Gesamter Zeitraum", noGrouping: "Nicht gruppiert",
+    byRule: "Nach Regel", byHost: "Nach Host", grouping: "Gruppierung", searchAlerts: "Titel, Regel oder Host", bulkAck: "Alle angezeigten bestätigen", bulkResolve: "Alle angezeigten erledigen",
+    confirmBulkAck: "{n} Alarme bestätigen?", confirmBulkResolve: "{n} Alarme als erledigt markieren?", resetFilters: "Filter zurücksetzen", cards: "Karten", table: "Tabelle",
+    allStates: "Jeder Zustand", notOnline: "nicht online", onlyCritical: "kritische oder hohe Alarme", onlyReboot: "Neustart nötig", noHostsFilter: "Kein Host passt zum Filter",
+    onlyScope: "Nur {s}", attacksOnHost: "Adressen, die {h} angegriffen haben", attacksNoGroup: "Angriffe lassen sich auf einen Host eingrenzen, nicht auf eine Gruppe. Angezeigt für alle Hosts.",
+    attacksHostNote: "Die Zahlen je Adresse umfassen alle Hosts, die sie angegriffen hat. Tageszeiten und versuchte Benutzernamen gibt es nur für alle Hosts zusammen, sie fehlen hier.",
   },
 };
 
@@ -448,6 +460,7 @@ function shell(active, ...content) {
   if (crumbs) crumbs.className = "page-sub";
   const topbar = h("header", { class: "topbar" },
     h("div", { class: "page-head" }, h("div", { class: "page-title" }, title ? title.textContent : ""), crumbs),
+    SCOPED.has(active) && scopeHosts && scopeHosts.length > 1 && !/^#\/hosts\/./.test(location.hash) ? scopePicker() : null,
     actions);
 
   if (title) document.title = title.textContent + " | " + brandName;
@@ -729,7 +742,7 @@ function postureSection(a) {
 const sevCounts = (m) => h("span", { class: "sevcounts" }, SEVS.filter((s) => m && m[s]).map((s) => h("span", { class: "sev " + s }, m[s])));
 
 async function overview() {
-  const [o, inc, acts] = await Promise.all([api("/api/ui/overview"), api("/api/ui/incidents?status=active"), api("/api/ui/actions").catch(() => [])]);
+  const [o, inc, acts] = await Promise.all([api("/api/ui/overview?" + scopeQ()), api("/api/ui/incidents?" + scopeQ({ status: "active" })), api("/api/ui/actions").catch(() => [])]);
   const waiting = acts.filter((x) => x.status === "approval");
   openAlerts = Object.values(o.open_by_severity).reduce((a, b) => a + b, 0);
   const online = o.agents.filter((a) => a.status === "online").length;
@@ -768,7 +781,7 @@ async function overview() {
 
   mount(shell("overview",
     h("h1", null, t("overview")),
-    h("div", { class: "crumbs" }, t("welcome") + ", " + me.user),
+    h("div", { class: "crumbs" }, scopeName() ? t("onlyScope").replace("{s}", scopeName()) : t("welcome") + ", " + me.user),
     waiting.length ? [h("h2", null, t("pendingApprovals")), actionRows(waiting)] : null,
     tiles,
     h("div", { class: "grid dash-a" },
@@ -798,14 +811,6 @@ async function overview() {
 }
 
 let alertTab = "open";
-async function alertsView() {
-  const list = await api("/api/ui/alerts?status=" + (alertTab === "all" ? "" : alertTab));
-  const tabs = h("div", { class: "tabs" }, ["open", "acked", "resolved", "all"].map((k) =>
-    h("button", { class: k === alertTab ? "on" : null, onclick: () => { alertTab = k; render(); } }, t(k))));
-  const n = list.length + " " + (alertTab === "all" ? t("alerts") : t(alertTab).toLowerCase());
-  mount(shell("alerts", h("h1", null, t("alerts")), h("div", { class: "crumbs" }, n), tabs,
-    h("div", { class: "list" }, list.length ? list.map(alertRow) : h("div", { class: "empty" }, t("noAlerts")))));
-}
 
 const actLabel = (a) => t({ block_ip: "actBlock", kill_session: "actSession", kill_process: "actProcess", remove_key: "actKey",
   isolate_host: "actIsolate", release_host: "actRelease", lock_user: "actLock", unlock_user: "actUnlock" }[a.type])
@@ -989,6 +994,7 @@ async function hostView(id) {
   const [d, actions, tests, hostsData] = await Promise.all([api("/api/ui/agents/" + encodeURIComponent(id)), api("/api/ui/actions?agent=" + encodeURIComponent(id)),
     api("/api/ui/selftests?agent=" + encodeURIComponent(id)), api("/api/ui/hosts").catch(() => null)]);
   const a = d.agent;
+  if (hostsData) { scopeHosts = hostsData.hosts; scopeHostsAt = Date.now(); }
   const perf = await performanceSection(a, hostsData);
   selftestOpen = tests.some((x) => x.status === "pending" || x.status === "running");
   const stErr = h("div", { class: "err" });
@@ -1052,6 +1058,7 @@ async function hostView(id) {
         h("div", { class: "flex" }, statusChip(a.status)),
         h("dl", { class: "kv" },
           h("dt", null, "Hostname"), h("dd", null, a.hostname),
+          h("dt", null, t("groups")), h("dd", null, tagChips(a.tags) || h("span", { class: "muted" }, t("none"))),
           h("dt", null, t("lastSeen")), h("dd", null, timeEl(a.last_seen)),
           h("dt", null, t("lastIP")), h("dd", { class: "mono" }, a.last_ip),
           h("dt", null, t("version")), h("dd", null, (a.version || "·") + (updText ? "  ·  " + updText : "")),
@@ -1061,6 +1068,7 @@ async function hostView(id) {
       !can("admin") ? null : h("div", { class: "card" },
         h("form", { class: "inline", onsubmit: async (e) => { e.preventDefault(); await post("/api/ui/agents/" + a.id + "/rename", { name: renameInput.value }); render(); } },
           h("label", null, t("rename"), renameInput), h("button", { class: "btn ghost", type: "submit" }, t("rename"))),
+        tagEditor(a),
         a.maintenance_until
           ? h("div", { class: "flex mt" }, h("span", { class: "chip" }, h("span", { class: "dot stopped" }), t("maintenanceUntil") + " " + abs(a.maintenance_until)),
             h("button", { class: "btn small ghost", onclick: action("maintenance", { minutes: 0 }) }, t("end")))
@@ -1071,7 +1079,8 @@ async function hostView(id) {
           h("a", { class: "btn ghost", href: "#/events?agent=" + a.id }, t("events")),
           h("a", { class: "btn ghost", href: tlHref(a.id, new Date().toISOString(), { minutes: 60 }) }, t("timeline")),
           h("a", { class: "btn ghost", href: "#/sessions?agent=" + a.id }, t("sessions")),
-          h("a", { class: "btn ghost", href: "#/alerts" }, t("alerts")),
+          h("a", { class: "btn ghost", href: "#/alerts?host=" + a.id }, t("alerts")),
+          h("a", { class: "btn ghost", href: "#/attacks?host=" + a.id }, t("attacks")),
           h("button", { class: "btn danger", onclick: async () => { if (confirm(t("confirmDelete"))) { await post("/api/ui/agents/" + a.id + "/delete"); location.hash = "#/"; } } }, t("deleteHost"))))),
     perf,
     a.updates ? h("div", { class: "card mt" }, h("h3", null, t("updates")), h("dl", { class: "kv" },
@@ -1099,14 +1108,15 @@ async function hostView(id) {
 async function eventsView(params) {
   const q = params.get("q") || "";
   if (q) return searchView(params);
-  const agents = (await api("/api/ui/overview")).agents;
-  const agent = params.get("agent") || "";
+  const agents = scopeHosts || (await api("/api/ui/overview")).agents;
+  const agent = params.get("agent") || scopeSel.agent || "";
+  const group = params.get("agent") ? "" : scopeSel.group || "";
   const type = params.get("type") || "";
   const tbody = h("tbody");
   let before = 0;
   const more = h("button", { class: "btn ghost mt" }, t("loadMore"));
   async function load() {
-    const qs = new URLSearchParams({ agent, type, limit: "200" });
+    const qs = new URLSearchParams({ agent, group, type, limit: "200" });
     if (before) qs.set("before", before);
     const rows = await api("/api/ui/events?" + qs);
     for (const r of rows) {
@@ -1123,7 +1133,7 @@ async function eventsView(params) {
     e.preventDefault();
     location.hash = "#/events?" + new URLSearchParams({ agent: hostSel.value, type: typeIn.value.trim() });
   } }, h("label", null, t("host"), hostSel), h("label", null, t("filterType"), typeIn), h("button", { class: "btn", type: "submit" }, "OK"));
-  const scopeLine = [(agents.find((a) => a.id === agent) || {}).name || t("allHosts"), type].filter(Boolean).join(", ");
+  const scopeLine = [(agents.find((a) => a.id === agent) || {}).name || (group ? t("group") + " " + group : t("allHosts")), type].filter(Boolean).join(", ");
   mount(shell("events", h("h1", null, t("events")), h("div", { class: "crumbs" }, scopeLine),
     await searchCard(""),
     h("div", { class: "card mt" }, form), h("div", { class: "tablewrap mt" },
@@ -1203,8 +1213,9 @@ const sessionHref = (x) => "#/session?" + new URLSearchParams({ agent: x.agent, 
 
 async function sessionsView(params) {
   const days = params.get("days") || "7";
-  const agent = params.get("agent") || "";
+  const agent = params.get("agent") || scopeSel.agent || "";
   const r = await api("/api/ui/sessions?" + new URLSearchParams({ days, agent }));
+  if (!agent && scopeSel.group && r.sessions) r.sessions = r.sessions.filter((x) => inScopeHost(x.agent));
   const daysSel = h("select", { onchange: () => { location.hash = "#/sessions?" + new URLSearchParams({ days: daysSel.value, agent }); } },
     [1, 7, 30, 90].map((n) => h("option", { value: n, selected: String(n) === days }, t("days30").replace("{n}", n))));
   mount(shell("sessions", h("h1", null, t("sessions")),
@@ -1316,7 +1327,7 @@ const incRow = (c) => h("a", { class: "row", href: "#/incidents/" + c.id },
   h("div", { class: "meta" }, incChip(c.status), timeEl(c.last)));
 
 async function incidentsView() {
-  const r = await api("/api/ui/incidents?status=" + (incTab === "all" ? "" : incTab));
+  const r = await api("/api/ui/incidents?" + scopeQ({ status: incTab === "all" ? "" : incTab }));
   const tabs = h("div", { class: "tabs" }, [["active", t("activeInc")], ["closed", t("closed")], ["all", t("all")]].map(([k, l]) =>
     h("button", { class: k === incTab ? "on" : null, onclick: () => { incTab = k; render(); } }, l)));
   mount(shell("incidents", h("h1", null, t("incidents")),
@@ -2417,7 +2428,7 @@ function sourceEditor() {
 async function attacksView(params) {
   const days = params.get("days") || "7";
   const cc = params.get("country") || "";
-  const v = await api("/api/ui/attacks?days=" + encodeURIComponent(days));
+  const v = await api("/api/ui/attacks?" + new URLSearchParams({ days, ...(scopeSel.agent ? { agent: scopeSel.agent } : {}) }));
   const href = (extra) => "#/attacks?" + new URLSearchParams({ days, ...extra });
   const T_ = v.totals;
   const tiles = h("div", { class: "grid metrics six" },
@@ -2467,9 +2478,10 @@ async function attacksView(params) {
   const liveChip = h("span", { class: "livechip", title: t("liveHint") }, h("span", { class: "livedot" }), "LIVE", liveStatus);
   mount(shell("attacks",
     h("h1", null, t("attacks")),
-    h("div", { class: "crumbs" }, t("attacksSub")),
+    h("div", { class: "crumbs" }, scopeSel.agent ? t("attacksOnHost").replace("{h}", scopeName()) : t("attacksSub")),
     h("div", { class: "flex toolbar" }, daySel, h("span", { class: "right" }, reports)),
     v.ready ? null : h("div", { class: "card note" }, t("building")),
+    scopeSel.group ? scopeNote(t("attacksNoGroup")) : v.agent ? scopeNote(t("attacksHostNote")) : null,
     tiles,
     v.geo.enabled ? h("div", { class: "grid dash-a" },
       panel(t("worldMap"), h("span", { class: "flex" }, cc ? h("a", { href: href({}) }, countryName(cc) + "  ×") : null, liveChip),
@@ -2484,17 +2496,18 @@ async function attacksView(params) {
       panel(t("netKind"), null, rankList(kinds.map((k) => ({ key: t("net_" + k.key), count: k.count })), { empty: t("noAttacks") })),
       panel(t("perDay"), null, dayChart(v.per_day))),
     v.geo.enabled ? h("div", { class: "mt" }, panel(t("treemapTitle"), t("treemapSub"), originTreemap(v.countries, v.networks))) : null,
-    h("h2", null, t("triedUsers")),
-    v.estimated ? h("div", { class: "muted small" }, t("usersEstimated")) : null,
-    h("div", { class: "grid dash-a" },
-      panel(t("userRanking"), null, userTable(v.user_stats || [], v.days)),
-      panel(t("cloudTitle"), null, userCloud(v.user_stats || []))),
-    h("div", { class: "mt" }, panel(t("heatTitle"), t("timezoneLocal"), userHeatmap(v.user_stats || []))),
-    h("div", { class: "grid two mt" },
-      panel(t("matrixTitle"), null, userCountryMatrix(v.matrix || { users: [], countries: [], cells: [] })),
-      panel(t("sankeyTitle"), null, userSankey(v.flows || []))),
+    // per user and per hour is kept for all hosts together only
+    v.agent ? null : [h("h2", null, t("triedUsers")),
+      v.estimated ? h("div", { class: "muted small" }, t("usersEstimated")) : null,
+      h("div", { class: "grid dash-a" },
+        panel(t("userRanking"), null, userTable(v.user_stats || [], v.days)),
+        panel(t("cloudTitle"), null, userCloud(v.user_stats || []))),
+      h("div", { class: "mt" }, panel(t("heatTitle"), t("timezoneLocal"), userHeatmap(v.user_stats || []))),
+      h("div", { class: "grid two mt" },
+        panel(t("matrixTitle"), null, userCountryMatrix(v.matrix || { users: [], countries: [], cells: [] })),
+        panel(t("sankeyTitle"), null, userSankey(v.flows || [])))],
     h("div", { class: "grid dash-b mt" },
-      panel(t("hourOfDay"), t("timezoneLocal"), hourChart(v.hours)),
+      v.agent ? null : panel(t("hourOfDay"), t("timezoneLocal"), hourChart(v.hours)),
       panel(t("webAttacks"), null, v.web_kinds.length || v.paths.length ? [
         rankList(v.web_kinds.map((k) => ({ key: k.key, count: k.ips })), { mono: true }),
         h("div", { class: "rank-gap" }), rankList(v.paths.slice(0, 6).map((k) => ({ key: k.key, count: k.ips })), { mono: true })] : h("div", { class: "empty small" }, t("noAttacks"))),
@@ -2854,7 +2867,7 @@ function topology(d) {
     const [px, py] = pos[x.id];
     const m = x.metrics;
     const cpu = m ? m.cpu : 0, mem = m ? pctOf(m.mem_used, m.mem_total) : 0;
-    const g = sv("g", { class: "node" + (x.server ? " server" : "") + (x.status !== "online" || x.stale ? " off" : ""), tabindex: 0, role: "link", "aria-label": x.name });
+    const g = sv("g", { class: "node" + (x.server ? " server" : "") + (x.status !== "online" || x.stale ? " off" : "") + (d.focus && !d.focus.has(x.id) ? " dim" : ""), tabindex: 0, role: "link", "aria-label": x.name });
     g.append(sv("rect", { x: px - nw / 2, y: py - nh / 2, width: nw, height: nh, rx: 10, class: "nbox" }));
     g.append(sv("circle", { cx: px - nw / 2 + 15, cy: py - nh / 2 + 16, r: 4, class: "ndot " + x.status }));
     const name = x.name.length > (narrow ? 14 : 19) ? x.name.slice(0, narrow ? 13 : 18) + "…" : x.name;
@@ -2889,6 +2902,7 @@ function hostCard(x, agentPort) {
   const head = h("div", { class: "hc-head" },
     h("a", { href: "#/hosts/" + x.id, class: "strong" }, x.name), statusChip(x.status),
     x.server ? h("span", { class: "pill" }, t("vigilServer")) : null,
+    tagChips(x.tags),
     h("span", { class: "muted right" }, x.version || "·"));
   if (!m) return h("div", { class: "card hostcard" }, head, h("div", { class: "empty small" }, t("noMetrics")));
   const mem = pctOf(m.mem_used, m.mem_total);
@@ -2916,7 +2930,9 @@ function hostCard(x, agentPort) {
 
 async function hostsView() {
   const d = await api("/api/ui/hosts");
-  const hosts = d.hosts;
+  scopeHosts = d.hosts; scopeHostsAt = Date.now();
+  const everyHost = d.hosts;
+  const hosts = d.hosts.filter(hostFilterMatch);
   const withM = hosts.filter((x) => x.metrics);
   const online = hosts.filter((x) => x.status === "online").length;
   const sum = (f) => withM.reduce((s, x) => s + f(x.metrics), 0);
@@ -2925,7 +2941,7 @@ async function hostsView() {
   const memUsed = sum((m) => m.mem_used), memTotal = sum((m) => m.mem_total);
   const conns = sum((m) => m.conn_in + m.conn_out);
   const tiles = h("div", { class: "grid metrics six" },
-    metric(null, "server", t("hosts"), online + " / " + hosts.length, online === hosts.length ? null : "bad", t("online")),
+    metric(null, "server", t("hosts"), online + " / " + hosts.length, online === hosts.length ? null : "bad", scopeName() || t("online")),
     metric(null, "layout-dashboard", t("avgCpu"), withM.length ? fmtPct(cpuAvg) : "·", cpuAvg >= 90 ? "bad" : null, cores + " " + t("cores")),
     metric(null, "stack-2", t("memUsed"), withM.length ? fmtPct(pctOf(memUsed, memTotal)) : "·", pctOf(memUsed, memTotal) >= 90 ? "bad" : null, fmtBytes(memUsed) + " " + t("ofTotal") + " " + fmtBytes(memTotal)),
     metric(null, "world", t("throughput"), withM.length ? fmtRate(sum((m) => m.rx + m.tx)) : "·", null, "↓ " + fmtRate(sum((m) => m.rx)) + "  ↑ " + fmtRate(sum((m) => m.tx))),
@@ -2935,14 +2951,16 @@ async function hostsView() {
     h("h1", null, t("hosts")),
     h("div", { class: "crumbs" }, t("hostsSub")),
     tiles,
-    hosts.length ? null : h("div", { class: "card empty" }, t("noHosts"))));
+    everyHost.length ? hostFilterBar(hosts, everyHost) : null,
+    hosts.length ? null : h("div", { class: "card empty mt" }, everyHost.length ? t("noHostsFilter") : t("noHosts"))));
   if (!hosts.length) return;
   // the graph needs the content's real width, known once the page is mounted
   const content = document.querySelector("main.content");
+  if (hostsMode === "table") { content.append(h("div", { class: "mt" }, hostTable(hosts))); return; }
   content.append(
     h("div", { class: "card mt topo-card" },
       h("div", { class: "panel-head" }, h("h3", null, t("topology")), h("span", { class: "panel-extra" }, t("topologySub"))),
-      topology(d),
+      topology({ ...d, focus: hosts.length < everyHost.length ? new Set(hosts.map((x) => x.id)) : null }),
       h("div", { class: "topo-legend" },
         h("span", { class: "chip" }, h("span", { class: "lg-line" }), t("legendTcp")),
         h("span", { class: "chip" }, h("span", { class: "lg-line ext" }), t("legendNet")),
@@ -2997,6 +3015,211 @@ async function performanceSection(a, hostsData) {
   return out;
 }
 
+// ---------- scope: one host or one group of hosts ----------
+// The choice holds across pages (and reloads); the API takes it as
+// ?agent= or ?group=. Pages that cannot narrow by a group say so.
+const SCOPED = new Set(["overview", "hosts", "alerts", "incidents", "events", "sessions", "attacks"]);
+let scopeSel = (() => { try { return JSON.parse(store("vigil.scope") || "{}") || {}; } catch { return {}; } })();
+let scopeHosts = null, scopeHostsAt = 0;
+async function loadScopeHosts(force) {
+  if (!force && scopeHosts && Date.now() - scopeHostsAt < 60000) return;
+  try { scopeHosts = (await api("/api/ui/hosts")).hosts; scopeHostsAt = Date.now(); } catch { scopeHosts = scopeHosts || []; }
+  // a host or group that no longer exists does not stay selected
+  if (scopeSel.agent && !scopeHosts.some((x) => x.id === scopeSel.agent)) scopeSel = {};
+  if (scopeSel.group && !scopeHosts.some((x) => (x.tags || []).some((g) => g.toLowerCase() === scopeSel.group.toLowerCase()))) scopeSel = {};
+}
+const scopeParams = () => scopeSel.agent ? { agent: scopeSel.agent } : scopeSel.group ? { group: scopeSel.group } : {};
+const scopeQ = (extra = {}) => new URLSearchParams({ ...extra, ...scopeParams() }).toString();
+const allTags = () => [...new Set((scopeHosts || []).flatMap((x) => x.tags || []))].sort((a, b) => a.localeCompare(b, lang));
+const inScopeHost = (id) => scopeSel.agent ? id === scopeSel.agent
+  : scopeSel.group ? ((scopeHosts || []).find((x) => x.id === id) || { tags: [] }).tags.some((g) => g.toLowerCase() === scopeSel.group.toLowerCase()) : true;
+function scopeName() {
+  if (scopeSel.agent) return ((scopeHosts || []).find((x) => x.id === scopeSel.agent) || {}).name || scopeSel.agent;
+  if (scopeSel.group) return t("group") + " " + scopeSel.group;
+  return "";
+}
+function setScope(v, quiet) {
+  scopeSel = v && (v.agent || v.group) ? v : {};
+  store("vigil.scope", JSON.stringify(scopeSel));
+  if (!quiet) render();
+}
+function scopePicker() {
+  const hosts = (scopeHosts || []).slice().sort((a, b) => a.name.localeCompare(b.name, lang));
+  const cur = scopeSel.agent ? "a:" + scopeSel.agent : scopeSel.group ? "g:" + scopeSel.group : "";
+  const tags = allTags();
+  const sel = h("select", { class: "scope-select" + (cur ? " on" : ""), "aria-label": t("hostScope"), onchange: () => {
+    const v = sel.value;
+    setScope(v.startsWith("a:") ? { agent: v.slice(2) } : v.startsWith("g:") ? { group: v.slice(2) } : {});
+  } },
+    h("option", { value: "" }, t("allHosts")),
+    tags.length ? h("optgroup", { label: t("groups") }, tags.map((g) => h("option", { value: "g:" + g, selected: cur === "g:" + g },
+      g + " (" + hosts.filter((x) => (x.tags || []).includes(g)).length + ")"))) : null,
+    h("optgroup", { label: t("hosts") }, hosts.map((x) => h("option", { value: "a:" + x.id, selected: cur === "a:" + x.id }, x.name))));
+  return h("div", { class: "scope" }, icon("server"), sel,
+    cur ? h("button", { class: "scope-clear", title: t("allHosts"), "aria-label": t("allHosts"), onclick: () => setScope({}) }, "×") : null);
+}
+const tagChips = (tags) => (tags || []).length ? h("span", { class: "tags" }, tags.map((g) => h("a", { class: "tag", href: "#/hosts", onclick: (e) => { e.preventDefault(); setScope({ group: g }); location.hash = "#/hosts"; } }, g))) : null;
+const scopeNote = (text) => h("div", { class: "card note" }, text);
+
+// ---------- alerts: filters, groups, bulk actions ----------
+let alertFilt = { sev: [], rule: "", q: "", days: "", by: "" };
+function alertGroups(list, by) {
+  const m = new Map();
+  for (const a of list) {
+    const k = by === "host" ? a.host || "·" : a.rule;
+    if (!m.has(k)) m.set(k, []);
+    m.get(k).push(a);
+  }
+  const rank = (l) => Math.min(...l.map((a) => SEVS.indexOf(a.severity)));
+  return [...m.entries()].sort((x, y) => rank(x[1]) - rank(y[1]) || y[1].length - x[1].length);
+}
+function alertMatches(a, f) {
+  if (f.sev.length && !f.sev.includes(a.severity)) return false;
+  if (f.rule && !a.rule.startsWith(f.rule)) return false;
+  if (f.days && Date.now() - new Date(a.updated).getTime() > Number(f.days) * 86400e3) return false;
+  if (f.q && !(a.title + " " + a.rule + " " + (a.host || "")).toLowerCase().includes(f.q.toLowerCase())) return false;
+  return true;
+}
+
+async function alertsView() {
+  const all = await api("/api/ui/alerts?" + scopeQ({ status: alertTab === "all" ? "" : alertTab }));
+  const tabs = h("div", { class: "tabs" }, ["open", "acked", "resolved", "all"].map((k) =>
+    h("button", { class: k === alertTab ? "on" : null, onclick: () => { alertTab = k; render(); } }, t(k))));
+  const listBox = h("div");
+  const countLine = h("div", { class: "filter-sum" });
+  const bulkErr = h("div", { class: "err" });
+  const rules = [...new Set(all.map((a) => a.rule))].sort();
+  const sevBox = h("div", { class: "chips" }, SEVS.map((sv) => {
+    const n = all.filter((a) => a.severity === sv).length;
+    return h("button", { class: "fchip sev-" + sv + (alertFilt.sev.includes(sv) ? " on" : ""), "aria-pressed": alertFilt.sev.includes(sv) ? "true" : "false", onclick: (e) => {
+      alertFilt.sev = alertFilt.sev.includes(sv) ? alertFilt.sev.filter((x) => x !== sv) : [...alertFilt.sev, sv];
+      e.currentTarget.classList.toggle("on"); e.currentTarget.setAttribute("aria-pressed", alertFilt.sev.includes(sv) ? "true" : "false");
+      draw();
+    } }, h("span", { class: "dot " + sv }), t(sv), h("span", { class: "fcount" }, n));
+  }));
+  const ruleSel = h("select", { onchange: () => { alertFilt.rule = ruleSel.value; draw(); } },
+    h("option", { value: "" }, t("allRules")), rules.map((r) => h("option", { value: r, selected: r === alertFilt.rule }, r)));
+  const qIn = h("input", { type: "search", value: alertFilt.q, placeholder: t("searchAlerts"), oninput: () => { alertFilt.q = qIn.value.trim(); draw(); } });
+  const daysSel = h("select", { onchange: () => { alertFilt.days = daysSel.value; draw(); } },
+    [["", t("anyTime")], ["1", "24 h"], ["7", t("days7")], ["30", t("days30").replace("{n}", 30)]].map(([v, l]) => h("option", { value: v, selected: v === alertFilt.days }, l)));
+  const bySel = h("select", { onchange: () => { alertFilt.by = bySel.value; draw(); } },
+    [["", t("noGrouping")], ["rule", t("byRule")], ["host", t("byHost")]].map(([v, l]) => h("option", { value: v, selected: v === alertFilt.by }, l)));
+  let shown = [];
+  const bulk = (action) => async () => {
+    if (!shown.length || !confirm(t(action === "ack" ? "confirmBulkAck" : "confirmBulkResolve").replace("{n}", shown.length))) return;
+    bulkErr.textContent = "";
+    try { await post("/api/ui/alerts/bulk", { ids: shown.map((a) => a.id), action }); render(); } catch (x) { bulkErr.textContent = x.message; }
+  };
+  const bulkBox = can("analyst") && alertTab !== "resolved" ? h("div", { class: "flex wrap" },
+    alertTab !== "acked" ? h("button", { class: "btn small ghost", onclick: bulk("ack") }, t("bulkAck")) : null,
+    h("button", { class: "btn small ghost", onclick: bulk("resolve") }, t("bulkResolve"))) : null;
+  function draw() {
+    shown = all.filter((a) => alertMatches(a, alertFilt));
+    const active = alertFilt.sev.length || alertFilt.rule || alertFilt.q || alertFilt.days;
+    countLine.replaceChildren(...[h("span", { class: "strong" }, shown.length.toLocaleString(lang)), " ",
+      active ? t("ofTotal") + " " + all.length.toLocaleString(lang) + " " : "", alertTab === "all" ? t("alerts") : t(alertTab).toLowerCase(),
+      active ? h("button", { class: "linkbtn", onclick: () => { alertFilt = { sev: [], rule: "", q: "", days: "", by: alertFilt.by }; render(); } }, t("resetFilters")) : null].filter((x) => x != null));
+    if (bulkBox) bulkBox.hidden = !shown.length;
+    if (!shown.length) { listBox.replaceChildren(h("div", { class: "list" }, h("div", { class: "empty" }, t("noAlerts")))); return; }
+    if (!alertFilt.by) { listBox.replaceChildren(h("div", { class: "list" }, shown.slice(0, 500).map(alertRow))); return; }
+    const groups = alertGroups(shown, alertFilt.by);
+    listBox.replaceChildren(...groups.map(([k, l], i) => {
+      const bySev = {};
+      l.forEach((a) => { bySev[a.severity] = (bySev[a.severity] || 0) + 1; });
+      return h("details", { class: "agroup", open: groups.length <= 4 || i < 2 ? true : null },
+        h("summary", null, h("span", { class: alertFilt.by === "rule" ? "mono strong" : "strong" }, k), h("span", { class: "muted" }, "×" + l.length), sevCounts(bySev),
+          alertFilt.by === "rule" ? h("span", { class: "muted right" }, [...new Set(l.map((a) => a.host))].join(", ")) : null),
+        h("div", { class: "list" }, l.slice(0, 200).map(alertRow)));
+    }));
+  }
+  draw();
+  mount(shell("alerts", h("h1", null, t("alerts")), h("div", { class: "crumbs" }, scopeName() || t("allHosts")),
+    tabs,
+    h("div", { class: "card filters mt" },
+      sevBox,
+      h("div", { class: "filter-row" }, h("label", null, t("searchL"), qIn), h("label", null, t("rule"), ruleSel), h("label", null, t("period"), daysSel), h("label", null, t("grouping"), bySel))),
+    h("div", { class: "flex mt" }, countLine, h("div", { class: "right" }, bulkBox)), bulkErr,
+    listBox));
+}
+
+// ---------- hosts tab: table with sorting and filters ----------
+let hostsMode = store("vigil.hostsMode") || "cards";
+let hostSort = { key: "name", dir: 1 };
+let hostFilt = { status: "", crit: false, reboot: false };
+const sevWeight = (o) => ((o || {}).critical || 0) * 1e6 + ((o || {}).high || 0) * 1e3 + ((o || {}).medium || 0);
+const HOST_COLS = [
+  ["name", "host", (x) => x.name.toLowerCase()],
+  ["status", "status", (x) => x.status],
+  ["cpu", "cpu", (x) => x.metrics ? x.metrics.cpu : -1],
+  ["mem", "memory", (x) => x.metrics ? pctOf(x.metrics.mem_used, x.metrics.mem_total) : -1],
+  ["disk", "disk", (x) => x.metrics ? x.metrics.disk_pct : -1],
+  ["load", "load", (x) => x.metrics && x.metrics.cores ? x.metrics.load[0] / x.metrics.cores : -1],
+  ["net", "traffic", (x) => x.metrics ? x.metrics.rx + x.metrics.tx : -1],
+  ["alerts", "alertsOpen", (x) => sevWeight(x.open_by_severity)],
+  ["updates", "updates", (x) => x.updates ? (x.updates.security || 0) * 1000 + (x.updates.pending || 0) : -1],
+  ["version", "version", (x) => x.version || ""],
+];
+function hostFilterMatch(x) {
+  if (!inScopeHost(x.id)) return false;
+  if (hostFilt.status && (hostFilt.status === "online") !== (x.status === "online")) return false;
+  if (hostFilt.crit && !((x.open_by_severity || {}).critical || (x.open_by_severity || {}).high)) return false;
+  if (hostFilt.reboot && !(x.updates && x.updates.reboot_required)) return false;
+  return true;
+}
+function hostTable(hosts) {
+  const col = HOST_COLS.find((c) => c[0] === hostSort.key) || HOST_COLS[0];
+  const rows = hosts.slice().sort((a, b) => { const x = col[2](a), y = col[2](b); return (x < y ? -1 : x > y ? 1 : 0) * hostSort.dir; });
+  const cell = (v, cls) => h("td", { class: cls || "" }, v);
+  const pctCell = (p) => {
+    const fill = h("span", { class: "meter-fill " + level(p) });
+    fill.style.width = Math.min(100, p) + "%";
+    return h("div", { class: "usage" }, h("div", { class: "meter-bar" }, fill), h("span", { class: "nowrap" }, fmtPct(p)));
+  };
+  return h("div", { class: "tablewrap" }, h("table", { class: "hosts sortable" },
+    h("thead", null, h("tr", null, HOST_COLS.map(([k, label]) => h("th", { class: "sort" + (hostSort.key === k ? " on" : ""), "aria-sort": hostSort.key === k ? (hostSort.dir > 0 ? "ascending" : "descending") : null },
+      h("button", { onclick: () => { hostSort = { key: k, dir: hostSort.key === k ? -hostSort.dir : k === "name" ? 1 : -1 }; render(); } },
+        t(label), hostSort.key === k ? (hostSort.dir > 0 ? " ↑" : " ↓") : ""))))),
+    h("tbody", null, rows.map((x) => {
+      const m = x.metrics;
+      return h("tr", { class: "click" + (x.stale ? " stale" : ""), onclick: (e) => { if (!e.target.closest("a")) location.hash = "#/hosts/" + x.id; } },
+        cell(h("div", null, h("a", { href: "#/hosts/" + x.id, class: "strong" }, x.name), x.server ? h("span", { class: "pill ml" }, "vigil") : null, h("div", null, tagChips(x.tags)))),
+        cell(statusChip(x.status)),
+        cell(m ? pctCell(m.cpu) : "·"),
+        cell(m ? pctCell(pctOf(m.mem_used, m.mem_total)) : "·"),
+        cell(m ? pctCell(m.disk_pct) : "·"),
+        cell(m ? m.load[0].toFixed(2) + " / " + m.cores : "·", "nowrap"),
+        cell(m ? "↓ " + fmtRate(m.rx) + "  ↑ " + fmtRate(m.tx) : "·", "nowrap"),
+        cell(x.open_alerts ? h("a", { href: "#/alerts", onclick: (e) => { e.preventDefault(); e.stopPropagation(); setScope({ agent: x.id }, true); location.hash = "#/alerts"; } }, sevCounts(x.open_by_severity)) : h("span", { class: "muted" }, "0")),
+        cell(updatesCell(x.updates)),
+        cell(x.version || "·", "muted nowrap"));
+    }))));
+}
+function hostFilterBar(hosts, all) {
+  const statusSel = h("select", { onchange: () => { hostFilt.status = statusSel.value; render(); } },
+    [["", t("allStates")], ["online", t("online")], ["offline", t("notOnline")]].map(([v, l]) => h("option", { value: v, selected: v === hostFilt.status }, l)));
+  const check = (k, label) => h("label", { class: "check" }, h("input", { type: "checkbox", checked: hostFilt[k] ? true : null, onchange: (e) => { hostFilt[k] = e.target.checked; render(); } }), t(label));
+  const mode = h("div", { class: "tabs" }, [["cards", t("cards")], ["table", t("table")]].map(([k, l]) =>
+    h("button", { class: hostsMode === k ? "on" : null, onclick: () => { hostsMode = k; store("vigil.hostsMode", k); render(); } }, l)));
+  return h("div", { class: "flex wrap mt hostbar" }, mode, h("label", { class: "inline-l" }, t("status"), statusSel), check("crit", "onlyCritical"), check("reboot", "onlyReboot"),
+    h("span", { class: "muted right" }, hosts.length + " " + t("ofTotal") + " " + all.length));
+}
+
+// tags editor for the host page (admins)
+function tagEditor(a) {
+  const input = h("input", { value: (a.tags || []).join(", "), maxlength: 220, list: "tag-list", placeholder: "E, M, game, web" });
+  const err = h("div", { class: "err" });
+  return h("form", { class: "inline mt", onsubmit: async (e) => {
+    e.preventDefault();
+    err.textContent = "";
+    try {
+      await post("/api/ui/agents/" + a.id + "/tags", { tags: input.value.split(",").map((x) => x.trim()).filter(Boolean) });
+      await loadScopeHosts(true);
+      render();
+    } catch (x) { err.textContent = x.message; }
+  } }, h("datalist", { id: "tag-list" }, allTags().map((g) => h("option", { value: g }))),
+    h("label", null, t("groups"), input), h("button", { class: "btn ghost", type: "submit" }, t("save")), err);
+}
+
 let refreshTimer = null;
 let selftestOpen = false;
 let lastHash = null;
@@ -3014,7 +3237,11 @@ async function render() {
   const [path, query] = (location.hash.slice(1) || "/").split("?");
   const params = new URLSearchParams(query || "");
   const parts = path.split("/").filter(Boolean);
+  // links may carry a scope: #/alerts?host=ID or ?group=TAG
+  if (params.get("host")) setScope({ agent: params.get("host") }, true);
+  else if (params.get("group")) setScope({ group: params.get("group") }, true);
   try {
+    if (SCOPED.has(parts[0] || "overview") && !(parts[0] === "hosts" && parts[1])) await loadScopeHosts();
     if (parts[0] === "alerts" && parts[1]) await alertDetail(parts[1]);
     else if (parts[0] === "alerts") await alertsView();
     else if (parts[0] === "hosts" && parts[1]) await hostView(parts[1]);
@@ -3040,7 +3267,9 @@ async function render() {
     if (x.message !== "unauthorized") { console.error(x); mount(shell("", h("div", { class: "card err" }, x.message))); }
   }
   // The overview and alert list refresh themselves; forms are left alone.
-  if (!parts.length || (parts[0] === "alerts" && !parts[1]) || (parts[0] === "hosts" && !parts[1])) refreshTimer = setTimeout(render, 30000);
+  // not while someone types into a filter
+  const later = () => { const el = document.activeElement; if (el && /^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName)) refreshTimer = setTimeout(later, 10000); else render(); };
+  if (!parts.length || (parts[0] === "alerts" && !parts[1]) || (parts[0] === "hosts" && !parts[1])) refreshTimer = setTimeout(later, 30000);
   // A running self test finishes within minutes; follow it on the host page.
   if (parts[0] === "hosts" && selftestOpen) refreshTimer = setTimeout(render, 10000);
 }

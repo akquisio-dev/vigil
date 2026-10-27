@@ -109,7 +109,10 @@ type campaignView struct {
 }
 
 type attackView struct {
-	Days      int       `json:"days"`
+	Days int `json:"days"`
+	// Agent: only addresses that tried this host; hours and tried users
+	// are then not shown (they are kept per day, not per host).
+	Agent     string    `json:"agent,omitempty"`
 	Ready     bool      `json:"ready"`
 	Generated time.Time `json:"generated"`
 	Totals    struct {
@@ -201,7 +204,14 @@ type userWindow struct {
 	est   bool
 }
 
-func (r *attackRollup) attackWindow(days int, now time.Time) (map[string]*atkIP, map[string]int, []dayStat, [24]int, int, userWindow) {
+// attackWindow merges the last days. With hit, only the addresses it
+// accepts count, and the hour and user tables (kept per day, not per
+// address) stay empty.
+func (r *attackRollup) attackWindow(days int, now time.Time, hit ...func(*atkIP) bool) (map[string]*atkIP, map[string]int, []dayStat, [24]int, int, userWindow) {
+	var keep func(*atkIP) bool
+	if len(hit) > 0 {
+		keep = hit[0]
+	}
 	uw := userWindow{days: map[string][]int{}, hours: map[string]*[24]int{}}
 	merged := map[string]*atkIP{}
 	active := map[string]int{}
@@ -213,6 +223,9 @@ func (r *attackRollup) attackWindow(days int, now time.Time) (map[string]*atkIP,
 		ds := dayStat{Day: day}
 		if d := r.days[day]; d != nil {
 			for ip, x := range d.IPs {
+				if keep != nil && !keep(x) {
+					continue
+				}
 				if x.attempts() > 0 {
 					ds.IPs++
 					active[ip]++
@@ -225,6 +238,10 @@ func (r *attackRollup) attackWindow(days int, now time.Time) (map[string]*atkIP,
 					merged[ip] = m
 				}
 				mergeIP(m, x)
+			}
+			if keep != nil {
+				per = append(per, ds)
+				continue
 			}
 			for h, n := range d.Hours {
 				hours[h] += n
@@ -256,7 +273,9 @@ func (r *attackRollup) attackWindow(days int, now time.Time) (map[string]*atkIP,
 
 // attackStats builds the view for the last days (1 to 30), cached for a
 // minute.
-func (s *Server) attackStats(days int) *attackView {
+func (s *Server) attackStats(days int) *attackView { return s.attackStatsFor(days, "") }
+
+func (s *Server) attackStatsFor(days int, agent string) *attackView {
 	if days < 1 {
 		days = 1
 	}
@@ -265,7 +284,8 @@ func (s *Server) attackStats(days int) *attackView {
 	}
 	r := &s.attacks
 	r.mu.Lock()
-	if c, ok := r.cache[days]; ok && time.Since(c.at) < time.Minute {
+	key := strconv.Itoa(days) + "|" + agent
+	if c, ok := r.cache[key]; ok && time.Since(c.at) < time.Minute {
 		r.mu.Unlock()
 		return c.v
 	}
@@ -275,10 +295,21 @@ func (s *Server) attackStats(days int) *attackView {
 	now := time.Now().UTC()
 	r.mu.Lock()
 	ready := r.ready
-	merged, active, per, hours, overflow, uw := r.attackWindow(days, now)
+	var hit []func(*atkIP) bool
+	if agent != "" {
+		hit = append(hit, func(x *atkIP) bool {
+			for _, h := range x.Hosts {
+				if h == agent {
+					return true
+				}
+			}
+			return false
+		})
+	}
+	merged, active, per, hours, overflow, uw := r.attackWindow(days, now, hit...)
 	r.mu.Unlock()
 
-	v := &attackView{Days: days, Ready: ready, Generated: now, PerDay: per, Hours: hours, NetKinds: map[string]int{}, Geo: s.geoStatus(),
+	v := &attackView{Days: days, Agent: agent, Ready: ready, Generated: now, PerDay: per, Hours: hours, NetKinds: map[string]int{}, Geo: s.geoStatus(),
 		all: map[string]*addrView{}}
 	v.Totals.Overflow = overflow
 	v.Estimated = uw.est
@@ -469,9 +500,9 @@ func (s *Server) attackStats(days int) *attackView {
 	}
 	r.mu.Lock()
 	if r.cache == nil {
-		r.cache = map[int]attackCache{}
+		r.cache = map[string]attackCache{}
 	}
-	r.cache[days] = attackCache{time.Now(), v}
+	r.cache[key] = attackCache{time.Now(), v}
 	r.mu.Unlock()
 	return v
 }
@@ -963,5 +994,15 @@ func (s *Server) handleAttacks(w http.ResponseWriter, r *http.Request, sess *ses
 	if days <= 0 {
 		days = 7
 	}
-	writeJSON(w, s.attackStats(days))
+	agent := r.URL.Query().Get("agent")
+	if agent != "" {
+		s.mu.Lock()
+		_, known := s.state.Agents[agent]
+		s.mu.Unlock()
+		if !known {
+			http.NotFound(w, r)
+			return
+		}
+	}
+	writeJSON(w, s.attackStatsFor(days, agent))
 }
