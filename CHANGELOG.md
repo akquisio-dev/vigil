@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.35.0
 
 - Hosts tab: a third view, List, next to Cards and Table. One host per row: system logo (from the release the weakness check found), name, hostname and address, state, cores and memory, rings for CPU and memory (green, amber from 70 %, red from 90 %) and the number of listening ports, three marks for open critical, high and medium alerts (a click opens the alerts of the host), and links to the host page and its Performance tab. The arrow opens disk, load, network, connections, uptime, updates, version and groups. Ten hosts per page. See [operations](docs/operations.md#the-host-list). No agent update needed.
 
