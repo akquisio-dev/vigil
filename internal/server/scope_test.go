@@ -84,6 +84,8 @@ func TestAlertFilterAndBulk(t *testing.T) {
 		}
 	}
 
+	joey, _, _ := NewUser("joey", "admin")
+	SaveUsers(s.cfg.DataDir, map[string]*User{"joey": joey})
 	body, _ := json.Marshal(map[string]any{"ids": []string{"x1", "x2", "x4", "nope"}, "action": "resolve"})
 	w := httptest.NewRecorder()
 	s.handleAlertsBulk(w, httptest.NewRequest(http.MethodPost, "/api/ui/alerts/bulk", bytes.NewReader(body)), &session{User: "joey"})

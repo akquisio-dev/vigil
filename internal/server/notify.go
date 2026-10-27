@@ -23,8 +23,9 @@ func truncate(s string, n int) string { return notify.Truncate(s, n) }
 
 func (s *Server) alertMessage(al *Alert) message {
 	host := ""
+	var groups []string
 	if a := s.state.Agents[al.Agent]; a != nil {
-		host = a.Name
+		host, groups = a.Name, append([]string{}, a.Tags...)
 	}
 	link := ""
 	if s.cfg.PublicURL != "" {
@@ -32,7 +33,7 @@ func (s *Server) alertMessage(al *Alert) message {
 	}
 	return message{
 		Severity: al.Severity, Title: renderTitle(al.Rule, decodeParams(al.Detail), s.cfg.Language),
-		Host: host, Technique: al.Technique, Link: link,
+		Host: host, Technique: al.Technique, Link: link, Groups: groups,
 	}
 }
 
@@ -67,13 +68,29 @@ func (s *Server) notifierStatus() []NotifierStatus {
 	return out
 }
 
+// forGroups: a notifier limited to groups only gets messages of hosts in
+// one of them.
+func forGroups(n NotifierConfig, m message) bool {
+	if len(n.Groups) == 0 {
+		return true
+	}
+	for _, g := range n.Groups {
+		for _, t := range m.Groups {
+			if strings.EqualFold(g, t) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // notify delivers in the background; a slow mail server must never hold up
 // event ingestion. It may be called with s.mu held.
 func (s *Server) notify(m message, force bool) { s.notifyExcept(m, force, "") }
 
 func (s *Server) notifyExcept(m message, force bool, skip string) {
 	for _, n := range s.cfg.Notifiers {
-		if n.Name == skip || !force && severityRank[m.Severity] < severityRank[n.MinSeverity] {
+		if n.Name == skip || !force && severityRank[m.Severity] < severityRank[n.MinSeverity] || !forGroups(n, m) {
 			continue
 		}
 		go func(n NotifierConfig) {

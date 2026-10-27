@@ -250,7 +250,7 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request, sess *sess
 		total = -total - 1
 	}
 	names := s.agentNames()
-	role := s.roleFor(sess)
+	role := s.rolesFor(sess)
 	views := make([]viewRecord, len(recs))
 	for i, rec := range recs {
 		views[i] = s.view(rec, names, role)

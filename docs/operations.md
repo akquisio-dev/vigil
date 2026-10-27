@@ -274,6 +274,25 @@ roles and remove users. These changes need a fresh code from the
 authenticator app and are written to the event chain. The last admin can
 neither be removed nor lowered.
 
+### Roles per group
+
+An account can have a higher role for the hosts of a group than for the
+rest: someone can read the whole network as viewer and be admin of the group
+of their own servers. Admins set this under **Settings, Users, Roles per
+group** (a fresh code is needed, the change is audited).
+
+For everything tied to one host the higher role counts: its alerts (also in
+bulk, where alerts of other hosts are skipped and counted as `denied`), its
+incidents (including alerts added to one), canaries, response actions,
+evidence snapshots, renaming, maintenance and updates. What concerns the
+whole network keeps the base role: users, groups, a host's groups and
+removing a host, enrollment tokens, sources and shares, rules and
+suppressions, the summary, test notifications and the chain. Detail an
+analyst may see (command lines, diffs) follows the role for the event's host.
+
+Groups are managed under **Settings, Groups**: create one with its hosts,
+rename it on all hosts, remove it (the hosts stay), or set its members.
+
 Passkeys need `public_url` to be set to the address in the browser, because
 it is the relying party they are bound to. Changing the domain later makes
 existing passkeys unusable; password and TOTP keep working.

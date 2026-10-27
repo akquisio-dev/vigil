@@ -221,6 +221,11 @@ Each notifier has a `type`, a `name` and a `min_severity` (`info`, `low`,
 one, vigil names it after its type (`discord-1`). An incomplete notifier stops
 the server at start, so typos show up during installation.
 
+`"groups": ["Moritz"]` limits a notifier to alerts of hosts in one of these
+host groups, for example a Discord channel of the people who run them. Such a
+notifier gets nothing that concerns the whole network: no daily summary and
+no message about the server itself.
+
 After every change, check each channel from the server:
 
 ```

@@ -187,8 +187,8 @@ type viewRecord struct {
 // details of evidence snapshots.
 var sensitiveFields = map[string]bool{"diff": true, "processes": true, "target": true, "journal": true, "connections": true}
 
-func (s *Server) view(rec Record, names map[string]string, role string) viewRecord {
-	if roleRank[role] < roleRank["analyst"] && rec.Event.Data != nil {
+func (s *Server) view(rec Record, names map[string]string, role roleSet) viewRecord {
+	if roleRank[role.For(rec.Agent)] < roleRank["analyst"] && rec.Event.Data != nil {
 		cp := map[string]any{}
 		for k, v := range rec.Event.Data {
 			if sensitiveFields[k] {
@@ -258,7 +258,7 @@ func (s *Server) handleTimeline(w http.ResponseWriter, r *http.Request, sess *se
 	win := time.Duration(minutes) * time.Minute
 	from, to := at.Add(-win), at.Add(win)
 	names := s.agentNames()
-	role := s.roleFor(sess)
+	role := s.rolesFor(sess)
 	recs := []viewRecord{}
 	truncated := false
 	s.store.Between(from, to, func(rec Record) bool {
@@ -304,7 +304,7 @@ func (s *Server) handleRecords(w http.ResponseWriter, r *http.Request, sess *ses
 		at = time.Now().UTC()
 	}
 	names := s.agentNames()
-	role := s.roleFor(sess)
+	role := s.rolesFor(sess)
 	out := []viewRecord{}
 	if len(want) > 0 {
 		// from a little before the given moment (the alert's creation) up to now
@@ -345,7 +345,7 @@ func (s *Server) handlePivot(w http.ResponseWriter, r *http.Request, sess *sessi
 	}
 	now := time.Now().UTC()
 	names := s.agentNames()
-	role := s.roleFor(sess)
+	role := s.rolesFor(sess)
 	var recs []viewRecord
 	total := 0
 	var first, last time.Time

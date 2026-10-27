@@ -75,10 +75,11 @@ func (s *Server) authRole(role string, h authed) http.HandlerFunc {
 
 func (s *Server) meJSON(sess *session) map[string]any {
 	role := "viewer"
+	var groups map[string]string
 	if u := s.user(sess.User); u != nil {
-		role = roleOf(u)
+		role, groups = roleOf(u), u.GroupRoles
 	}
-	return map[string]any{"user": sess.User, "csrf": sess.CSRF, "version": Version, "agent_url": s.cfg.AgentURL, "role": role}
+	return map[string]any{"user": sess.User, "csrf": sess.CSRF, "version": Version, "agent_url": s.cfg.AgentURL, "role": role, "group_roles": groups}
 }
 
 func (s *Server) uiHandler() http.Handler {
@@ -135,8 +136,8 @@ func (s *Server) uiHandler() http.Handler {
 	mux.HandleFunc("POST /api/ui/users/{name}/{action}", s.adminOnly(s.handleUserAction))
 	mux.HandleFunc("GET /api/ui/overview", s.auth(s.handleOverview))
 	mux.HandleFunc("GET /api/ui/alerts", s.auth(s.handleAlerts))
-	mux.HandleFunc("POST /api/ui/alerts/bulk", s.analyst(s.handleAlertsBulk))
-	mux.HandleFunc("POST /api/ui/alerts/{id}/{action}", s.analyst(s.handleAlertAction))
+	mux.HandleFunc("POST /api/ui/alerts/bulk", s.auth(s.handleAlertsBulk))
+	mux.HandleFunc("POST /api/ui/alerts/{id}/{action}", s.onHost("analyst", s.hostByAlert, s.handleAlertAction))
 	mux.HandleFunc("GET /api/ui/events", s.auth(s.handleEventsList))
 	mux.HandleFunc("GET /api/ui/timeline", s.auth(s.handleTimeline))
 	mux.HandleFunc("GET /api/ui/records", s.auth(s.handleRecords))
@@ -158,32 +159,34 @@ func (s *Server) uiHandler() http.Handler {
 	mux.HandleFunc("POST /api/ui/shares/{id}/{action}", s.adminOnly(s.handleShareAction))
 	mux.HandleFunc("GET /api/ui/sessions", s.auth(s.handleSessions))
 	mux.HandleFunc("GET /api/ui/session", s.auth(s.handleSession))
-	mux.HandleFunc("POST /api/ui/agents/{id}/snapshot", s.analyst(s.handleSnapshotRequest))
+	mux.HandleFunc("POST /api/ui/agents/{id}/snapshot", s.onHost("analyst", s.hostByAgent, s.handleSnapshotRequest))
 	mux.HandleFunc("GET /api/ui/agents/{id}", s.auth(s.handleAgent))
 	mux.HandleFunc("GET /api/ui/agents/{id}/metrics", s.auth(s.handleAgentMetrics))
 	mux.HandleFunc("GET /api/ui/hosts", s.auth(s.handleHosts))
-	mux.HandleFunc("POST /api/ui/agents/{id}/{action}", s.adminOnly(s.handleAgentAction))
+	mux.HandleFunc("GET /api/ui/groups", s.auth(s.handleGroups))
+	mux.HandleFunc("POST /api/ui/groups", s.adminOnly(s.handleGroupAction))
+	mux.HandleFunc("POST /api/ui/agents/{id}/{action}", s.onHost("admin", s.hostByAgent, s.handleAgentAction))
 	mux.HandleFunc("GET /api/ui/release/latest", s.adminOnly(s.handleLatestRelease))
 	mux.HandleFunc("POST /api/ui/tokens", s.adminOnly(s.handleToken))
 	mux.HandleFunc("GET /api/ui/canaries", s.auth(s.handleCanaries))
-	mux.HandleFunc("POST /api/ui/canaries", s.adminOnly(s.handleCanaryCreate))
-	mux.HandleFunc("POST /api/ui/canaries/{id}/delete", s.adminOnly(s.handleCanaryDelete))
+	mux.HandleFunc("POST /api/ui/canaries", s.auth(s.handleCanaryCreate))
+	mux.HandleFunc("POST /api/ui/canaries/{id}/delete", s.onHost("admin", s.hostByCanary, s.handleCanaryDelete))
 	mux.HandleFunc("GET /api/ui/rules", s.auth(func(w http.ResponseWriter, r *http.Request, sess *session) {
 		custom, errs := CustomInfo()
 		writeJSON(w, map[string]any{"builtin": Catalog(), "custom": custom, "errors": errs, "suppressible": suppressibleList(),
 			"sigma": sigmaStatus(), "malware": s.malwareStatus(), "forward": s.forwardStatus()})
 	}))
 	mux.HandleFunc("GET /api/ui/alerts/{id}/actions", s.auth(s.handleAlertActions))
-	mux.HandleFunc("POST /api/ui/agents/{id}/respond", s.adminOnly(s.handleRespond))
+	mux.HandleFunc("POST /api/ui/agents/{id}/respond", s.onHost("admin", s.hostByAgent, s.handleRespond))
 	mux.HandleFunc("GET /api/ui/actions", s.auth(s.handleActions))
-	mux.HandleFunc("POST /api/ui/actions/{id}/{decision}", s.adminOnly(s.handleActionDecision))
+	mux.HandleFunc("POST /api/ui/actions/{id}/{decision}", s.onHost("admin", s.hostByAction, s.handleActionDecision))
 	mux.HandleFunc("GET /api/ui/intel", s.auth(func(w http.ResponseWriter, r *http.Request, sess *session) {
 		writeJSON(w, map[string]any{"enabled": s.cfg.ThreatIntel, "lists": s.intel.status(), "vulns": s.vulnStatus(), "malware": s.malwareStatus()})
 	}))
 	mux.HandleFunc("GET /api/ui/incidents", s.auth(s.handleIncidents))
 	mux.HandleFunc("GET /api/ui/incidents/{id}", s.auth(s.handleIncident))
-	mux.HandleFunc("GET /api/ui/incidents/{id}/report", s.analyst(s.handleIncidentReport))
-	mux.HandleFunc("POST /api/ui/incidents/{id}/{action}", s.analyst(s.handleIncidentAction))
+	mux.HandleFunc("GET /api/ui/incidents/{id}/report", s.onHost("analyst", s.hostByIncident, s.handleIncidentReport))
+	mux.HandleFunc("POST /api/ui/incidents/{id}/{action}", s.auth(s.handleIncidentAction))
 	mux.HandleFunc("GET /api/ui/suppressions", s.auth(s.handleSuppressions))
 	mux.HandleFunc("POST /api/ui/suppressions", s.analyst(s.handleSuppressionCreate))
 	mux.HandleFunc("POST /api/ui/suppressions/{id}/{action}", s.analyst(s.handleSuppressionAction))
@@ -488,7 +491,7 @@ func (s *Server) handleEventsList(w http.ResponseWriter, r *http.Request, sess *
 	}
 	recs := s.store.Recent(Query{Agent: q.Get("agent"), Agents: group, Prefix: q.Get("type"), Before: before, Limit: limit})
 	names := s.agentNames()
-	role := s.roleFor(sess)
+	role := s.rolesFor(sess)
 	out := make([]viewRecord, len(recs))
 	for i, rec := range recs {
 		out[i] = s.view(rec, names, role)
@@ -530,6 +533,11 @@ func (s *Server) handleAgentAction(w http.ResponseWriter, r *http.Request, sess 
 		Tags    []string `json:"tags"`
 	}
 	if !decode(r, w, &req) {
+		return
+	}
+	// changing a host's groups or removing it acts on the whole network
+	if (action == "tags" || action == "delete") && roleRank[s.rolesFor(sess).base] < roleRank["admin"] {
+		forbidden(w, s.rolesFor(sess).base)
 		return
 	}
 	s.mu.Lock()
@@ -677,6 +685,9 @@ func (s *Server) handleCanaryCreate(w http.ResponseWriter, r *http.Request, sess
 		Readable bool              `json:"readable"`
 	}
 	if !decode(r, w, &req) {
+		return
+	}
+	if !s.allowHost(w, sess, "admin", req.AgentID) {
 		return
 	}
 	bad := func(msg string) { http.Error(w, msg, http.StatusBadRequest) }

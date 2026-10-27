@@ -42,6 +42,11 @@ type Config struct {
 	// Summary false leaves this notifier out of the daily summary.
 	Summary *bool `json:"summary,omitempty"`
 
+	// Groups limits the notifier to alerts of hosts in one of these host
+	// groups (tags); it then gets no daily summary and nothing about the
+	// server itself, which concern the whole network.
+	Groups []string `json:"groups,omitempty"`
+
 	// Token is the ntfy access token or the Telegram bot token.
 	Token  string `json:"token,omitempty"`
 	ChatID string `json:"chat_id,omitempty"` // telegram
@@ -68,6 +73,8 @@ type Message struct {
 	Technique string
 	Link      string
 	Text      string // used instead of the alert layout, e.g. chain anchors
+	// Groups are the groups of the alert's host, for notifiers with Groups.
+	Groups []string
 }
 
 // Plain renders a Message for channels without rich layout.

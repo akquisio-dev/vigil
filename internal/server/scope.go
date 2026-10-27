@@ -142,10 +142,16 @@ func (s *Server) handleAlertsBulk(w http.ResponseWriter, r *http.Request, sess *
 		want[id] = true
 	}
 	now := time.Now().UTC()
+	rs := s.rolesFor(sess)
 	s.mu.Lock()
 	var done []map[string]any
+	denied := 0
 	for _, al := range s.state.Alerts {
 		if !want[al.ID] || al.Status == next || al.Status == "resolved" {
+			continue
+		}
+		if !rs.mayHost("analyst", al.Agent) {
+			denied++
 			continue
 		}
 		al.Status, al.By, al.Updated = next, sess.User, now
@@ -162,5 +168,144 @@ func (s *Server) handleAlertsBulk(w http.ResponseWriter, r *http.Request, sess *
 		d["bulk"] = true
 		s.audit(sess.User, "alert."+req.Action, d)
 	}
-	writeJSON(w, map[string]int{"changed": len(done)})
+	writeJSON(w, map[string]int{"changed": len(done), "denied": denied})
+}
+
+type groupView struct {
+	Name     string         `json:"name"`
+	Hosts    []string       `json:"hosts"` // agent IDs
+	Online   int            `json:"online"`
+	OpenBy   map[string]int `json:"open_by_severity"`
+	Security int            `json:"security_updates"`
+	Reboot   int            `json:"reboot_pending"`
+	Attack24 int            `json:"attackers_24h"` // addresses that tried a host of the group
+}
+
+// handleGroups: GET /api/ui/groups, one line per group; hosts without a
+// group are left out.
+func (s *Server) handleGroups(w http.ResponseWriter, r *http.Request, sess *session) {
+	s.mu.Lock()
+	byName := map[string]*groupView{}
+	var order []string
+	for _, a := range s.state.Agents {
+		v := s.viewAgent(a)
+		for _, t := range a.Tags {
+			k := strings.ToLower(t)
+			g := byName[k]
+			if g == nil {
+				g = &groupView{Name: t, OpenBy: map[string]int{}}
+				byName[k] = g
+				order = append(order, k)
+			}
+			g.Hosts = append(g.Hosts, a.ID)
+			if v.Status == "online" {
+				g.Online++
+			}
+			for sev, n := range v.OpenBySev {
+				g.OpenBy[sev] += n
+			}
+			if a.Updates != nil {
+				g.Security += int(num(a.Updates, "security"))
+				if b, _ := a.Updates["reboot_required"].(bool); b {
+					g.Reboot++
+				}
+			}
+		}
+	}
+	s.mu.Unlock()
+	sort.Strings(order)
+	out := []groupView{}
+	for _, k := range order {
+		g := byName[k]
+		seen := map[string]bool{}
+		for _, id := range g.Hosts {
+			if v := s.attackStatsFor(1, id); v != nil {
+				for _, a := range v.Addresses {
+					seen[a.IP] = true
+				}
+			}
+		}
+		g.Attack24 = len(seen)
+		sort.Strings(g.Hosts)
+		out = append(out, *g)
+	}
+	writeJSON(w, out)
+}
+
+// handleGroupAction: POST /api/ui/groups {"action": "rename"|"delete"|"members",
+// "group": NAME, "to": NEW_NAME, "hosts": [IDs]}. Groups exist through
+// their hosts: members sets exactly which hosts carry the group.
+func (s *Server) handleGroupAction(w http.ResponseWriter, r *http.Request, sess *session) {
+	var req struct {
+		Action string   `json:"action"`
+		Group  string   `json:"group"`
+		To     string   `json:"to"`
+		Hosts  []string `json:"hosts"`
+	}
+	if !decode(r, w, &req) {
+		return
+	}
+	name := cleanTags([]string{req.Group})
+	if len(name) != 1 {
+		http.Error(w, "bad group name", http.StatusBadRequest)
+		return
+	}
+	g := name[0]
+	var to string
+	if req.Action == "rename" {
+		t := cleanTags([]string{req.To})
+		if len(t) != 1 {
+			http.Error(w, "bad new name", http.StatusBadRequest)
+			return
+		}
+		to = t[0]
+	}
+	want := map[string]bool{}
+	for _, id := range req.Hosts {
+		want[id] = true
+	}
+	s.mu.Lock()
+	changed := 0
+	for id, a := range s.state.Agents {
+		had := hasTag(a, g)
+		var tags []string
+		for _, t := range a.Tags {
+			if !strings.EqualFold(t, g) {
+				tags = append(tags, t)
+			}
+		}
+		switch req.Action {
+		case "rename":
+			if !had {
+				continue
+			}
+			tags = append(tags, to)
+		case "delete":
+			if !had {
+				continue
+			}
+		case "members":
+			if want[id] == had {
+				continue
+			}
+			if want[id] {
+				tags = append(tags, g)
+			}
+		default:
+			s.mu.Unlock()
+			http.Error(w, "action must be rename, delete or members", http.StatusBadRequest)
+			return
+		}
+		if want[id] && req.Action == "members" && len(cleanTags(tags)) < len(tags) {
+			continue // already at maxTags
+		}
+		a.Tags = cleanTags(tags)
+		changed++
+	}
+	if changed > 0 {
+		s.saveLocked()
+	}
+	s.mu.Unlock()
+	s.audit(sess.User, "group."+req.Action, map[string]any{"group": g, "to": to, "hosts": req.Hosts, "changed": changed})
+	writeJSON(w, map[string]int{"changed": changed})
 }

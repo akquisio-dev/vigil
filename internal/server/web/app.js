@@ -142,6 +142,8 @@ const T = {
     allStates: "Any state", notOnline: "not online", onlyCritical: "critical or high alerts", onlyReboot: "reboot pending", noHostsFilter: "No host matches the filter",
     onlyScope: "Only {s}", attacksOnHost: "Addresses that tried {h}", attacksNoGroup: "Attacks can be narrowed to one host, not to a group. Shown for all hosts.",
     attacksHostNote: "Counts per address cover every host it tried. Hours of day and tried user names are kept for all hosts together and are left out here.",
+    noGroup: "No group", onlyThisGroup: "Only this group", securityShortL: "Security updates", renameGroup: "New name of the group", confirmDeleteGroup: "Remove the group {g} from all its hosts? The hosts stay.",
+    saveMembers: "Save members", newGroup: "New group", createGroup: "Create group", noGroups: "No groups yet", groupRoles: "Roles per group", baseRoleOnly: "base role only",
   },
   de: {
     overview: "Lage", alerts: "Alarme", events: "Ereignisse", canaries: "Köder", settings: "Einstellungen",
@@ -281,6 +283,8 @@ const T = {
     allStates: "Jeder Zustand", notOnline: "nicht online", onlyCritical: "kritische oder hohe Alarme", onlyReboot: "Neustart nötig", noHostsFilter: "Kein Host passt zum Filter",
     onlyScope: "Nur {s}", attacksOnHost: "Adressen, die {h} angegriffen haben", attacksNoGroup: "Angriffe lassen sich auf einen Host eingrenzen, nicht auf eine Gruppe. Angezeigt für alle Hosts.",
     attacksHostNote: "Die Zahlen je Adresse umfassen alle Hosts, die sie angegriffen hat. Tageszeiten und versuchte Benutzernamen gibt es nur für alle Hosts zusammen, sie fehlen hier.",
+    noGroup: "Ohne Gruppe", onlyThisGroup: "Nur diese Gruppe", securityShortL: "Sicherheitsupdates", renameGroup: "Neuer Name der Gruppe", confirmDeleteGroup: "Die Gruppe {g} bei allen Hosts entfernen? Die Hosts bleiben.",
+    saveMembers: "Mitglieder speichern", newGroup: "Neue Gruppe", createGroup: "Gruppe anlegen", noGroups: "Noch keine Gruppen", groupRoles: "Rollen je Gruppe", baseRoleOnly: "nur Grundrolle",
   },
 };
 
@@ -335,7 +339,21 @@ function newerVersion(a, b) {
   return false;
 }
 const RANK = { viewer: 1, analyst: 2, admin: 3 };
-const can = (role) => me && (RANK[me.role] || 3) >= RANK[role];
+// can(role, agent): the base role, raised by the account's role for the
+// groups of that host (as the server decides it, see roles.go). agent ""
+// asks for the base role only.
+const can = (role, agent) => {
+  if (!me) return false;
+  let r = RANK[me.role] || 3;
+  const gr = me.group_roles || {};
+  if (agent && Object.keys(gr).length) {
+    const host = (scopeHosts || []).find((x) => x.id === agent);
+    for (const g of (host && host.tags) || []) for (const [k, v] of Object.entries(gr)) if (k.toLowerCase() === g.toLowerCase()) r = Math.max(r, RANK[v] || 0);
+  }
+  return r >= RANK[role];
+};
+// anyGroupRole: the account is at least role for some group
+const anyGroupRole = (role) => Object.values((me && me.group_roles) || {}).some((v) => (RANK[v] || 0) >= RANK[role]);
 const fromB64u = (s) => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0));
 const toB64u = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 
@@ -792,6 +810,7 @@ async function overview() {
       panel(t("topRules"), t("days7"), rankList(o.top_rules, { mono: true, empty: t("noAlerts"), href: () => "#/alerts" })),
       panel(t("attackers"), "24 h", rankList(o.top_attackers, { mono: true, tone: "red", empty: t("noEvents"),
         href: (i) => "#/events?type=ssh.failed" }))),
+    scopeName() ? null : await groupsPanel(),
     h("h2", null, t("hosts")), hostTable,
     h("div", { class: "grid dash-b mt" },
       panel(t("incidents"), h("a", { href: "#/incidents" }, inc.incidents.length + " " + t("activeInc").toLowerCase()),
@@ -825,7 +844,7 @@ function actionRows(list) {
     actStatus(x.status),
     h("div", null, h("div", { class: "title" }, actLabel(x)),
       h("div", { class: "sub" }, [x.by, x.approved_by ? t("approvedBy") + " " + x.approved_by : "", x.result].filter(Boolean).join("  ·  ")),
-      x.status === "approval" && can("admin") ? h("div", { class: "actions" },
+      x.status === "approval" && can("admin", x.agent) ? h("div", { class: "actions" },
         x.by !== me.user ? h("button", { class: "btn small", onclick: decide(x, "approve") }, t("approve")) : h("span", { class: "muted" }, t("needsSecond")),
         h("button", { class: "btn small ghost", onclick: decide(x, "reject") }, x.by === me.user ? t("withdraw") : t("reject"))) : null),
     h("div", { class: "meta" }, timeEl(x.created)))));
@@ -850,17 +869,17 @@ function containCard(a) {
   const allowed = new Set(a.response_types || []);
   const locked = Object.entries(c.locked || {});
   const isolated = c.isolated_until && new Date(c.isolated_until) > new Date();
-  if (!isolated && !locked.length && !(can("admin") && (allowed.has("isolate_host") || allowed.has("lock_user")))) return null;
+  if (!isolated && !locked.length && !(can("admin", a.id) && (allowed.has("isolate_host") || allowed.has("lock_user")))) return null;
   const userIn = h("input", { placeholder: t("user"), maxlength: 32, class: "mono" });
   return h("div", { class: "card mt" + (isolated ? " danger-card" : "") },
     h("h3", null, t("containment")),
     isolated ? h("div", { class: "flex" }, h("span", { class: "chip" }, h("span", { class: "dot critical" }), t("isolatedUntil") + " " + abs(c.isolated_until)),
-      can("admin") && allowed.has("release_host") ? h("button", { class: "btn small right", onclick: respondNow(a.id, "release_host", {}) }, t("actRelease")) : null) : null,
+      can("admin", a.id) && allowed.has("release_host") ? h("button", { class: "btn small right", onclick: respondNow(a.id, "release_host", {}) }, t("actRelease")) : null) : null,
     locked.map(([u, until]) => h("div", { class: "flex mt" }, h("span", { class: "chip" }, h("span", { class: "dot high" }), u + ": " + t("lockedUntil") + " " + abs(until)),
-      can("admin") && allowed.has("unlock_user") ? h("button", { class: "btn small right", onclick: respondNow(a.id, "unlock_user", { user: u }) }, t("unlock")) : null)),
-    can("admin") && !isolated && allowed.has("isolate_host") ? h("div", { class: "actions" },
+      can("admin", a.id) && allowed.has("unlock_user") ? h("button", { class: "btn small right", onclick: respondNow(a.id, "unlock_user", { user: u }) }, t("unlock")) : null)),
+    can("admin", a.id) && !isolated && allowed.has("isolate_host") ? h("div", { class: "actions" },
       h("button", { class: "btn danger", onclick: respondNow(a.id, "isolate_host", { minutes: "60" }) }, t("actIsolate").replace("{dur}", "1 h"))) : null,
-    can("admin") && allowed.has("lock_user") ? h("form", { class: "inline mt", onsubmit: (e) => { e.preventDefault(); if (userIn.value.trim()) respondNow(a.id, "lock_user", { user: userIn.value.trim(), minutes: "1440" })(); } },
+    can("admin", a.id) && allowed.has("lock_user") ? h("form", { class: "inline mt", onsubmit: (e) => { e.preventDefault(); if (userIn.value.trim()) respondNow(a.id, "lock_user", { user: userIn.value.trim(), minutes: "1440" })(); } },
       h("label", null, t("lockAccount"), userIn), h("button", { class: "btn ghost", type: "submit" }, t("actLock").replace("{user}", "").replace("{dur}", "24 h").trim())) : null);
 }
 
@@ -975,12 +994,12 @@ async function alertDetail(id) {
         h("dt", null, t("created")), h("dd", null, abs(a.created)),
         h("dt", null, t("updated")), h("dd", null, abs(a.updated)),
         params.map(([k, v]) => [h("dt", null, k), h("dd", { class: "mono" }, entityLink(k, v) || v || "·")])),
-      !can("analyst") ? null : h("div", { class: "actions" },
+      !can("analyst", a.agent) ? null : h("div", { class: "actions" },
         a.status === "open" ? h("button", { class: "btn", onclick: act("ack") }, t("ack")) : null,
         a.status !== "resolved" ? h("button", { class: "btn ghost", onclick: act("resolve") }, t("resolve")) : null,
         a.status !== "open" ? h("button", { class: "btn ghost", onclick: act("reopen") }, t("reopen")) : null,
-        a.suppressible ? h("button", { class: "btn ghost", onclick: () => { box.hidden = false; preview(); reason.focus(); } }, icon("bell-off"), t("suppress")) : null,
-        a.proc_key && a.agent && can("admin") ? h("button", { class: "btn ghost", title: a.proc_key, onclick: async () => {
+        a.suppressible && can("analyst", "") ? h("button", { class: "btn ghost", onclick: () => { box.hidden = false; preview(); reason.focus(); } }, icon("bell-off"), t("suppress")) : null,
+        a.proc_key && a.agent && can("admin", a.agent) ? h("button", { class: "btn ghost", title: a.proc_key, onclick: async () => {
           await post("/api/ui/agents/" + a.agent + "/accept-port", { key: a.proc_key }); render();
         } }, t("acceptProcess")) : null,
         a.incident ? h("a", { class: "btn ghost", href: "#/incidents/" + a.incident }, icon("stack-2"), t("incident"))
@@ -1006,7 +1025,7 @@ async function hostView(id) {
       h("div", { class: "sub" }, [x.by, x.error, x.notified ? t("notifiedTo") + " " + Object.entries(x.notified).map(([k, v]) => k + (v === "ok" ? "" : " (" + v + ")")).join(", ") : ""].filter(Boolean).join("  ·  "))),
     h("div", { class: "meta" }, timeEl(x.created)));
   const selftestCard = h("div", null, h("div", { class: "flex" }, h("h2", null, t("selftest")),
-      can("admin") && a.selftest ? h("button", { class: "btn small right", onclick: async () => {
+      can("admin", a.id) && a.selftest ? h("button", { class: "btn small right", onclick: async () => {
         stErr.textContent = "";
         try { await post("/api/ui/agents/" + a.id + "/selftest"); render(); } catch (x) { stErr.textContent = x.message; }
       } }, t("runSelftest")) : null),
@@ -1036,7 +1055,7 @@ async function hostView(id) {
   const updText = u ? t("upd_" + u.status).replace("{v}", u.version).replace("{f}", u.from || "?") + (u.error ? ": " + u.error : "") : "";
   // Agents before v0.19.0 cannot update themselves. A newer one decides by
   // its own agent.json; self_update is what it said on its last start.
-  const updButton = !can("admin") ? null : newerVersion("v0.19.0", a.version) ? null
+  const updButton = !can("admin", a.id) ? null : newerVersion("v0.19.0", a.version) ? null
     : h("div", { class: "actions" }, !a.self_update ? h("div", { class: "muted" }, t("selfUpdateOff")) : null, h("button", { class: "btn ghost", onclick: async () => {
       updErr.textContent = "";
       try {
@@ -1065,10 +1084,10 @@ async function hostView(id) {
           h("dt", null, t("enrolled")), h("dd", null, abs(a.enrolled)),
           h("dt", null, t("canaryRoots")), h("dd", { class: "mono" }, (a.canary_roots || []).join("  ") || t("none")),
           h("dt", null, t("configSync")), h("dd", null, t(a.config_sync ? "synced" : "waiting")))),
-      !can("admin") ? null : h("div", { class: "card" },
+      !can("admin", a.id) ? null : h("div", { class: "card" },
         h("form", { class: "inline", onsubmit: async (e) => { e.preventDefault(); await post("/api/ui/agents/" + a.id + "/rename", { name: renameInput.value }); render(); } },
           h("label", null, t("rename"), renameInput), h("button", { class: "btn ghost", type: "submit" }, t("rename"))),
-        tagEditor(a),
+        can("admin", "") ? tagEditor(a) : null,
         a.maintenance_until
           ? h("div", { class: "flex mt" }, h("span", { class: "chip" }, h("span", { class: "dot stopped" }), t("maintenanceUntil") + " " + abs(a.maintenance_until)),
             h("button", { class: "btn small ghost", onclick: action("maintenance", { minutes: 0 }) }, t("end")))
@@ -1081,7 +1100,7 @@ async function hostView(id) {
           h("a", { class: "btn ghost", href: "#/sessions?agent=" + a.id }, t("sessions")),
           h("a", { class: "btn ghost", href: "#/alerts?host=" + a.id }, t("alerts")),
           h("a", { class: "btn ghost", href: "#/attacks?host=" + a.id }, t("attacks")),
-          h("button", { class: "btn danger", onclick: async () => { if (confirm(t("confirmDelete"))) { await post("/api/ui/agents/" + a.id + "/delete"); location.hash = "#/"; } } }, t("deleteHost"))))),
+          can("admin", "") ? h("button", { class: "btn danger", onclick: async () => { if (confirm(t("confirmDelete"))) { await post("/api/ui/agents/" + a.id + "/delete"); location.hash = "#/"; } } }, t("deleteHost")) : null))),
     perf,
     a.updates ? h("div", { class: "card mt" }, h("h3", null, t("updates")), h("dl", { class: "kv" },
       h("dt", null, t("updates")), h("dd", null, updatesCell(a.updates)),
@@ -1359,9 +1378,9 @@ async function incidentDetail(id) {
   mount(shell("incidents",
     h("div", { class: "crumbs" }, h("a", { href: "#/incidents" }, t("incidents")), " / " + c.id),
     h("h1", null, c.title || c.id),
-    h("div", { class: "page-actions" }, c.owner !== me.user && can("analyst") ? h("button", { class: "btn", onclick: act("assign") }, t("assignMe")) : null,
-      can("analyst") ? h("a", { class: "btn ghost", href: "/api/ui/incidents/" + c.id + "/report?format=md" }, t("reportMD")) : null,
-      can("analyst") ? h("a", { class: "btn ghost", href: "/api/ui/incidents/" + c.id + "/report?format=html", target: "_blank", rel: "noopener" }, t("reportPrint")) : null),
+    h("div", { class: "page-actions" }, c.owner !== me.user && can("analyst", c.agent) ? h("button", { class: "btn", onclick: act("assign") }, t("assignMe")) : null,
+      can("analyst", c.agent) ? h("a", { class: "btn ghost", href: "/api/ui/incidents/" + c.id + "/report?format=md" }, t("reportMD")) : null,
+      can("analyst", c.agent) ? h("a", { class: "btn ghost", href: "/api/ui/incidents/" + c.id + "/report?format=html", target: "_blank", rel: "noopener" }, t("reportPrint")) : null),
     h("div", { class: "grid two" },
       h("div", { class: "card" }, h("dl", { class: "kv" },
         h("dt", null, t("status")), h("dd", null, incChip(c.status)),
@@ -1371,14 +1390,14 @@ async function incidentDetail(id) {
         h("dt", null, t("created")), h("dd", null, abs(c.created)),
         h("dt", null, t("updated")), h("dd", null, abs(c.last)),
         h("dt", null, t("alerts")), h("dd", null, c.count + (c.open_alerts ? " (" + c.open_alerts + " " + t("open").toLowerCase() + ")" : ""))),
-        !can("analyst") ? null : h("div", { class: "actions" }, h("span", { class: "muted" }, t("setStatus")),
+        !can("analyst", c.agent) ? null : h("div", { class: "actions" }, h("span", { class: "muted" }, t("setStatus")),
           h("div", { class: "tabs" }, ["open", "investigating", "contained", "closed"].map((st) =>
             h("button", { class: st === c.status ? "on" : null, onclick: act("status", { status: st }) }, t(st === "open" ? "openInc" : st)))))),
       h("div", { class: "card" }, h("h3", null, t("notes")),
         h("div", { class: "notes" }, (c.notes || []).map((n) => h("div", { class: "note" },
           h("div", { class: "note-head" }, h("span", { class: "strong" }, n.by), " ", h("span", { class: "muted" }, abs(n.at))),
           h("div", { class: "note-text" }, n.text)))),
-        !can("analyst") ? null : h("form", { class: "stack mt", onsubmit: async (e) => { e.preventDefault(); await act("note", { note: note.value })(); } },
+        !can("analyst", c.agent) ? null : h("form", { class: "stack mt", onsubmit: async (e) => { e.preventDefault(); await act("note", { note: note.value })(); } },
           note, h("div", null, h("button", { class: "btn ghost", type: "submit" }, t("addNote")))))),
     h("h2", null, t("timeline")), h("div", { class: "card" }, tl)));
 }
@@ -1539,6 +1558,7 @@ async function settingsView() {
         try { await post("/api/ui/users/" + encodeURIComponent(u.name) + "/role", { role: e.target.value, code }); } catch (x) { uErr.textContent = x.message; }
         render();
       })),
+      h("td", null, groupRolesCell(u, askCode, (m) => { uErr.textContent = m; })),
       h("td", { class: "nowrap" }, u.last_login && !u.last_login.startsWith("0001") ? timeEl(u.last_login) : "·"),
       h("td", null, u.passkeys),
       h("td", null, u.name === me.user ? null : h("button", { class: "btn small ghost", onclick: async () => {
@@ -1548,7 +1568,7 @@ async function settingsView() {
       } }, t("remove"))));
     const tbody = h("tbody", null, users.map(userRow));
     usersCard = h("div", { class: "card mt" }, h("h3", null, t("users")),
-      h("div", { class: "tablewrap flat" }, h("table", null, h("thead", null, h("tr", null, [t("name"), t("role"), t("lastLogin"), t("passkeys"), ""].map((x) => h("th", null, x)))), tbody)),
+      h("div", { class: "tablewrap flat" }, h("table", null, h("thead", null, h("tr", null, [t("name"), t("role"), t("groupRoles"), t("lastLogin"), t("passkeys"), ""].map((x) => h("th", null, x)))), tbody)),
       h("div", { class: "mt" }, uForm), uErr, result);
   }
 
@@ -1567,6 +1587,7 @@ async function settingsView() {
     h("button", { class: k === lang ? "on" : null, onclick: () => setLang(k) }, name)));
   mount(shell("settings", h("h1", null, t("settings")), h("div", { class: "crumbs" }, "vigil " + me.version),
     accountCards, usersCard,
+    can("admin", "") && scopeHosts && scopeHosts.length ? groupsAdmin(scopeHosts) : null,
     h("div", { class: "grid two mt" },
       can("admin") ? h("div", { class: "card" }, h("h3", null, t("enroll")),
         h("button", { class: "btn", onclick: async () => {
@@ -2580,7 +2601,7 @@ async function snapshotsCard(agent, alertID) {
   const q = new URLSearchParams(alertID ? { alert: alertID } : { agent });
   const d = await api("/api/ui/snapshots?" + q);
   const note = h("span", { class: "muted" });
-  const ask = can("analyst") && agent ? h("button", { class: "btn small ghost", onclick: async () => {
+  const ask = can("analyst", agent) && agent ? h("button", { class: "btn small ghost", onclick: async () => {
     try { await post("/api/ui/agents/" + agent + "/snapshot", { alert: alertID || "" }); note.textContent = t("snapshotAsked"); setTimeout(render, 45000); }
     catch (x) { note.textContent = x.message; }
   } }, t("takeSnapshot")) : null;
@@ -2869,6 +2890,7 @@ function topology(d) {
     const cpu = m ? m.cpu : 0, mem = m ? pctOf(m.mem_used, m.mem_total) : 0;
     const g = sv("g", { class: "node" + (x.server ? " server" : "") + (x.status !== "online" || x.stale ? " off" : "") + (d.focus && !d.focus.has(x.id) ? " dim" : ""), tabindex: 0, role: "link", "aria-label": x.name });
     g.append(sv("rect", { x: px - nw / 2, y: py - nh / 2, width: nw, height: nh, rx: 10, class: "nbox" }));
+    if (primaryGroup(x)) g.append(sv("rect", { x: px - nw / 2 + 1, y: py - nh / 2 + 8, width: 3, height: nh - 16, rx: 1.5, class: "ngroup " + groupClass(primaryGroup(x)) }));
     g.append(sv("circle", { cx: px - nw / 2 + 15, cy: py - nh / 2 + 16, r: 4, class: "ndot " + x.status }));
     const name = x.name.length > (narrow ? 14 : 19) ? x.name.slice(0, narrow ? 13 : 18) + "…" : x.name;
     g.append(sv("text", { x: px - nw / 2 + 24, y: py - nh / 2 + 20, class: "nname" }, name));
@@ -2964,8 +2986,9 @@ async function hostsView() {
       h("div", { class: "topo-legend" },
         h("span", { class: "chip" }, h("span", { class: "lg-line" }), t("legendTcp")),
         h("span", { class: "chip" }, h("span", { class: "lg-line ext" }), t("legendNet")),
-        h("span", { class: "chip" }, h("span", { class: "lg-dot" }), "vigil"))),
-    h("div", { class: "hostgrid mt" }, hosts.map((x) => hostCard(x, d.agent_port))));
+        h("span", { class: "chip" }, h("span", { class: "lg-dot" }), "vigil"),
+        mainGroups().map((g) => h("span", { class: "chip" }, h("span", { class: "gmark " + groupClass(g) }), g)))),
+    ...[groupedCards(hosts, d.agent_port)].flat());
 }
 
 const RANGES = ["1h", "6h", "24h", "7d", "30d"];
@@ -3110,7 +3133,7 @@ async function alertsView() {
     bulkErr.textContent = "";
     try { await post("/api/ui/alerts/bulk", { ids: shown.map((a) => a.id), action }); render(); } catch (x) { bulkErr.textContent = x.message; }
   };
-  const bulkBox = can("analyst") && alertTab !== "resolved" ? h("div", { class: "flex wrap" },
+  const bulkBox = (can("analyst") || anyGroupRole("analyst")) && alertTab !== "resolved" ? h("div", { class: "flex wrap" },
     alertTab !== "acked" ? h("button", { class: "btn small ghost", onclick: bulk("ack") }, t("bulkAck")) : null,
     h("button", { class: "btn small ghost", onclick: bulk("resolve") }, t("bulkResolve"))) : null;
   function draw() {
@@ -3220,6 +3243,109 @@ function tagEditor(a) {
     h("label", null, t("groups"), input), h("button", { class: "btn ghost", type: "submit" }, t("save")), err);
 }
 
+// ---------- groups ----------
+// The first three groups (alphabetical) get the validated series colours,
+// further ones stay grey; colour is never the only hint, names come along.
+const groupNames = () => allTags();
+// A host's main group is the one most hosts share (owner groups like
+// "Moritz" rather than a role tag only it carries); ties go by name.
+const groupSize = (g) => (scopeHosts || []).filter((x) => (x.tags || []).includes(g)).length;
+const primaryGroup = (x) => ((x.tags || []).slice().sort((a, b) => groupSize(b) - groupSize(a) || a.localeCompare(b, lang))[0]) || "";
+const mainGroups = () => [...new Set((scopeHosts || []).map(primaryGroup).filter(Boolean))].sort((a, b) => a.localeCompare(b, lang));
+const groupClass = (g) => { const i = mainGroups().indexOf(g); return i >= 0 && i < 3 ? "g" + (i + 1) : "g0"; };
+
+function groupHead(name, list) {
+  const withM = list.filter((x) => x.metrics);
+  const online = list.filter((x) => x.status === "online").length;
+  const avg = (f) => withM.length ? withM.reduce((s, x) => s + f(x.metrics), 0) / withM.length : 0;
+  const bySev = {};
+  list.forEach((x) => Object.entries(x.open_by_severity || {}).forEach(([k, n]) => { bySev[k] = (bySev[k] || 0) + n; }));
+  return h("div", { class: "ghead" },
+    h("span", { class: "gmark " + (name ? groupClass(name) : "g0") }),
+    h("h2", null, name || t("noGroup")),
+    h("span", { class: "chip" }, h("span", { class: "dot " + (online === list.length ? "online" : "silent") }), online + " / " + list.length + " " + t("online")),
+    withM.length ? h("span", { class: "muted" }, t("cpu") + " " + fmtPct(avg((m) => m.cpu)) + "  ·  " + t("memory") + " " + fmtPct(avg((m) => pctOf(m.mem_used, m.mem_total)))) : null,
+    Object.keys(bySev).length ? sevCounts(bySev) : null,
+    name ? h("button", { class: "linkbtn right", onclick: () => setScope({ group: name }) }, t("onlyThisGroup")) : null);
+}
+
+function groupedCards(hosts, agentPort) {
+  const by = new Map();
+  for (const x of hosts) {
+    const g = primaryGroup(x);
+    if (!by.has(g)) by.set(g, []);
+    by.get(g).push(x);
+  }
+  const names = [...by.keys()].sort((a, b) => (a === "") - (b === "") || a.localeCompare(b, lang));
+  if (names.length === 1 && names[0] === "") return h("div", { class: "hostgrid mt" }, hosts.map((x) => hostCard(x, agentPort)));
+  return names.map((g) => h("section", { class: "gsection mt" }, groupHead(g, by.get(g)), h("div", { class: "hostgrid" }, by.get(g).map((x) => hostCard(x, agentPort)))));
+}
+
+async function groupsPanel() {
+  const gs = await api("/api/ui/groups").catch(() => []);
+  if (!gs.length) return null;
+  return h("div", { class: "mt" }, h("h2", null, t("groups")), h("div", { class: "tablewrap" }, h("table", { class: "groups" },
+    h("thead", null, h("tr", null, [t("group"), t("hosts"), t("alertsOpen"), t("securityShortL"), t("rebootShort"), t("attackers") + " 24 h"].map((x) => h("th", null, x)))),
+    h("tbody", null, gs.map((g) => h("tr", { class: "click", onclick: () => setScope({ group: g.name }) },
+      h("td", null, h("span", { class: "gmark " + groupClass(g.name) }), h("span", { class: "strong" }, g.name)),
+      h("td", null, h("span", { class: "chip" }, h("span", { class: "dot " + (g.online === g.hosts.length ? "online" : "silent") }), g.online + " / " + g.hosts.length)),
+      h("td", null, Object.values(g.open_by_severity).some(Boolean) ? sevCounts(g.open_by_severity) : h("span", { class: "muted" }, "0")),
+      h("td", null, g.security_updates ? h("span", { class: "sev high" }, g.security_updates) : h("span", { class: "muted" }, "0")),
+      h("td", null, g.reboot_pending ? h("span", { class: "sev medium" }, g.reboot_pending) : h("span", { class: "muted" }, "0")),
+      h("td", null, g.attackers_24h.toLocaleString(lang))))))));
+}
+
+// settings: groups and their members (admins with the base role)
+function groupsAdmin(hosts) {
+  const err = h("div", { class: "err" });
+  const names = groupNames();
+  const send = async (body) => {
+    err.textContent = "";
+    try { await post("/api/ui/groups", body); await loadScopeHosts(true); render(); } catch (x) { err.textContent = x.message; }
+  };
+  const sorted = hosts.slice().sort((a, b) => a.name.localeCompare(b.name, lang));
+  const memberForm = (g) => {
+    const boxes = sorted.map((x) => h("label", { class: "check" }, h("input", { type: "checkbox", value: x.id, checked: (x.tags || []).some((t_) => t_.toLowerCase() === g.toLowerCase()) ? true : null }), x.name));
+    return h("div", { class: "gadmin" },
+      h("div", { class: "flex wrap" }, h("span", { class: "gmark " + groupClass(g) }), h("span", { class: "strong" }, g),
+        h("button", { class: "btn small ghost right", onclick: () => { const to = prompt(t("renameGroup"), g); if (to && to.trim() !== g) send({ action: "rename", group: g, to: to.trim() }); } }, t("rename")),
+        h("button", { class: "btn small ghost", onclick: () => { if (confirm(t("confirmDeleteGroup").replace("{g}", g))) send({ action: "delete", group: g }); } }, t("remove"))),
+      h("div", { class: "flex wrap mt" }, boxes),
+      h("button", { class: "btn small mt", onclick: () => send({ action: "members", group: g, hosts: boxes.map((b) => b.querySelector("input")).filter((i) => i.checked).map((i) => i.value) }) }, t("saveMembers")));
+  };
+  const newName = h("input", { maxlength: 24, placeholder: t("newGroup") });
+  const newBoxes = sorted.map((x) => h("label", { class: "check" }, h("input", { type: "checkbox", value: x.id }), x.name));
+  return h("div", { class: "card mt" }, h("h3", null, t("groups")),
+    names.length ? names.map(memberForm) : h("div", { class: "muted" }, t("noGroups")),
+    h("div", { class: "gadmin" }, h("label", null, t("newGroup"), newName), h("div", { class: "flex wrap mt" }, newBoxes),
+      h("button", { class: "btn small mt", onclick: () => {
+        const g = newName.value.trim();
+        const ids = newBoxes.map((b) => b.querySelector("input")).filter((i) => i.checked).map((i) => i.value);
+        if (g && ids.length) send({ action: "members", group: g, hosts: ids });
+      } }, icon("plus"), t("createGroup"))),
+    err);
+}
+
+// settings: one account's roles per group
+function groupRolesCell(u, askCode, onErr) {
+  const gr = u.group_roles || {};
+  const chips = Object.entries(gr).map(([g, r]) => h("span", { class: "tag" }, g + ": " + t(r)));
+  const edit = h("button", { class: "btn small ghost", onclick: () => {
+    const box = h("div", { class: "grolesedit" }, groupNames().map((g) => {
+      const cur = Object.entries(gr).find(([k]) => k.toLowerCase() === g.toLowerCase());
+      return h("label", null, g, h("select", { "data-group": g },
+        [["", t("baseRoleOnly")], ["viewer", t("viewer")], ["analyst", t("analyst")], ["admin", t("admin")]].map(([v, l]) => h("option", { value: v, selected: (cur ? cur[1] : "") === v }, l))));
+    }), h("button", { class: "btn small", onclick: async () => {
+      const roles = {};
+      box.querySelectorAll("select").forEach((s_) => { if (s_.value) roles[s_.dataset.group] = s_.value; });
+      const code = askCode(); if (!code) return;
+      try { await post("/api/ui/users/" + encodeURIComponent(u.name) + "/group_roles", { group_roles: roles, code }); render(); } catch (x) { onErr(x.message); }
+    } }, t("save")));
+    edit.replaceWith(box);
+  } }, t("edit"));
+  return h("div", { class: "flex wrap" }, chips.length ? chips : h("span", { class: "muted" }, t("none")), groupNames().length ? edit : null);
+}
+
 let refreshTimer = null;
 let selftestOpen = false;
 let lastHash = null;
@@ -3241,7 +3367,7 @@ async function render() {
   if (params.get("host")) setScope({ agent: params.get("host") }, true);
   else if (params.get("group")) setScope({ group: params.get("group") }, true);
   try {
-    if (SCOPED.has(parts[0] || "overview") && !(parts[0] === "hosts" && parts[1])) await loadScopeHosts();
+    await loadScopeHosts();
     if (parts[0] === "alerts" && parts[1]) await alertDetail(parts[1]);
     else if (parts[0] === "alerts") await alertsView();
     else if (parts[0] === "hosts" && parts[1]) await hostView(parts[1]);

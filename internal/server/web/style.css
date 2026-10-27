@@ -728,3 +728,24 @@ table.hosts tr.stale td { opacity: 0.6; }
   .scope { margin-left: 0; }
   .scope-select { max-width: 150px; min-width: 104px; }
 }
+
+/* groups */
+.gmark { width: 10px; height: 10px; border-radius: 3px; display: inline-block; flex: none; background: var(--text-tertiary); margin-right: 6px; vertical-align: -1px; }
+.gmark.g1, .topo .ngroup.g1 { background: var(--series-1); fill: var(--series-1); }
+.gmark.g2, .topo .ngroup.g2 { background: var(--series-2); fill: var(--series-2); }
+.gmark.g3, .topo .ngroup.g3 { background: var(--series-3); fill: var(--series-3); }
+.topo .ngroup.g0 { fill: var(--text-tertiary); }
+.ghead { display: flex; align-items: center; gap: 8px 14px; flex-wrap: wrap; margin-bottom: 10px; }
+.ghead h2 { margin: 0; }
+.ghead .gmark { margin-right: 0; }
+.gsection + .gsection { border-top: 1px solid var(--border-light); padding-top: 18px; }
+.gadmin { border-top: 1px solid var(--border-light); padding: 12px 0; display: grid; gap: 4px; }
+.gadmin:first-of-type { border-top: 0; }
+.gadmin label { display: grid; gap: 4px; font-size: 12px; color: var(--text-secondary); max-width: 280px; }
+.gadmin .check { display: inline-flex; margin-right: 14px; }
+.gadmin .btn { justify-self: start; }
+.grolesedit { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
+.grolesedit label { display: grid; gap: 2px; font-size: 11px; color: var(--text-secondary); }
+.grolesedit select { padding: 4px 6px; font-size: 12px; }
+table.groups td .gmark { vertical-align: -1px; }
+.hc-head a.tag { font-size: 10px; }

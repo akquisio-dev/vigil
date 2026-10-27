@@ -345,7 +345,7 @@ func (s *Server) handleSession(w http.ResponseWriter, r *http.Request, sess *ses
 		if v.PID == pid && v.Start.Equal(start) {
 			evs := events[v.Agent+"|"+strconv.Itoa(v.PID)+"|"+v.Start.Format(time.RFC3339Nano)]
 			names := s.agentNames()
-			role := s.roleFor(sess)
+			role := s.rolesFor(sess)
 			out := make([]viewRecord, len(evs))
 			for i, e := range evs {
 				out[i] = s.view(e.Record, names, role)

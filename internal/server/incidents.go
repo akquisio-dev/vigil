@@ -221,7 +221,7 @@ func (s *Server) handleIncident(w http.ResponseWriter, r *http.Request, sess *se
 		}
 	})
 	names := s.agentNames()
-	role := s.roleFor(sess)
+	role := s.rolesFor(sess)
 	evs := make([]viewRecord, len(events))
 	for i, rec := range events {
 		evs[i] = s.view(rec, names, role)
@@ -246,6 +246,16 @@ func (s *Server) handleIncidentAction(w http.ResponseWriter, r *http.Request, se
 	action, id := r.PathValue("action"), r.PathValue("id")
 	now := time.Now().UTC()
 	s.mu.Lock()
+	// analyst on the incident's host, and on the host of an alert added to it
+	rs := s.rolesLocked(sess)
+	deny := func(agent string) bool {
+		if rs.mayHost("analyst", agent) {
+			return false
+		}
+		s.mu.Unlock()
+		forbidden(w, rs.For(agent))
+		return true
+	}
 	var c *Incident
 	if id == "new" {
 		al := s.alertByID(req.Alert)
@@ -254,12 +264,17 @@ func (s *Server) handleIncidentAction(w http.ResponseWriter, r *http.Request, se
 			http.NotFound(w, r)
 			return
 		}
+		if deny(al.Agent) {
+			return
+		}
 		c = &Incident{ID: newID(8), Agent: al.Agent, Status: "open", Severity: al.Severity, Start: al.ID, Created: al.Created, Last: al.Created}
 		s.state.Incidents = append(s.state.Incidents, c)
 		s.attach(c, al)
 	} else if c = s.incident(id); c == nil {
 		s.mu.Unlock()
 		http.NotFound(w, r)
+		return
+	} else if deny(c.Agent) {
 		return
 	}
 	switch action {
@@ -293,6 +308,9 @@ func (s *Server) handleIncidentAction(w http.ResponseWriter, r *http.Request, se
 		if al == nil {
 			s.mu.Unlock()
 			http.NotFound(w, r)
+			return
+		}
+		if deny(al.Agent) {
 			return
 		}
 		s.attach(c, al)

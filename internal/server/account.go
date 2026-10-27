@@ -355,6 +355,8 @@ type userView struct {
 	Created   time.Time `json:"created"`
 	LastLogin time.Time `json:"last_login"`
 	Passkeys  int       `json:"passkeys"`
+	// GroupRoles: higher roles for the hosts of some groups.
+	GroupRoles map[string]string `json:"group_roles,omitempty"`
 }
 
 func (s *Server) handleUsers(w http.ResponseWriter, r *http.Request, sess *session) {
@@ -365,7 +367,7 @@ func (s *Server) handleUsers(w http.ResponseWriter, r *http.Request, sess *sessi
 	}
 	out := []userView{}
 	for _, u := range users {
-		out = append(out, userView{Name: u.Name, Role: roleOf(u), Created: u.Created, LastLogin: u.LastLogin, Passkeys: len(u.Passkeys)})
+		out = append(out, userView{Name: u.Name, Role: roleOf(u), Created: u.Created, LastLogin: u.LastLogin, Passkeys: len(u.Passkeys), GroupRoles: u.GroupRoles})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	writeJSON(w, out)
@@ -429,12 +431,15 @@ func (s *Server) handleUserCreate(w http.ResponseWriter, r *http.Request, sess *
 }
 
 func (s *Server) handleUserAction(w http.ResponseWriter, r *http.Request, sess *session) {
-	var req struct{ Role, Code string }
+	var req struct {
+		Role, Code string
+		GroupRoles map[string]string `json:"group_roles"`
+	}
 	if !decode(r, w, &req) {
 		return
 	}
 	name, action := r.PathValue("name"), r.PathValue("action")
-	if action != "role" && action != "delete" {
+	if action != "role" && action != "delete" && action != "group_roles" {
 		http.NotFound(w, r)
 		return
 	}
@@ -471,6 +476,12 @@ func (s *Server) handleUserAction(w http.ResponseWriter, r *http.Request, sess *
 				return errors.New("the last admin must stay admin")
 			}
 			u.Role = req.Role
+		case "group_roles":
+			gr, err := cleanGroupRoles(req.GroupRoles)
+			if err != nil {
+				return err
+			}
+			u.GroupRoles = gr
 		}
 		return nil
 	})
@@ -479,6 +490,7 @@ func (s *Server) handleUserAction(w http.ResponseWriter, r *http.Request, sess *
 		return
 	}
 	s.endSessions(name, nil)
-	s.audit(sess.User, "user."+map[string]string{"delete": "removed", "role": "role_changed"}[action], map[string]any{"user": name, "role": req.Role})
+	s.audit(sess.User, "user."+map[string]string{"delete": "removed", "role": "role_changed", "group_roles": "group_roles_changed"}[action],
+		map[string]any{"user": name, "role": req.Role, "group_roles": req.GroupRoles})
 	writeJSON(w, map[string]bool{"ok": true})
 }

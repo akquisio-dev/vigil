@@ -12,6 +12,8 @@ import (
 
 func TestReadableCanaryNeedsSupport(t *testing.T) {
 	s := forensicServer(t)
+	ana, _, _ := NewUser("ana", "admin")
+	SaveUsers(s.cfg.DataDir, map[string]*User{"ana": ana})
 	s.state.Canaries = map[string]*CanaryRec{}
 	a := s.state.Agents["a1"]
 	a.CanaryRoots = []string{"/opt"}

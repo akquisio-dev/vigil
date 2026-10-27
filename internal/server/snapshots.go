@@ -202,7 +202,7 @@ func (s *Server) handleSnapshotRequest(w http.ResponseWriter, r *http.Request, s
 	}
 	if req.PID == 0 && req.Alert != "" {
 		for _, al := range s.state.Alerts {
-			if al.ID == req.Alert {
+			if al.ID == req.Alert && al.Agent == a.ID {
 				req.PID, _ = strconv.Atoi(decodeParams(al.Detail)["pid"])
 			}
 		}

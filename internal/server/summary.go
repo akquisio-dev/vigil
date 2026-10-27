@@ -53,7 +53,8 @@ func (s *Server) checkSummary() {
 func (s *Server) sendSummary(now time.Time) {
 	text := s.summaryText(now)
 	for _, n := range s.cfg.Notifiers {
-		if n.Summary != nil && !*n.Summary {
+		// the summary covers the whole network: never to a notifier of some groups
+		if n.Summary != nil && !*n.Summary || len(n.Groups) > 0 {
 			continue
 		}
 		go func(n NotifierConfig) {

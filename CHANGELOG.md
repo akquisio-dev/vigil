@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Roles per group: an account can have a higher role for the hosts of some groups, for example viewer for the network and admin of the group of its own servers. Everything tied to one host (alerts, also in bulk, incidents, canaries, response actions, snapshots, renaming, maintenance, updates) follows the higher role; users, groups, a host's groups, removing hosts, enrollment, sources, rules, suppressions and the other network wide settings keep the base role. Detail behind the analyst role follows the role for each event's host. Set under Settings, Users (`POST /api/ui/users/{name}/group_roles`, audited).
+- Groups under Settings: create, rename, remove, set members (`POST /api/ui/groups`). The hosts tab shows one section per group with hosts online, average CPU and memory and open alerts, and the graph marks each host with its group. The overview lists the groups with open alerts, security updates, pending reboots and the addresses that tried their hosts in 24 hours (`GET /api/ui/groups`).
+- Notifiers can be limited to host groups (`"groups"` in server.json); they get no daily summary and no messages about the server itself.
+- An evidence snapshot asked for with an alert only takes the alert's process when the alert is from that host.
+- The secret scan leaves out Ruby gems and a bundled Ruby's standard library (Oracle's unified-monitoring-agent): their examples raised `secret.exposed` for `user:password@host` and sample keys.
+
 ## v0.30.0
 
 - One host or one group everywhere: a selector at the top of the overview, hosts, alerts, incidents, events, sessions and attackers narrows them, holds across pages and reloads, and comes with links as `?host=` or `?group=`. API: `agent` and `group` on `/api/ui/overview`, `/api/ui/alerts`, `/api/ui/incidents`, `/api/ui/events`, `agent` on `/api/ui/attacks` (the addresses that tried that host).

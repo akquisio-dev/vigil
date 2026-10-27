@@ -34,7 +34,14 @@ var secretRootsDefault = []string{"/etc", "/home", "/root", "/srv", "/opt", "/va
 // Directories that hold vendored code and test fixtures full of sample keys.
 var secretSkipNames = map[string]bool{"node_modules": true, "vendor": true, "site-packages": true, "dist-packages": true,
 	"__pycache__": true, ".cache": true, ".npm": true, ".cargo": true, ".rustup": true, "go": true, "testdata": true,
-	"fixtures": true, "test": true, "tests": true, "spec": true}
+	"fixtures": true, "test": true, "tests": true, "spec": true, "gems": true}
+
+// vendoredDir also leaves out a bundled Ruby's standard library (lib/ruby),
+// as Oracle's unified-monitoring-agent ships it: its examples hold
+// user:password@host and sample keys.
+func vendoredDir(p, name string) bool {
+	return secretSkipNames[name] || name == "ruby" && filepath.Base(filepath.Dir(p)) == "lib"
+}
 
 var secretSkipPaths = []string{"/etc/ssl/certs", "/var/lib/docker", "/var/lib/containerd", "/var/lib/containers", "/var/lib/dpkg",
 	"/var/lib/apt", "/var/lib/snapd", "/var/lib/lxd", "/var/lib/lxc", "/var/lib/mysql", "/var/lib/postgresql", "/var/lib/vigil-agent"}
@@ -244,7 +251,7 @@ func walkSecrets(ctx context.Context, roots []string, allMounts map[string]bool,
 					}
 					switch {
 					case d.IsDir():
-						if st.Mode&0o001 != 0 && !allMounts[p] && !secretSkipNames[d.Name()] && !underAny(p, secretSkipPaths) {
+						if st.Mode&0o001 != 0 && !allMounts[p] && !vendoredDir(p, d.Name()) && !underAny(p, secretSkipPaths) {
 							if d.Name() == ".git" {
 								// only the config, where remote URLs with tokens live
 								if cfg := p + "/config"; worldReadableFile(cfg, &st) {
