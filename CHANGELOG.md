@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- The host page in tabs: Overview, Performance, Security, Network, Software, Access and Changes. The overview starts with a state card, one light per area with its number, each opening its tab. Security shows alerts per day over 30 days, the top rules and the median reaction time for this host; Network the outbound destinations by first contact with country and network, destinations per program, port history and data volume over 14 days; Software one weakness table for system and applications, filtered by severity, ecosystem and "exploited"; Access logins by user and hour, keys, source addresses with new ones marked, failed logins per day and the attackers of this host; Changes a changelog of the host by day and kind, including package differences between two package lists. See [operations](docs/operations.md#the-host-page).
+- `GET /api/ui/agents/{id}/activity?days=N` (1 to 30): one pass over the host's day files for changes, destinations, port history and failed logins per day, cached for two minutes. `/api/ui/overview` takes `days` (1 to 30). The host's response carries its hourly data volume.
+- The group list on the overview shows "·" instead of 0 attackers while the attack counts are still being built after a start.
+
 ## v0.31.0
 
 - Roles per group: an account can have a higher role for the hosts of some groups, for example viewer for the network and admin of the group of its own servers. Everything tied to one host (alerts, also in bulk, incidents, canaries, response actions, snapshots, renaming, maintenance, updates) follows the higher role; users, groups, a host's groups, removing hosts, enrollment, sources, rules, suppressions and the other network wide settings keep the base role. Detail behind the analyst role follows the role for each event's host. Set under Settings, Users (`POST /api/ui/users/{name}/group_roles`, audited).

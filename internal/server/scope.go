@@ -178,7 +178,9 @@ type groupView struct {
 	OpenBy   map[string]int `json:"open_by_severity"`
 	Security int            `json:"security_updates"`
 	Reboot   int            `json:"reboot_pending"`
-	Attack24 int            `json:"attackers_24h"` // addresses that tried a host of the group
+	// addresses that tried a host of the group; null while the attack
+	// rollup is still being counted after a start
+	Attack24 *int `json:"attackers_24h"`
 }
 
 // handleGroups: GET /api/ui/groups, one line per group; hosts without a
@@ -218,14 +220,19 @@ func (s *Server) handleGroups(w http.ResponseWriter, r *http.Request, sess *sess
 	for _, k := range order {
 		g := byName[k]
 		seen := map[string]bool{}
+		ready := true
 		for _, id := range g.Hosts {
 			if v := s.attackStatsFor(1, id); v != nil {
+				ready = ready && v.Ready
 				for _, a := range v.Addresses {
 					seen[a.IP] = true
 				}
 			}
 		}
-		g.Attack24 = len(seen)
+		if ready {
+			n := len(seen)
+			g.Attack24 = &n
+		}
 		sort.Strings(g.Hosts)
 		out = append(out, *g)
 	}

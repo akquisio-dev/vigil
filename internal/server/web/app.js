@@ -145,7 +145,7 @@ const T = {
     noGroup: "No group", onlyThisGroup: "Only this group", securityShortL: "Security updates", renameGroup: "New name of the group", confirmDeleteGroup: "Remove the group {g} from all its hosts? The hosts stay.",
     saveMembers: "Save members", newGroup: "New group", createGroup: "Create group", noGroups: "No groups yet", groupRoles: "Roles per group", baseRoleOnly: "base role only",
     ht_tabs: "Host sections", ht_overview: "Overview", ht_perf: "Performance", ht_security: "Security", ht_network: "Network", ht_software: "Software", ht_access: "Access", ht_changes: "Changes",
-    ht_new: "new", ht_noReport: "no report yet", ht_secUpdates: "Security updates", ht_oldestDays: "oldest open for {n} days", ht_oldestOpen: "Oldest open",
+    ht_openInc: "Open incidents", ht_inSessions: "in {n} sessions", ht_new: "new", ht_noReport: "no report yet", ht_secUpdates: "Security updates", ht_oldestDays: "oldest open for {n} days", ht_oldestOpen: "Oldest open",
     ht_exploitedN: "exploited", ht_allSev: "all severities", ht_publicPorts: "Public ports", ht_unexpected: "unexpected", ht_unexpectedOne: "unexpected", ht_allExpected: "all expected",
     ht_diskMem: "Disk and memory", ht_openAlerts: "Open alerts", ht_alerts30: "Alerts", ht_mttaHost: "median, this host, 30 days", ht_alertsMonth: "Alerts per day, 30 days",
     ht_latestEvents: "Latest events", ht_olderThan: "open for longer than {n} days", ht_openSince: "Open since", ht_destinations: "Outbound destinations",
@@ -307,7 +307,7 @@ const T = {
     noGroup: "Ohne Gruppe", onlyThisGroup: "Nur diese Gruppe", securityShortL: "Sicherheitsupdates", renameGroup: "Neuer Name der Gruppe", confirmDeleteGroup: "Die Gruppe {g} bei allen Hosts entfernen? Die Hosts bleiben.",
     saveMembers: "Mitglieder speichern", newGroup: "Neue Gruppe", createGroup: "Gruppe anlegen", noGroups: "Noch keine Gruppen", groupRoles: "Rollen je Gruppe", baseRoleOnly: "nur Grundrolle",
     ht_tabs: "Bereiche des Hosts", ht_overview: "Überblick", ht_perf: "Leistung", ht_security: "Sicherheit", ht_network: "Netzwerk", ht_software: "Software", ht_access: "Zugänge", ht_changes: "Änderungen",
-    ht_new: "neu", ht_noReport: "noch kein Bericht", ht_secUpdates: "Sicherheitsupdates", ht_oldestDays: "ältestes seit {n} Tagen offen", ht_oldestOpen: "Ältestes offen",
+    ht_openInc: "Offene Vorfälle", ht_inSessions: "in {n} Sitzungen", ht_new: "neu", ht_noReport: "noch kein Bericht", ht_secUpdates: "Sicherheitsupdates", ht_oldestDays: "ältestes seit {n} Tagen offen", ht_oldestOpen: "Ältestes offen",
     ht_exploitedN: "ausgenutzt", ht_allSev: "alle Schweregrade", ht_publicPorts: "Öffentliche Ports", ht_unexpected: "unerwartet", ht_unexpectedOne: "unerwartet", ht_allExpected: "alle erwartet",
     ht_diskMem: "Platte und Speicher", ht_openAlerts: "Offene Alarme", ht_alerts30: "Alarme", ht_mttaHost: "Median, dieser Host, 30 Tage", ht_alertsMonth: "Alarme pro Tag, 30 Tage",
     ht_latestEvents: "Letzte Ereignisse", ht_olderThan: "länger als {n} Tage offen", ht_openSince: "Offen seit", ht_destinations: "Ausgehende Ziele",
@@ -1044,7 +1044,8 @@ async function hostView(id, params) {
     software: hostSoftwareTab, access: hostAccessTab, changes: hostChangesTab }[tab])(a, d, params);
   mount(shell("hosts",
     h("div", { class: "crumbs" }, h("a", { href: "#/hosts" }, t("hosts")), " / ", a.name),
-    h("div", { class: "flex" }, h("h1", null, a.name), statusChip(a.status), tagChips(a.tags)),
+    h("h1", null, a.name),
+    h("div", { class: "flex" }, statusChip(a.status), tagChips(a.tags)),
     h("nav", { class: "hosttabs", "aria-label": t("ht_tabs") }, HOST_TABS.map((k) =>
       h("a", { class: "tab" + (k === tab ? " on" : ""), href: hostHref(a.id, k), "aria-current": k === tab ? "page" : null }, t("ht_" + k)))),
     body));
@@ -1185,7 +1186,7 @@ async function hostSecurityTab(a) {
       metric(null, "alert-triangle", t("alertsTile"), a.open_alerts, (a.open_by_severity.critical || a.open_by_severity.high) ? "bad" : null, sevText(a.open_by_severity)),
       metric(null, "list-details", t("ht_alerts30"), total30, null, t("days30").replace("{n}", 30)),
       metric(null, "clock", t("mtta"), duration(o.mtta_seconds), null, o.acked_30d ? t("ht_mttaHost") : t("noneYet")),
-      metric(null, "radar", t("activeInc"), inc.incidents.length, inc.incidents.length ? "bad" : null, inc.incidents.length ? t("openInc") : t("noIncidents"))),
+      metric(null, "radar", t("ht_openInc"), inc.incidents.length, inc.incidents.length ? "bad" : null, inc.incidents.length ? t("openInc") : t("noIncidents"))),
     h("div", { class: "grid dash-a" },
       panel(t("ht_alertsMonth"), null, severityChart(o.alerts_per_day, o.day_start)),
       panel(t("topRules"), t("days30").replace("{n}", 30), rankList(o.top_rules, { mono: true, empty: t("noAlerts"), href: () => "#/alerts?host=" + a.id }))),
@@ -1301,7 +1302,7 @@ function vulnTable(a, params) {
   const kevBox = h("label", { class: "check" }, h("input", { type: "checkbox", checked: f.kev, onchange: (e) => go({ kev: e.target.checked ? "1" : "" }) }), t("ht_onlyExploited"));
   return h("div", { class: "card mt" },
     h("div", { class: "flex" }, h("h3", null, t("ht_vulnList")), h("span", { class: "muted right" }, shown.length + " / " + list.length)),
-    h("div", { class: "flex filters" }, sevSel, ecoSel, kevBox),
+    h("div", { class: "flex vfilters" }, sevSel, ecoSel, kevBox),
     shown.length ? h("div", { class: "tablewrap" }, h("table", null,
       h("thead", null, h("tr", null, ["", t("vulnId"), t("pkg"), t("ht_ecosystem"), t("installed"), t("fixedIn"), t("lockFile")].map((x) => h("th", null, x)))),
       h("tbody", null, shown.slice(0, 200).map((x) => h("tr", null,
@@ -1391,10 +1392,10 @@ async function hostAccessTab(a, d, params) {
       metric(null, "world", t("ht_sources"), ipList.length, ipList.some(isNew) ? "bad" : null, ipList.filter(isNew).length + " " + t("ht_newSources")),
       metric(null, "user-x", t("failedTile"), num(failedTotal), null, t("days30").replace("{n}", 30)),
       metric(atk ? "#/attacks?host=" + a.id : null, "radar", t("attackers"), atk ? (atk.ready ? num(atk.totals.ips) : "·") : "·", null, atk && atk.ready ? atk.totals.countries + " " + t("ht_countriesN") : t("ht_rollupWait")),
-      metric("#/sessions?agent=" + a.id, "terminal-2", t("sessions"), list.reduce((x, s) => x + s.commands, 0), null, t("ht_commandsN"))),
+      metric("#/sessions?agent=" + a.id, "terminal-2", t("ht_commandsN"), num(list.reduce((x, s) => x + s.commands, 0)), null, t("ht_inSessions").replace("{n}", list.length))),
     h("div", { class: "grid dash-a" },
       panel(t("ht_loginHeat"), t("days30").replace("{n}", 30), rows.length ? h("div", { class: "scrollx" }, grid) : h("div", { class: "empty small" }, t("noEvents"))),
-      panel(t("ht_failedDay"), num(failedTotal), dayChart(failedDays))),
+      panel(t("ht_failedDay"), num(failedTotal), sshDays(failedDays))),
     h("div", { class: "grid two mt" },
       panel(t("ht_keys"), null, Object.keys(keys).length ? h("div", { class: "tablewrap" }, h("table", null,
         h("thead", null, h("tr", null, [t("key"), t("user"), "n", t("ht_lastUse")].map((x) => h("th", null, x)))),
@@ -1414,7 +1415,7 @@ async function hostAccessTab(a, d, params) {
         extra: [x.country ? countryName(x.country) : "", x.org || "", x.class ? t("cls_" + x.class) : ""].filter(Boolean).join("  ·  ") })),
         { mono: true, tone: "red", href: (i) => pivotHref("ip", i.key) }))) : null,
     h("div", { class: "flex mt" }, h("h2", null, t("sessions")), h("a", { class: "right", href: "#/sessions?agent=" + a.id }, t("all"))),
-    list.length ? h("div", { class: "tablewrap" }, h("table", null,
+    list.length ? h("div", { class: "tablewrap" }, h("table", { class: "nowrap" },
       h("thead", null, h("tr", null, [t("time"), t("user"), t("ip"), t("key"), t("ht_duration"), t("ht_commandsN"), "sudo", t("alerts")].map((x) => h("th", null, x)))),
       h("tbody", null, list.slice(0, 30).map((x) => h("tr", { class: "click", onclick: () => { location.hash = sessionHref(x); } },
         h("td", { class: "nowrap" }, h("a", { href: sessionHref(x) }, new Date(x.start).toLocaleString(lang))),
@@ -1422,6 +1423,13 @@ async function hostAccessTab(a, d, params) {
         h("td", { class: "nowrap" }, x.end ? fmtDur(x.start, x.end) : h("span", { class: "chip" }, h("span", { class: "dot ok" }), t("open"))),
         h("td", null, x.commands), h("td", null, x.sudo), h("td", null, x.alerts ? h("span", { class: "sev high" }, x.alerts) : "0")))))) : h("div", { class: "card empty" }, t("noEvents")),
   ];
+}
+
+// failed logins per day: the attack chart's columns without the web part
+function sshDays(days) {
+  const c = dayChart(days);
+  c.lastChild.remove();
+  return c;
 }
 
 // The host's changelog: what changed on it, newest first, by day.
@@ -1432,6 +1440,8 @@ function changeKind(r) {
   if (ty.startsWith("ssh.key_")) return "keys";
   if (ty.startsWith("user.")) return "users";
   if (ty.startsWith("port.")) return "ports";
+  if (ty.startsWith("user.")) return [verb, " ", mono(d.user || d.name || ""), d.uid != null ? h("span", { class: "muted" }, "  ·  uid " + d.uid) : null];
+  if (ty === "agent.stopping") return [verb, d.reason ? h("span", { class: "muted" }, "  ·  " + d.reason) : null];
   if (ty.startsWith("process.")) return "programs";
   if (ty === "packages.changed") return "packages";
   if (ty.startsWith("kernel.")) return "kernel";
@@ -3651,7 +3661,7 @@ async function groupsPanel() {
       h("td", null, Object.values(g.open_by_severity).some(Boolean) ? sevCounts(g.open_by_severity) : h("span", { class: "muted" }, "0")),
       h("td", null, g.security_updates ? h("span", { class: "sev high" }, g.security_updates) : h("span", { class: "muted" }, "0")),
       h("td", null, g.reboot_pending ? h("span", { class: "sev medium" }, g.reboot_pending) : h("span", { class: "muted" }, "0")),
-      h("td", null, g.attackers_24h.toLocaleString(lang))))))));
+      h("td", null, g.attackers_24h == null ? h("span", { class: "muted", title: t("ht_rollupWait") }, "·") : g.attackers_24h.toLocaleString(lang))))))));
 }
 
 // settings: groups and their members (admins with the base role)

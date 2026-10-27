@@ -35,6 +35,41 @@ The alert list filters by severity, rule, period and text, and groups by rule
 or host. Analysts can acknowledge or resolve everything the filter shows at
 once (`POST /api/ui/alerts/bulk`, at most 1000, each audited).
 
+### The host page
+
+A host's page has seven tabs; the tab and its options are part of the link
+(`#/hosts/ID?tab=changes&days=30`).
+
+- **Overview**: one light per area with its number (open alerts, hardening
+  findings, security updates and how long the oldest has been open,
+  weaknesses, public ports, the last self test, disk and memory); each opens
+  the tab with the detail. Below are the host's facts, its admin actions and
+  open alerts.
+- **Performance**: load, memory, network, disks, processes and peers.
+- **Security**: alerts per day over 30 days, the rules that fired most, the
+  median time until someone looked at an alert of this host, open incidents,
+  hardening, containment, response, snapshots, self tests and the latest
+  events.
+- **Network**: listening ports with the time they opened, outbound
+  destinations by first contact with country and network, destinations per
+  program, the history of ports that opened and closed, and the data sent and
+  received per hour over 14 days.
+- **Software**: updates, weaknesses of the system and the applications in one
+  table filtered by severity, ecosystem and "exploited or malicious", lock
+  files and containers.
+- **Access**: SSH logins by user and hour of day, keys and methods, source
+  addresses (new ones are marked), failed logins per day on this host, the
+  addresses that attacked it with their countries, and its sessions.
+- **Changes**: what changed on the host, by day and kind: files, systemd and
+  cron, keys, accounts, ports, new programs, packages added, removed or
+  updated, kernel modules, containers and agent starts. File contents stay on
+  the timeline; each entry links there.
+
+Network, access and changes read the day files on disk for the host
+(`GET /api/ui/agents/{id}/activity?days=7`, 1 to 30 days, kept for two
+minutes), so they reach back further than the in-memory window.
+`/api/ui/overview` takes `days` (1 to 30) for its alert counts.
+
 ## Investigating
 
 Every alert tied to a host has a **timeline**: everything the host reported

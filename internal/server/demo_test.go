@@ -165,6 +165,44 @@ func TestWriteDemoData(t *testing.T) {
 			"unattended_upgrades": true, "lists_age_days": float64(0)})
 	}
 	add(now.Add(-26*time.Minute), hosts[0], "user.added", map[string]any{"user": "backup", "uid": float64(1003)})
+
+	// the host page's changes and network tabs: package lists that differ,
+	// outbound destinations, a port that came and went, agent starts
+	base := []any{[]any{"bash", "5.2.21-2ubuntu4"}, []any{"curl", "8.5.0-2ubuntu10.5"}, []any{"nginx", "1.24.0-2ubuntu7.4"}, []any{"openssl", "3.0.13-0ubuntu3.5"}, []any{"nodejs", "18.19.1+dfsg-6ubuntu5"}}
+	next := []any{[]any{"bash", "5.2.21-2ubuntu4"}, []any{"curl", "8.5.0-2ubuntu10.6"}, []any{"nginx", "1.24.0-2ubuntu7.4"}, []any{"openssl", "3.0.13-0ubuntu3.6"}, []any{"nodejs", "18.19.1+dfsg-6ubuntu5"}, []any{"jq", "1.7.1-3build1"}}
+	last := []any{[]any{"bash", "5.2.21-2ubuntu4"}, []any{"curl", "8.5.0-2ubuntu10.6"}, []any{"nginx", "1.24.0-2ubuntu7.4"}, []any{"openssl", "3.0.13-0ubuntu3.6"}, []any{"jq", "1.7.1-3build1"}}
+	for d, list := range [][]any{base, base, base, next, next, next, last} {
+		add(day(d, 4), hosts[0], "system.packages", map[string]any{"os_id": "ubuntu", "os_version": "24.04", "packages": list})
+	}
+	for d := 0; d < 7; d += 3 {
+		add(day(d, 6), hosts[0], "net.connection", map[string]any{"remote_ip": "185.125.190.36", "remote_port": float64(443), "process": "http", "exe": "/usr/lib/apt/methods/http", "private": false})
+	}
+	for i, x := range []struct {
+		ip, proc string
+		port     int
+		h        *AgentRec
+		at       time.Time
+	}{
+		{"140.82.121.4", "git", 443, hosts[0], day(1, 9)}, {"10.90.0.3", "java", 5432, hosts[1], day(0, 1)}, {"104.16.25.35", "node", 443, hosts[0], day(4, 15)},
+		{"91.189.91.157", "chronyd", 123, hosts[0], day(0, 2)}, {"52.84.150.39", "node", 443, hosts[0], now.Add(-3 * time.Hour)}, {"194.150.168.168", "systemd-resolve", 53, hosts[0], day(2, 8)},
+	} {
+		add(x.at, x.h, "net.connection", map[string]any{"remote_ip": x.ip, "remote_port": float64(x.port), "local_port": float64(40000 + i), "process": x.proc, "exe": "/usr/bin/" + x.proc,
+			"private": strings.HasPrefix(x.ip, "10.")})
+	}
+	add(day(2, 11), hosts[0], "port.opened", map[string]any{"proto": "tcp", "port": float64(8081), "addr": "0.0.0.0", "scope": "any", "via": "listen", "process": "python3", "key": "listen/tcp/0.0.0.0:8081"})
+	add(day(2, 14), hosts[0], "port.closed", map[string]any{"proto": "tcp", "port": float64(8081), "addr": "0.0.0.0", "scope": "any", "via": "listen", "key": "listen/tcp/0.0.0.0:8081"})
+	add(day(1, 10), hosts[0], "port.opened", map[string]any{"proto": "tcp", "port": float64(3000), "addr": "127.0.0.1", "scope": "loopback", "via": "listen", "process": "node", "key": "listen/tcp/127.0.0.1:3000"})
+	add(day(3, 3), hosts[0], "agent.stopping", map[string]any{"reason": "update"})
+	add(day(3, 3).Add(20*time.Second), hosts[0], "agent.started", map[string]any{"version": "v0.31.0", "hostname": "web-01"})
+	add(day(4, 9), hosts[0], "ssh.key_removed", map[string]any{"file": "/root/.ssh/authorized_keys", "comment": "old-laptop", "fingerprint": "SHA256:demoOld"})
+	add(day(5, 16), hosts[0], "file.changed", map[string]any{"path": "/etc/systemd/system/app.service", "category": "systemd", "diff": "-ExecStart=/usr/bin/node app.js\n+ExecStart=/usr/bin/node --max-old-space-size=2048 app.js\n"})
+	add(day(6, 1), hosts[0], "process.rare", map[string]any{"exe": "/usr/bin/jq", "comm": "jq", "parent_comm": "bash"})
+	for _, h := range hosts {
+		for at := now.Truncate(time.Hour).Add(-14 * 24 * time.Hour); at.Before(now); at = at.Add(time.Hour) {
+			wave := 0.6 + 0.4*math.Sin((float64(at.Hour())-9)/24*2*math.Pi)
+			h.Volume = append(h.Volume, VolumeHour{At: at, TX: uint64(wave * float64(400<<20) * (0.7 + 0.6*rng.Float64())), RX: uint64(wave * float64(900<<20) * (0.7 + 0.6*rng.Float64()))})
+		}
+	}
 	add(now.Add(-12*time.Minute), hosts[1], "file.changed", map[string]any{"path": "/etc/sudoers.d/90-app", "category": "sudo"})
 
 	// chronological, so the chain and the day files stay in order
