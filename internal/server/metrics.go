@@ -30,6 +30,7 @@ const (
 	metricsSaveGap = 5 * time.Minute
 	metricsMaxAge  = 2 * time.Hour   // a sample older than this on arrival is dropped
 	metricsStale   = 3 * time.Minute // a host's newest sample older than this is not drawn as now
+	metricsIfaces  = 6               // interfaces kept per point
 )
 
 // metricPoint is one minute, or one hour with the peaks of its minutes.
@@ -50,11 +51,18 @@ type metricPoint struct {
 	CO     int     `json:"co"`
 	CPUMax float64 `json:"cpu_max,omitempty"`
 	MemMax float64 `json:"mem_max,omitempty"`
+	// If is received and sent bytes per second per interface (eth0, wg0).
+	If map[string][2]float64 `json:"if,omitempty"`
 }
 
 type hostMetrics struct {
 	Minutes []metricPoint  `json:"minutes"`
 	Hours   []metricPoint  `json:"hours"`
+	// the busiest programs of each minute (a day) and hour (a week), and
+	// when the host booted (a month)
+	ProcMinutes []procSample `json:"proc_minutes,omitempty"`
+	ProcHours   []procSample `json:"proc_hours,omitempty"`
+	Boots       []int64      `json:"boots,omitempty"`
 	Latest  *proto.Metrics `json:"latest,omitempty"` // newest sample that carried detail
 	Last    *proto.Metrics `json:"last,omitempty"`   // newest sample of all
 }
@@ -215,9 +223,19 @@ func cleanMetrics(m proto.Metrics) proto.Metrics {
 // shows and keeps metrics.json small.
 func pointOf(m proto.Metrics) metricPoint {
 	r1 := func(v float64) float64 { return math.Round(v*10) / 10 }
-	return metricPoint{T: m.TS.Unix(), CPU: r1(m.CPU), IOWait: r1(m.IOWait), Steal: r1(m.Steal),
+	p := metricPoint{T: m.TS.Unix(), CPU: r1(m.CPU), IOWait: r1(m.IOWait), Steal: r1(m.Steal),
 		Mem: share(m.MemUsed, m.MemTotal), Swap: share(m.SwapUsed, m.SwapTotal), Load: math.Round(m.Load[0]*100) / 100,
 		RX: math.Round(m.RX), TX: math.Round(m.TX), DR: math.Round(m.DiskRead), DW: math.Round(m.DiskWrite), Disk: r1(m.DiskPct), CI: m.ConnIn, CO: m.ConnOut}
+	for _, f := range m.Ifaces {
+		if f.Name == "lo" || len(p.If) >= metricsIfaces {
+			continue
+		}
+		if p.If == nil {
+			p.If = map[string][2]float64{}
+		}
+		p.If[f.Name] = [2]float64{math.Round(f.RX), math.Round(f.TX)}
+	}
+	return p
 }
 
 // rollup averages the minutes of one hour and keeps their peaks.
@@ -240,6 +258,16 @@ func rollup(ms []metricPoint, hour int64) metricPoint {
 		h.CO = max(h.CO, m.CO)
 		h.CPUMax = math.Max(h.CPUMax, m.CPU)
 		h.MemMax = math.Max(h.MemMax, m.Mem)
+		for name, v := range m.If {
+			if h.If == nil {
+				h.If = map[string][2]float64{}
+			}
+			x := h.If[name]
+			h.If[name] = [2]float64{x[0] + v[0]/n, x[1] + v[1]/n}
+		}
+	}
+	for name, v := range h.If {
+		h.If[name] = [2]float64{math.Round(v[0]), math.Round(v[1])}
 	}
 	r := func(v float64) float64 { return math.Round(v*10) / 10 }
 	h.CPU, h.IOWait, h.Steal, h.Mem, h.Swap, h.Load = r(h.CPU), r(h.IOWait), r(h.Steal), r(h.Mem), r(h.Swap), math.Round(h.Load*100)/100
@@ -261,6 +289,7 @@ func (hm *hostMetrics) add(m proto.Metrics) {
 			}
 			if len(hm.Hours) == 0 || hm.Hours[len(hm.Hours)-1].T < hour {
 				hm.Hours = append(hm.Hours, rollup(in, hour))
+				hm.rollupProcs(hour, len(in))
 			}
 			if over := len(hm.Hours) - metricsHours; over > 0 {
 				hm.Hours = append([]metricPoint{}, hm.Hours[over:]...)
@@ -276,6 +305,8 @@ func (hm *hostMetrics) add(m proto.Metrics) {
 	if i > 0 {
 		hm.Minutes = append([]metricPoint{}, hm.Minutes[i:]...)
 	}
+	hm.addProcs(m)
+	hm.addBoot(m)
 	cp := m
 	hm.Last = &cp
 	if m.Ifaces != nil || m.Top != nil || m.Peers != nil || m.Disks != nil {
@@ -551,7 +582,10 @@ func (s *Server) handleHosts(w http.ResponseWriter, r *http.Request, sess *sessi
 	writeJSON(w, map[string]any{"hosts": cards, "flows": flows, "agent_port": agentPort})
 }
 
-// handleAgentMetrics: GET /api/ui/agents/{id}/metrics?range=1h|6h|24h|7d|30d
+// handleAgentMetrics: GET /api/ui/agents/{id}/metrics?range=1h|6h|24h|7d|30d,
+// or from=&to= (unix seconds; minutes when it lies within the last day).
+// Besides the points: reboots, the busiest programs of the span, where disk
+// and memory are heading and the normal range per hour.
 func (s *Server) handleAgentMetrics(w http.ResponseWriter, r *http.Request, sess *session) {
 	id := r.PathValue("id")
 	s.mu.Lock()
@@ -561,28 +595,54 @@ func (s *Server) handleAgentMetrics(w http.ResponseWriter, r *http.Request, sess
 		http.NotFound(w, r)
 		return
 	}
+	now := time.Now()
 	spans := map[string]time.Duration{"1h": time.Hour, "6h": 6 * time.Hour, "24h": 24 * time.Hour, "7d": 7 * 24 * time.Hour, "30d": 30 * 24 * time.Hour}
-	rng := r.URL.Query().Get("range")
+	q := r.URL.Query()
+	rng := q.Get("range")
 	span, ok := spans[rng]
 	if !ok {
 		rng, span = "6h", 6*time.Hour
 	}
-	cut := time.Now().Add(-span).Unix()
-	out := map[string]any{"range": rng, "step": 60, "points": []metricPoint{}}
+	from, to := now.Add(-span).Unix(), now.Unix()
+	if f, err := strconv.ParseInt(q.Get("from"), 10, 64); err == nil {
+		t, err := strconv.ParseInt(q.Get("to"), 10, 64)
+		if err != nil || t > to {
+			t = to
+		}
+		if f < t && f >= now.Add(-31*24*time.Hour).Unix() {
+			from, to, rng = f, t, "custom"
+		}
+	}
+	minutes := from >= now.Add(-24*time.Hour).Unix()-60
+	out := map[string]any{"range": rng, "from": from, "to": to, "step": 60, "points": []metricPoint{}, "boots": []int64{}}
 	s.metrics.mu.Lock()
 	if hm := s.metrics.hosts[id]; hm != nil {
 		src := hm.Minutes
-		if span > 24*time.Hour {
+		if !minutes {
 			src, out["step"] = hm.Hours, 3600
 		}
 		pts := []metricPoint{}
 		for _, p := range src {
-			if p.T > cut {
+			if p.T > from && p.T <= to {
 				pts = append(pts, p)
 			}
 		}
-		out["points"] = pts
-		out["latest"] = hm.Latest
+		boots := []int64{}
+		for _, b := range hm.Boots {
+			if b > from && b <= to {
+				boots = append(boots, b)
+			}
+		}
+		cpu, mem := hm.consumers(from, to)
+		out["points"], out["boots"], out["latest"] = pts, boots, hm.Latest
+		out["top_cpu"], out["top_mem"] = cpu, mem
+		out["forecast"] = hm.forecastOf(now)
+		if b := hm.bandOf(); b != nil {
+			out["band"] = b
+		}
+		if hm.Last != nil {
+			out["cores"] = hm.Last.Cores
+		}
 	}
 	s.metrics.mu.Unlock()
 	writeJSON(w, out)

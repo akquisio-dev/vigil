@@ -632,7 +632,7 @@ fieldset.checks legend { font-size: 12px; color: var(--text-tertiary); padding: 
 
 .lc { min-width: 0; }
 .lc-frame { position: relative; margin-top: 10px; }
-.lc-plot { display: block; width: 100%; height: 150px; overflow: visible; cursor: crosshair; }
+.lc-plot { display: block; width: 100%; height: 150px; overflow: visible; cursor: crosshair; user-select: none; }
 .lc.compact .lc-frame { margin-top: 2px; }
 .lc.compact .lc-plot { height: 44px; }
 .lc-grid { stroke: var(--border-light); stroke-width: 1; vector-effect: non-scaling-stroke; }
@@ -646,6 +646,20 @@ fieldset.checks legend { font-size: 12px; color: var(--text-tertiary); padding: 
 .lc-max { position: absolute; top: -2px; left: 0; font-size: 10px; color: var(--text-tertiary); background: var(--surface); padding-right: 4px; pointer-events: none; }
 .lc-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; justify-content: flex-end; }
 .lc-key { width: 12px; height: 3px; border-radius: 2px; display: inline-block; }
+.lc-key.band { height: 8px; background: var(--series-1); opacity: 0.18; }
+.lc-band { fill: var(--series-1); fill-opacity: 0.12; stroke: none; }
+.lc-out { stroke: var(--red); stroke-width: 5; stroke-linecap: round; }
+.lc-sel { fill: var(--accent); fill-opacity: 0.12; pointer-events: none; }
+.lc-marks { position: relative; height: 12px; margin-top: 3px; }
+.lc-mark { position: absolute; top: 2px; width: 8px; height: 8px; margin-left: -4px; border-radius: 50%; background: var(--text-tertiary); cursor: default; }
+.lc-mark.inline { position: static; display: inline-block; margin: 0 6px 0 0; vertical-align: 0; }
+.lc-mark.k-alert { background: var(--red); }
+.lc-mark.k-login { background: var(--series-1); }
+.lc-mark.k-agent { background: var(--series-2); }
+.lc-mark.k-pkg { background: var(--series-3); }
+.lc-mark.k-boot { background: var(--text-primary); }
+.lc-mark.k-many { background: var(--text-secondary); box-shadow: 0 0 0 2px var(--surface), 0 0 0 3px var(--text-secondary); }
+.procbox:not(:empty) { margin-top: 10px; }
 .rangepick { display: flex; gap: 4px; flex-wrap: wrap; }
 
 .topo-card { overflow: hidden; }

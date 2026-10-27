@@ -94,8 +94,10 @@ type hostActivity struct {
 	// SSH logins: per user and hour of day (UTC), per key and per source
 	Logins     int                 `json:"logins"`
 	LoginHours map[string]*[24]int `json:"login_hours"`
-	Keys       []*loginUse         `json:"keys"`
-	Sources    []*loginUse         `json:"sources"`
+	// logins per hour (unix seconds of the hour), for marks on the graphs
+	LoginHourly map[int64]int `json:"login_hourly"`
+	Keys        []*loginUse   `json:"keys"`
+	Sources     []*loginUse   `json:"sources"`
 }
 
 // changeType: the events that change a host. Scans and snapshots are left
@@ -189,7 +191,7 @@ func (s *Server) hostActivityFor(agent string, days int, role roleSet) *hostActi
 	from := dayStart
 	v := &hostActivity{Agent: agent, Days: days, From: from, DayStart: dayStart.Format("2006-01-02"), Generated: now,
 		Changes: []viewRecord{}, Dests: []destView{}, Ports: []portHistory{}, Failed: make([]int, days), FailedIPs: make([]int, days),
-		LoginHours: map[string]*[24]int{}, Keys: []*loginUse{}, Sources: []*loginUse{}}
+		LoginHours: map[string]*[24]int{}, LoginHourly: map[int64]int{}, Keys: []*loginUse{}, Sources: []*loginUse{}}
 	names := s.agentNames()
 	full := roleSet{base: "admin"}
 	dests := map[string]*destView{}
@@ -248,6 +250,7 @@ func (s *Server) hostActivityFor(agent string, days int, role roleSet) *hostActi
 				v.LoginHours[user] = hr
 			}
 			hr[at.UTC().Hour()]++
+			v.LoginHourly[at.Unix()/3600*3600]++
 			k := str(d, "key_comment")
 			if k == "" {
 				k = str(d, "fingerprint")

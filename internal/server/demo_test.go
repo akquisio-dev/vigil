@@ -291,7 +291,13 @@ func demoMetrics(s *Server, hosts []*AgentRec, now time.Time, rng *rand.Rand) {
 		hm := &hostMetrics{}
 		sh := shapes[i]
 		end := a.LastSeen
-		for ts := now.Add(-7 * 24 * time.Hour); !ts.After(end); ts = ts.Add(time.Minute) {
+		// a month of hours (the normal band needs it), a day of minutes;
+		// db-01 rebooted 20 hours ago and its disk fills up
+		boot := now.Add(-30 * 24 * time.Hour)
+		for ts := now.Add(-30 * 24 * time.Hour); !ts.After(end); ts = ts.Add(time.Minute) {
+			if i == 2 && boot.Before(now.Add(-20*time.Hour)) && !ts.Before(now.Add(-20*time.Hour)) {
+				boot = ts
+			}
 			hour := float64(ts.Hour()) + float64(ts.Minute())/60
 			wave := 0.6 + 0.4*math.Sin((hour-9)/24*2*math.Pi)
 			cpu := math.Min(100, sh.cpu*wave*(0.8+0.4*rng.Float64())+rng.Float64()*3)
@@ -304,9 +310,17 @@ func demoMetrics(s *Server, hosts []*AgentRec, now time.Time, rng *rand.Rand) {
 				MemTotal: sh.mem_total, MemUsed: uint64(float64(sh.mem_total) * memPct / 100), MemCache: sh.mem_total / 5,
 				SwapTotal: 2 << 30, SwapUsed: uint64(rng.Float64() * float64(200<<20)),
 				RX: sh.net * wave * (0.7 + 0.6*rng.Float64()), TX: sh.net * 0.6 * wave * (0.7 + 0.6*rng.Float64()),
-				DiskRead: 2e6 * wave * rng.Float64(), DiskWrite: 4e6 * wave * rng.Float64(), DiskPct: []float64{41, 63, 78}[i],
-				Procs: 180 + 40*i, Uptime: int64(ts.Sub(now.Add(-30 * 24 * time.Hour)).Seconds()),
+				DiskRead: 2e6 * wave * rng.Float64(), DiskWrite: 4e6 * wave * rng.Float64(), DiskPct: []float64{41, 63, 64 + 14*(1-now.Sub(ts).Hours()/720)}[i],
+				Procs: 180 + 40*i, Uptime: int64(ts.Sub(boot).Seconds()) + 60,
 				ConnIn: []int{140, 9, 13}[i] + rng.Intn(20), ConnOut: []int{8, 15, 2}[i]}
+			m.Ifaces = []proto.IfaceRate{{Name: ifs[i][0].Name, RX: m.RX * 0.8, TX: m.TX * 0.8}, {Name: ifs[i][1].Name, RX: m.RX * 0.2, TX: m.TX * 0.2}}
+			for _, p := range tops[i] {
+				p.CPU = math.Round(p.CPU*wave*(0.6+0.8*rng.Float64())*10) / 10
+				if i == 1 && p.Comm == "java" && ts.Hour() == 3 && ts.Minute() < 20 {
+					p.CPU = 640 + rng.Float64()*80
+				}
+				m.Top = append(m.Top, p)
+			}
 			hm.add(m)
 		}
 		last := *hm.Last

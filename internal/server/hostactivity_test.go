@@ -67,7 +67,7 @@ func TestHostActivity(t *testing.T) {
 		t.Fatalf("failed per day: %v %v", v.Failed, v.FailedIPs)
 	}
 
-	if v.Logins != 3 || len(v.LoginHours) != 2 || len(v.Keys) != 2 || v.Keys[0].Key != "alice" || v.Keys[0].Count != 2 ||
+	if len(v.LoginHourly) < 2 || v.Logins != 3 || len(v.LoginHours) != 2 || len(v.Keys) != 2 || v.Keys[0].Key != "alice" || v.Keys[0].Count != 2 ||
 		len(v.Keys[0].Users) != 2 || v.Keys[1].Key != "password" {
 		t.Fatalf("logins: %d %v %+v", v.Logins, v.LoginHours, v.Keys)
 	}

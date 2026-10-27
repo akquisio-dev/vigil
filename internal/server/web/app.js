@@ -145,6 +145,13 @@ const T = {
     noGroup: "No group", onlyThisGroup: "Only this group", securityShortL: "Security updates", renameGroup: "New name of the group", confirmDeleteGroup: "Remove the group {g} from all its hosts? The hosts stay.",
     saveMembers: "Save members", newGroup: "New group", createGroup: "Create group", noGroups: "No groups yet", groupRoles: "Roles per group", baseRoleOnly: "base role only",
     ht_tabs: "Host sections", ht_overview: "Overview", ht_perf: "Performance", ht_security: "Security", ht_network: "Network", ht_software: "Software", ht_access: "Access", ht_changes: "Changes",
+    close: "Close", pf_normal: "normal", pf_clickProcs: "click for programs", pf_reboot: "Reboot", pf_unzoom: "Whole range", pf_hours: "hourly values", pf_minutes: "minute values",
+    pf_mark_alert: "Alerts", pf_mark_login: "Logins", pf_mark_agent: "Agent starts", pf_mark_pkg: "Packages", pf_mark_boot: "Reboots",
+    pf_noProcs: "No programs recorded at this moment.", pf_procsAt: "Programs at {t}", pf_procsHour: "Programs in the hour from {t}", pf_cpuCore: "CPU (one core)",
+    pf_cpuHost: "CPU (host)", pf_peak: "peak", pf_perIface: "Traffic per interface", pf_pointsDay: "points a day", pf_topCpu: "Busiest programs",
+    pf_topMem: "Largest programs", pf_span: "span", pf_avgCore: "average {v} of one core", pf_ofHost: "of the host", pf_seenN: "in {n} samples",
+    pf_forecast: "Outlook", pf_diskNow: "Fullest disk", pf_diskTrend: "Disk trend", pf_diskFull: "Full", pf_inDays: "in about {n} days", pf_notFilling: "not filling up",
+    pf_tooShort: "needs two days of data", pf_memTrend: "Memory trend", pf_bandWeek: "per hour of the week", pf_bandDay: "per hour of the day, until three weeks are known",
     ht_openInc: "Open incidents", ht_allHostsCount: "attempts on all hosts", ht_inSessions: "in {n} sessions", ht_new: "new", ht_noReport: "no report yet", ht_secUpdates: "Security updates", ht_oldestDays: "oldest open for {n} days", ht_oldestOpen: "Oldest open",
     ht_exploitedN: "exploited", ht_allSev: "all severities", ht_publicPorts: "Public ports", ht_unexpected: "unexpected", ht_unexpectedOne: "unexpected", ht_allExpected: "all expected",
     ht_diskMem: "Disk and memory", ht_openAlerts: "Open alerts", ht_alerts30: "Alerts", ht_mttaHost: "median, this host, 30 days", ht_alertsMonth: "Alerts per day, 30 days",
@@ -307,6 +314,13 @@ const T = {
     noGroup: "Ohne Gruppe", onlyThisGroup: "Nur diese Gruppe", securityShortL: "Sicherheitsupdates", renameGroup: "Neuer Name der Gruppe", confirmDeleteGroup: "Die Gruppe {g} bei allen Hosts entfernen? Die Hosts bleiben.",
     saveMembers: "Mitglieder speichern", newGroup: "Neue Gruppe", createGroup: "Gruppe anlegen", noGroups: "Noch keine Gruppen", groupRoles: "Rollen je Gruppe", baseRoleOnly: "nur Grundrolle",
     ht_tabs: "Bereiche des Hosts", ht_overview: "Überblick", ht_perf: "Leistung", ht_security: "Sicherheit", ht_network: "Netzwerk", ht_software: "Software", ht_access: "Zugänge", ht_changes: "Änderungen",
+    close: "Schließen", pf_normal: "normal", pf_clickProcs: "Klick zeigt Programme", pf_reboot: "Neustart", pf_unzoom: "Ganzer Zeitraum", pf_hours: "Stundenwerte", pf_minutes: "Minutenwerte",
+    pf_mark_alert: "Alarme", pf_mark_login: "Anmeldungen", pf_mark_agent: "Agent-Starts", pf_mark_pkg: "Pakete", pf_mark_boot: "Neustarts",
+    pf_noProcs: "Zu diesem Zeitpunkt sind keine Programme erfasst.", pf_procsAt: "Programme um {t}", pf_procsHour: "Programme in der Stunde ab {t}", pf_cpuCore: "CPU (ein Kern)",
+    pf_cpuHost: "CPU (Host)", pf_peak: "Spitze", pf_perIface: "Verkehr je Schnittstelle", pf_pointsDay: "Punkte pro Tag", pf_topCpu: "Fleißigste Programme",
+    pf_topMem: "Größte Programme", pf_span: "Ausschnitt", pf_avgCore: "im Mittel {v} eines Kerns", pf_ofHost: "des Hosts", pf_seenN: "in {n} Messungen",
+    pf_forecast: "Ausblick", pf_diskNow: "Vollste Platte", pf_diskTrend: "Trend Platte", pf_diskFull: "Voll", pf_inDays: "in etwa {n} Tagen", pf_notFilling: "füllt sich nicht",
+    pf_tooShort: "braucht zwei Tage Daten", pf_memTrend: "Trend Speicher", pf_bandWeek: "je Stunde der Woche", pf_bandDay: "je Stunde des Tages, bis drei Wochen bekannt sind",
     ht_openInc: "Offene Vorfälle", ht_allHostsCount: "Versuche auf allen Hosts", ht_inSessions: "in {n} Sitzungen", ht_new: "neu", ht_noReport: "noch kein Bericht", ht_secUpdates: "Sicherheitsupdates", ht_oldestDays: "ältestes seit {n} Tagen offen", ht_oldestOpen: "Ältestes offen",
     ht_exploitedN: "ausgenutzt", ht_allSev: "alle Schweregrade", ht_publicPorts: "Öffentliche Ports", ht_unexpected: "unerwartet", ht_unexpectedOne: "unerwartet", ht_allExpected: "alle erwartet",
     ht_diskMem: "Platte und Speicher", ht_openAlerts: "Offene Alarme", ht_alerts30: "Alarme", ht_mttaHost: "Median, dieser Host, 30 Tage", ht_alertsMonth: "Alarme pro Tag, 30 Tage",
@@ -684,7 +698,7 @@ function rankList(items, opts = {}) {
     return h(opts.href ? "a" : "div", { class: "rank-row" + (it.count ? "" : " zero"), href: opts.href ? opts.href(it) : null },
       h("div", { class: "rank-top" },
         h("span", { class: "rank-key" + (opts.mono ? " mono" : "") }, opts.label ? opts.label(it) : it.key),
-        h("span", { class: "rank-count" }, it.count.toLocaleString(lang))),
+        h("span", { class: "rank-count" }, opts.fmt ? opts.fmt(it.count) : it.count.toLocaleString(lang))),
       h("div", { class: "rank-bar" }, fill),
       it.extra ? h("div", { class: "rank-extra" }, it.extra) : null);
   }));
@@ -1152,10 +1166,10 @@ async function hostOverviewTab(a, d) {
   ];
 }
 
-async function hostPerfTab(a) {
+async function hostPerfTab(a, d, params) {
   const hostsData = await api("/api/ui/hosts").catch(() => null);
   if (hostsData) { scopeHosts = hostsData.hosts; scopeHostsAt = Date.now(); }
-  return performanceSection(a, hostsData);
+  return performanceSection(a, hostsData, params);
 }
 
 function selftestSection(a, tests) {
@@ -1269,6 +1283,20 @@ async function hostNetworkTab(a, d, params) {
     h("div", { class: "mt" }, lineChart({ title: t("ht_volume"), points: vol, step: 3600, fmt: fmtBytes,
       series: [{ label: t("ht_sent"), get: (p) => p.tx }, { label: t("ht_received"), get: (p) => p.rx }] })),
   ];
+}
+
+// downloadCSV saves the points shown, one row each.
+function downloadCSV(a, d) {
+  const ifs = [...new Set(d.points.flatMap((p) => Object.keys(p.if || {})))].sort();
+  const cols = ["cpu", "iow", "st", "mem", "swap", "l1", "rx", "tx", "dr", "dw", "disk", "ci", "co"];
+  const rows = [["time", ...cols, ...ifs.flatMap((n) => [n + "_rx", n + "_tx"])].join(",")];
+  for (const p of d.points) rows.push([new Date(p.t * 1000).toISOString(), ...cols.map((c) => p[c] ?? ""), ...ifs.flatMap((n) => p.if && p.if[n] ? p.if[n] : ["", ""])].join(","));
+  const url = URL.createObjectURL(new Blob([rows.join("\n") + "\n"], { type: "text/csv" }));
+  const link = h("a", { href: url, download: (a.name || a.id).replace(/[^A-Za-z0-9._-]+/g, "_") + "-" + new Date(d.from * 1000).toISOString().slice(0, 16).replace(/[:T]/g, "") + ".csv" });
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 // one list of the operating system's and the applications' weaknesses,
@@ -3091,13 +3119,18 @@ function meter(label, p, sub) {
 // stretched to the card's width, so its lines keep their width with
 // non-scaling-stroke and the labels live in HTML around it. A gap of more
 // than a few steps (the host was off) breaks the line.
+// Optional: band(p) gives the normal [low, high] of the first series and
+// marks its points above it; marks [{t, kind, text}] sit in a strip under
+// the plot; onPick(t) gets a click, onZoom(from, to) a range dragged with
+// the mouse (a touch only picks, so the page still scrolls).
 function lineChart(opts) {
-  const { title, points, series, fmt = (v) => String(v), max: fixedMax, step = 60, compact, ref } = opts;
+  const { title, points, series, fmt = (v) => String(v), max: fixedMax, step = 60, compact, ref, band, marks, onPick, onZoom, extra } = opts;
   const W = 600, H = compact ? 44 : 150;
   const wrap = h("div", { class: "lc" + (compact ? " compact" : "") });
   if (!compact) {
     wrap.append(h("div", { class: "chart-head" }, h("h3", null, title),
-      series.length > 1 ? h("div", { class: "lc-legend" }, series.map((s, i) => h("span", { class: "chip" }, h("span", { class: "lc-key s" + (i + 1) }), s.label))) : null));
+      series.length > 1 || band ? h("div", { class: "lc-legend" }, series.length > 1 ? series.map((s, i) => h("span", { class: "chip" }, h("span", { class: "lc-key s" + (i + 1) }), s.label)) : null,
+        band ? h("span", { class: "chip" }, h("span", { class: "lc-key band" }), t("pf_normal")) : null) : null, extra || null));
   }
   if (!points.length) {
     wrap.append(h("div", { class: "empty small" }, t("noData")));
@@ -3111,6 +3144,17 @@ function lineChart(opts) {
     "aria-label": title + ": " + series.map((s) => s.label + " " + fmt(s.get(points[points.length - 1]))).join(", ") });
   if (!compact) for (const f of [0.25, 0.5, 0.75]) svg.append(sv("line", { x1: 0, x2: W, y1: H * f, y2: H * f, class: "lc-grid" }));
   if (ref) svg.append(sv("line", { x1: 0, x2: W, y1: Y(ref), y2: Y(ref), class: "lc-ref" }));
+  if (band) {
+    // one polygon per run of points that have a band
+    let run = [];
+    const flush = () => {
+      if (run.length > 1) svg.append(sv("path", { class: "lc-band", d: "M" + run.map(([x, , hi]) => x + "," + Y(hi).toFixed(1)).join("L") +
+        "L" + run.slice().reverse().map(([x, lo]) => x + "," + Y(lo).toFixed(1)).join("L") + "Z" }));
+      run = [];
+    };
+    for (const p of points) { const b = band(p); if (b) run.push([X(p.t).toFixed(1), b[0], b[1]]); else flush(); }
+    flush();
+  }
   series.forEach((s, i) => {
     let d = "", prev = null, area = "", runStart = null;
     for (const p of points) {
@@ -3132,19 +3176,63 @@ function lineChart(opts) {
     }
     svg.append(sv("path", { d, class: "lc-line s" + (i + 1), "vector-effect": "non-scaling-stroke" }));
   });
+  if (band) for (const p of points) {
+    const b = band(p), v = Number(series[0].get(p)) || 0;
+    // clearly above: by half the band's width, at least 5 points
+    if (b && v > b[1] + Math.max(5, (b[1] - b[0]) / 2)) svg.append(sv("line", { x1: X(p.t), x2: X(p.t), y1: Y(v), y2: Y(v), class: "lc-out", "vector-effect": "non-scaling-stroke" }));
+  }
   const cross = sv("line", { x1: 0, x2: 0, y1: 0, y2: H, class: "lc-cross", "vector-effect": "non-scaling-stroke", visibility: "hidden" });
   svg.append(cross);
+  const sel = sv("rect", { x: 0, y: 0, width: 0, height: H, class: "lc-sel", visibility: "hidden" });
+  svg.append(sel);
   const when = (tt) => new Date(tt * 1000).toLocaleString(lang, step >= 3600 ? { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" } : { hour: "2-digit", minute: "2-digit" });
+  const tAt = (clientX) => { const r = svg.getBoundingClientRect(); return t0 + Math.max(0, Math.min(1, (clientX - r.left) / r.width)) * (t1 - t0); };
+  const nearest = (tt) => { let best = points[0]; for (const p of points) if (Math.abs(p.t - tt) < Math.abs(best.t - tt)) best = p; return best; };
+  let drag = null;
   svg.addEventListener("mousemove", (e) => {
-    const r = svg.getBoundingClientRect();
-    const tt = t0 + (e.clientX - r.left) / r.width * (t1 - t0);
-    let best = points[0];
-    for (const p of points) if (Math.abs(p.t - tt) < Math.abs(best.t - tt)) best = p;
+    const best = nearest(tAt(e.clientX));
     cross.setAttribute("x1", X(best.t)); cross.setAttribute("x2", X(best.t)); cross.setAttribute("visibility", "visible");
-    tip(e, when(best.t) + "  ·  " + series.map((s) => (series.length > 1 || compact ? s.label + " " : "") + fmt(s.get(best))).join("  ·  "));
+    if (drag !== null) {
+      const a = X(Math.min(drag, tAt(e.clientX))), b = X(Math.max(drag, tAt(e.clientX)));
+      sel.setAttribute("x", a); sel.setAttribute("width", Math.max(0, b - a)); sel.setAttribute("visibility", "visible");
+    }
+    const bb = band && band(best);
+    tip(e, when(best.t) + "  ·  " + series.map((s) => (series.length > 1 || compact ? s.label + " " : "") + fmt(s.get(best))).join("  ·  ") +
+      (bb ? "  ·  " + t("pf_normal") + " " + fmt(bb[0]) + " … " + fmt(bb[1]) : "") + (onPick ? "  ·  " + t("pf_clickProcs") : ""));
   });
-  svg.addEventListener("mouseleave", (e) => { cross.setAttribute("visibility", "hidden"); tip(e, null); });
+  if (onPick || onZoom) {
+    svg.addEventListener("mousedown", (e) => { if (e.button === 0 && onZoom) { drag = tAt(e.clientX); e.preventDefault(); } });
+    svg.addEventListener("mouseup", (e) => {
+      const a = drag, b = tAt(e.clientX);
+      drag = null; sel.setAttribute("visibility", "hidden");
+      if (a !== null && onZoom && Math.abs(X(b) - X(a)) / W * svg.getBoundingClientRect().width > 8) onZoom(Math.floor(Math.min(a, b)), Math.ceil(Math.max(a, b)));
+      else if (onPick) onPick(nearest(b).t);
+    });
+    // a touch: pick only
+    svg.addEventListener("touchend", (e) => { if (onPick && e.changedTouches[0]) onPick(nearest(tAt(e.changedTouches[0].clientX)).t); });
+  }
+  svg.addEventListener("mouseleave", (e) => { cross.setAttribute("visibility", "hidden"); sel.setAttribute("visibility", "hidden"); drag = null; tip(e, null); });
   const plot = h("div", { class: "lc-frame" }, svg);
+  if (marks && marks.length) {
+    // marks close together share one dot; its tip lists them
+    const cols = {};
+    for (const m of marks) {
+      if (m.t < t0 || m.t > t1) continue;
+      const c = Math.round(X(m.t) / W * 100);
+      (cols[c] = cols[c] || []).push(m);
+    }
+    const strip = h("div", { class: "lc-marks" });
+    for (const [c, list] of Object.entries(cols)) {
+      const kinds = [...new Set(list.map((m) => m.kind))];
+      const dot = h("span", { class: "lc-mark k-" + (kinds.length > 1 ? "many" : kinds[0]) });
+      dot.style.left = c + "%";
+      const text = list.slice(0, 8).map((m) => when(m.t) + "  " + m.text).join("\n") + (list.length > 8 ? "\n+" + (list.length - 8) : "");
+      dot.addEventListener("mousemove", (e) => tip(e, text));
+      dot.addEventListener("mouseleave", (e) => tip(e, null));
+      strip.append(dot);
+    }
+    plot.append(strip);
+  }
   if (!compact) plot.append(h("span", { class: "lc-max" }, fmt(max)));
   wrap.append(plot);
   if (!compact) wrap.append(h("div", { class: "axis" }, h("span", null, when(t0)), h("span", null, when((t0 + t1) / 2)), h("span", null, when(t1))));
@@ -3355,23 +3443,97 @@ async function hostsView() {
 
 const RANGES = ["1h", "6h", "24h", "7d", "30d"];
 let hostRange = store("vigil.hostRange") || "6h";
-async function performanceSection(a, hostsData) {
+// The tab takes a range (1h to 30d) or a span dragged on a graph (from, to
+// in the hash). Marks: alerts, logins, agent starts, package changes and
+// reboots. A click on a graph shows the programs of that minute.
+async function performanceSection(a, hostsData, params) {
+  const q = encodeURIComponent(a.id);
   const r = RANGES.includes(hostRange) ? hostRange : "6h";
-  const d = await api("/api/ui/agents/" + encodeURIComponent(a.id) + "/metrics?range=" + r);
+  const zf = Number(params.get("from")) || 0, zt = Number(params.get("to")) || 0;
+  const zoomed = zf > 0 && zt > zf;
+  const d = await api("/api/ui/agents/" + q + "/metrics?" + (zoomed ? "from=" + zf + "&to=" + zt : "range=" + r));
   const pts = d.points, step = d.step, m = d.latest;
-  const pick = h("div", { class: "rangepick" }, RANGES.map((x) => h("button", { class: "btn small" + (x === r ? "" : " ghost"), onclick: () => { hostRange = x; store("vigil.hostRange", x); render(); } }, x)));
-  const cores = m ? m.cores : 0;
+  const days = Math.min(30, Math.max(1, Math.ceil((Date.now() / 1000 - d.from) / 86400)));
+  const [act, alerts] = await Promise.all([api("/api/ui/agents/" + q + "/activity?days=" + days).catch(() => null),
+    api("/api/ui/alerts?" + new URLSearchParams({ agent: a.id, status: "", days: String(days) })).catch(() => [])]);
+  const sec = (ts) => Math.floor(Date.parse(ts) / 1000);
+  const marks = [];
+  for (const al of alerts) marks.push({ t: sec(al.created), kind: "alert", text: t(al.severity) + ": " + al.title });
+  if (act) {
+    for (const [hr, n] of Object.entries(act.login_hourly || {})) marks.push({ t: Number(hr) + 1800, kind: "login", text: n + " " + t("ht_loginsN") });
+    for (const c of act.changes) {
+      const ty = c.event.type, ts = sec(c.event.ts || c.time);
+      if (ty === "agent.started") marks.push({ t: ts, kind: "agent", text: t("ch_agent_started") + " " + (c.event.data.version || "") });
+      if (ty === "packages.changed") marks.push({ t: ts, kind: "pkg", text: t("ht_pkgSummary").replace("{a}", c.event.data.added_n).replace("{r}", c.event.data.removed_n).replace("{c}", c.event.data.changed_n) });
+    }
+  }
+  for (const b of d.boots || []) marks.push({ t: b, kind: "boot", text: t("pf_reboot") });
+  for (let i = marks.length - 1; i >= 0; i--) if (marks[i].t < d.from || marks[i].t > d.to) marks.splice(i, 1);
+  const MARK_KINDS = ["alert", "login", "agent", "pkg", "boot"];
+  const shownKinds = new Set((params.get("marks") || MARK_KINDS.join(",")).split(",").filter((k) => MARK_KINDS.includes(k)));
+  const shownMarks = marks.filter((x) => shownKinds.has(x.kind));
+  const go = (ch) => { const p = new URLSearchParams(params); p.set("tab", "perf"); for (const [k, v] of Object.entries(ch)) { if (v) p.set(k, v); else p.delete(k); } location.hash = "#/hosts/" + a.id + "?" + p; };
+  const pick = h("div", { class: "rangepick" }, RANGES.map((x) => h("button", { class: "btn small" + (x === r && !zoomed ? "" : " ghost"),
+    onclick: () => { hostRange = x; store("vigil.hostRange", x); if (zoomed) go({ from: "", to: "" }); else render(); } }, x)),
+    zoomed ? h("button", { class: "btn small", onclick: () => go({ from: "", to: "" }) }, t("pf_unzoom")) : null,
+    pts.length ? h("button", { class: "btn small ghost", onclick: () => downloadCSV(a, d) }, "CSV") : null);
+  const markPick = h("div", { class: "tabs" }, MARK_KINDS.map((k) => h("a", { class: "tab" + (shownKinds.has(k) ? " on" : ""), href: "#",
+    onclick: (e) => { e.preventDefault(); const n = new Set(shownKinds); if (n.has(k)) n.delete(k); else n.add(k); go({ marks: [...n].join(",") || "none" }); } },
+    h("span", { class: "lc-mark inline k-" + k }), t("pf_mark_" + k) + " " + marks.filter((x) => x.kind === k).length)));
+  const cores = m ? m.cores : d.cores || 0;
   const owner = {};
   for (const x of (hostsData && hostsData.hosts) || []) for (const f of (x.metrics && x.metrics.ifaces) || []) for (const ip of f.addrs || []) owner[ip] = x.name;
-  const out = [h("div", { class: "flex mt" }, h("h2", null, t("performance")), h("div", { class: "right" }, pick))];
+  const out = [h("div", { class: "flex mt" }, h("h2", null, t("performance")), h("div", { class: "right" }, pick)),
+    zoomed ? h("div", { class: "muted" }, new Date(zf * 1000).toLocaleString(lang) + " … " + new Date(zt * 1000).toLocaleString(lang) + "  ·  " + t(step >= 3600 ? "pf_hours" : "pf_minutes")) : null];
   if (!pts.length && !m) return [...out, h("div", { class: "card empty" }, t("noMetrics"))];
+  // the band is per hour of the week (UTC, Monday first) or of the day
+  const bd = d.band;
+  const bucket = (tt) => { const x = new Date(tt * 1000); return bd.kind === "week" ? ((x.getUTCDay() + 6) % 7) * 24 + x.getUTCHours() : x.getUTCHours(); };
+  const bandOf = (key) => bd ? (p) => { const k = bucket(p.t); return bd.n[k] >= 3 ? bd[key][k] : null; } : null;
+  const procBox = h("div", { class: "procbox" });
+  const showProcs = async (tt) => {
+    procBox.replaceChildren(h("div", { class: "card empty small" }, "…"));
+    const x = await api("/api/ui/agents/" + q + "/procs?at=" + tt).catch(() => null);
+    if (!x || !x.found) { procBox.replaceChildren(h("div", { class: "card empty" }, t("pf_noProcs"))); return; }
+    const c = x.cores || cores || 1;
+    procBox.replaceChildren(h("div", { class: "card" },
+      h("div", { class: "flex" }, h("h3", null, t(x.step >= 3600 ? "pf_procsHour" : "pf_procsAt").replace("{t}", new Date(x.t * 1000).toLocaleString(lang, { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }))),
+        h("button", { class: "btn small ghost right", onclick: () => procBox.replaceChildren() }, t("close"))),
+      h("div", { class: "tablewrap" }, h("table", null,
+        h("thead", null, h("tr", null, [t("program"), t("pf_cpuCore"), t("pf_cpuHost"), x.step >= 3600 ? t("pf_peak") : null, t("memory")].filter(Boolean).map((y) => h("th", null, y)))),
+        h("tbody", null, x.procs.map((p) => h("tr", null, h("td", { class: "mono" }, p.name), h("td", { class: "nowrap" }, fmtPct(p.cpu)),
+          h("td", { class: "nowrap" }, fmtPct(p.cpu / c)), x.step >= 3600 ? h("td", { class: "nowrap" }, fmtPct(p.peak || 0)) : null, h("td", { class: "nowrap" }, fmtBytes(p.rss)))))))));
+    procBox.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  };
+  const zoom = (f, tt) => go({ from: String(f), to: String(tt) });
+  const common = { points: pts, step, marks: shownMarks, onPick: showProcs, onZoom: zoom };
+  const ifNames = [...new Set(pts.flatMap((p) => Object.keys(p.if || {})))].sort().slice(0, 3);
+  out.push(markPick);
   out.push(h("div", { class: "grid perfgrid" },
-    lineChart({ title: t("cpu"), points: pts, step, max: 100, fmt: fmtPct, series: [{ label: t("cpu"), get: (p) => p.cpu }, { label: t("iowait"), get: (p) => p.iow }, { label: t("steal"), get: (p) => p.st }] }),
-    lineChart({ title: t("memory"), points: pts, step, max: 100, fmt: fmtPct, series: [{ label: t("memory"), get: (p) => p.mem }, { label: t("swap"), get: (p) => p.swap }] }),
-    lineChart({ title: t("load") + (cores ? "  (" + cores + " " + t("cores") + ")" : ""), points: pts, step, ref: cores, fmt: (v) => (Number(v) || 0).toFixed(2), series: [{ label: t("load"), get: (p) => p.l1 }] }),
-    lineChart({ title: t("traffic"), points: pts, step, fmt: fmtRate, series: [{ label: t("netIn"), get: (p) => p.rx }, { label: t("netOut"), get: (p) => p.tx }] }),
-    lineChart({ title: t("diskIO"), points: pts, step, fmt: fmtRate, series: [{ label: t("readL"), get: (p) => p.dr }, { label: t("writeL"), get: (p) => p.dw }] }),
-    lineChart({ title: t("connections"), points: pts, step, fmt: (v) => Math.round(Number(v) || 0).toLocaleString(lang), series: [{ label: t("connIn"), get: (p) => p.ci }, { label: t("connOut"), get: (p) => p.co }] })));
+    lineChart({ ...common, title: t("cpu"), max: 100, fmt: fmtPct, band: bandOf("cpu"), series: [{ label: t("cpu"), get: (p) => p.cpu }, { label: t("iowait"), get: (p) => p.iow }, { label: t("steal"), get: (p) => p.st }] }),
+    lineChart({ ...common, title: t("memory"), max: 100, fmt: fmtPct, band: bandOf("mem"), series: [{ label: t("memory"), get: (p) => p.mem }, { label: t("swap"), get: (p) => p.swap }] }),
+    lineChart({ ...common, title: t("load") + (cores ? "  (" + cores + " " + t("cores") + ")" : ""), ref: cores, fmt: (v) => (Number(v) || 0).toFixed(2), series: [{ label: t("load"), get: (p) => p.l1 }] }),
+    lineChart({ ...common, title: t("traffic"), fmt: fmtRate, series: [{ label: t("netIn"), get: (p) => p.rx }, { label: t("netOut"), get: (p) => p.tx }] }),
+    ifNames.length > 1 ? lineChart({ ...common, title: t("pf_perIface"), fmt: fmtRate,
+      series: ifNames.map((n) => ({ label: n, get: (p) => p.if && p.if[n] ? p.if[n][0] + p.if[n][1] : 0 })) }) : null,
+    lineChart({ ...common, title: t("diskIO"), fmt: fmtRate, series: [{ label: t("readL"), get: (p) => p.dr }, { label: t("writeL"), get: (p) => p.dw }] }),
+    lineChart({ ...common, title: t("connections"), fmt: (v) => Math.round(Number(v) || 0).toLocaleString(lang), series: [{ label: t("connIn"), get: (p) => p.ci }, { label: t("connOut"), get: (p) => p.co }] })));
+  out.push(procBox);
+  const f = d.forecast || {};
+  const perDay = (v) => v == null ? "·" : (v > 0 ? "+" : "") + v.toLocaleString(lang, { maximumFractionDigits: 2 }) + " " + t("pf_pointsDay");
+  const loads = (list, val, fmt) => list && list.length ? rankList(list.map((x) => ({ key: x.name, count: val(x).n, extra: val(x).extra })), { mono: true, fmt })
+    : h("div", { class: "empty small" }, t("noData"));
+  out.push(h("div", { class: "grid dash-b mt" },
+    panel(t("pf_topCpu"), zoomed ? t("pf_span") : r, loads(d.top_cpu, (x) => ({ n: Math.round(x.cpu * 10) / 10,
+      extra: t("pf_avgCore").replace("{v}", fmtPct(x.cpu)) + (cores ? "  ·  " + fmtPct(x.cpu / cores) + " " + t("pf_ofHost") : "") + (x.peak ? "  ·  " + t("pf_peak") + " " + fmtPct(x.peak) : "") }), fmtPct)),
+    panel(t("pf_topMem"), zoomed ? t("pf_span") : r, loads(d.top_mem, (x) => ({ n: x.rss, extra: x.seen ? t("pf_seenN").replace("{n}", x.seen) : "" }), fmtBytes)),
+    panel(t("pf_forecast"), t("days7"), h("dl", { class: "kv" },
+      h("dt", null, t("pf_diskNow")), h("dd", null, fmtPct(f.disk || 0)),
+      h("dt", null, t("pf_diskTrend")), h("dd", null, perDay(f.disk_per_day)),
+      h("dt", null, t("pf_diskFull")), h("dd", { class: f.disk_full_days != null && f.disk_full_days < 14 ? "bad-text" : "" },
+        f.disk_full_days != null ? t("pf_inDays").replace("{n}", Math.round(f.disk_full_days).toLocaleString(lang)) : f.disk_per_day != null ? t("pf_notFilling") : t("pf_tooShort")),
+      h("dt", null, t("pf_memTrend")), h("dd", null, perDay(f.mem_per_day)),
+      h("dt", null, t("pf_normal")), h("dd", null, bd ? t(bd.kind === "week" ? "pf_bandWeek" : "pf_bandDay") : t("pf_tooShort"))))));
   if (!m) return out;
   const usage = (used, total) => {
     const fill = h("span", { class: "meter-fill " + level(pctOf(used, total)) });
