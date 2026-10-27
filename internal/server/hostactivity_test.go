@@ -32,6 +32,9 @@ func TestHostActivity(t *testing.T) {
 	appendAt(t, s, "a1", now.Add(-1*time.Hour), "ssh.failed", map[string]any{"ip": "198.51.100.7", "count": float64(12)})
 	appendAt(t, s, "a1", now.Add(-1*time.Hour), "ssh.failed", map[string]any{"ip": "198.51.100.8", "count": float64(3)})
 	appendAt(t, s, "a1", now.Add(-1*time.Hour), "posture.report", map[string]any{"checks": []any{}})
+	appendAt(t, s, "a1", now.Add(-5*day), "ssh.login", map[string]any{"user": "root", "ip": "192.0.2.50", "method": "publickey", "key_comment": "alice"})
+	appendAt(t, s, "a1", now.Add(-2*time.Hour), "ssh.login", map[string]any{"user": "deploy", "ip": "192.0.2.50", "method": "publickey", "key_comment": "alice"})
+	appendAt(t, s, "a1", now.Add(-1*time.Hour), "ssh.login", map[string]any{"user": "root", "ip": "203.0.113.9", "method": "password"})
 	// another host's events stay out
 	appendAt(t, s, "a2", now.Add(-1*time.Hour), "file.changed", map[string]any{"path": "/etc/passwd"})
 
@@ -62,6 +65,14 @@ func TestHostActivity(t *testing.T) {
 	}
 	if len(v.Failed) != 7 || v.Failed[6]+v.Failed[5] != 15 || v.FailedIPs[6]+v.FailedIPs[5] != 2 {
 		t.Fatalf("failed per day: %v %v", v.Failed, v.FailedIPs)
+	}
+
+	if v.Logins != 3 || len(v.LoginHours) != 2 || len(v.Keys) != 2 || v.Keys[0].Key != "alice" || v.Keys[0].Count != 2 ||
+		len(v.Keys[0].Users) != 2 || v.Keys[1].Key != "password" {
+		t.Fatalf("logins: %d %v %+v", v.Logins, v.LoginHours, v.Keys)
+	}
+	if len(v.Sources) != 2 || v.Sources[0].Key != "203.0.113.9" || !v.Sources[1].First.Before(v.Sources[1].Last) {
+		t.Fatalf("sources: %+v", v.Sources)
 	}
 
 	// the handler: unknown hosts are not found, days are bounded

@@ -58,6 +58,26 @@ type portHistory struct {
 	Times   int        `json:"times"` // how often it was opened in the window
 }
 
+// loginUse is one key (or method) or one source address of SSH logins.
+type loginUse struct {
+	Key    string    `json:"key"`
+	Method string    `json:"method,omitempty"`
+	Users  []string  `json:"users"`
+	Count  int       `json:"n"`
+	First  time.Time `json:"first"`
+	Last   time.Time `json:"last"`
+	users  map[string]bool
+}
+
+func (u *loginUse) add(user string, at time.Time) {
+	if u.users == nil {
+		u.users, u.First = map[string]bool{}, at
+	}
+	u.users[user] = true
+	u.Count++
+	u.Last = at
+}
+
 type hostActivity struct {
 	Agent     string        `json:"agent"`
 	Days      int           `json:"days"`
@@ -71,6 +91,11 @@ type hostActivity struct {
 	Ports     []portHistory `json:"ports"`
 	Failed    []int         `json:"failed_per_day"`
 	FailedIPs []int         `json:"failed_ips_per_day"`
+	// SSH logins: per user and hour of day (UTC), per key and per source
+	Logins     int                 `json:"logins"`
+	LoginHours map[string]*[24]int `json:"login_hours"`
+	Keys       []*loginUse         `json:"keys"`
+	Sources    []*loginUse         `json:"sources"`
 }
 
 // changeType: the events that change a host. Scans and snapshots are left
@@ -163,12 +188,14 @@ func (s *Server) hostActivityFor(agent string, days int, role roleSet) *hostActi
 	dayStart := now.Truncate(24*time.Hour).AddDate(0, 0, -(days - 1))
 	from := dayStart
 	v := &hostActivity{Agent: agent, Days: days, From: from, DayStart: dayStart.Format("2006-01-02"), Generated: now,
-		Changes: []viewRecord{}, Dests: []destView{}, Ports: []portHistory{}, Failed: make([]int, days), FailedIPs: make([]int, days)}
+		Changes: []viewRecord{}, Dests: []destView{}, Ports: []portHistory{}, Failed: make([]int, days), FailedIPs: make([]int, days),
+		LoginHours: map[string]*[24]int{}, Keys: []*loginUse{}, Sources: []*loginUse{}}
 	names := s.agentNames()
 	full := roleSet{base: "admin"}
 	dests := map[string]*destView{}
 	ports := map[string]*portHistory{}
 	failedIPs := make([]map[string]bool, days)
+	keys, sources := map[string]*loginUse{}, map[string]*loginUse{}
 	var lastPkgs map[string]string
 	deadline := time.Now().Add(scanBudget)
 	// A host sends its package list at least once a day; the last one
@@ -212,6 +239,31 @@ func (s *Server) hostActivityFor(agent string, days int, role roleSet) *hostActi
 				}
 				failedIPs[idx][str(d, "ip")] = true
 			}
+		case "ssh.login":
+			user := str(d, "user")
+			v.Logins++
+			hr := v.LoginHours[user]
+			if hr == nil {
+				hr = &[24]int{}
+				v.LoginHours[user] = hr
+			}
+			hr[at.UTC().Hour()]++
+			k := str(d, "key_comment")
+			if k == "" {
+				k = str(d, "fingerprint")
+			}
+			if k == "" {
+				k = str(d, "method")
+			}
+			if keys[k] == nil {
+				keys[k] = &loginUse{Key: k, Method: str(d, "method")}
+			}
+			keys[k].add(user, at)
+			ip := str(d, "ip")
+			if sources[ip] == nil {
+				sources[ip] = &loginUse{Key: ip}
+			}
+			sources[ip].add(user, at)
 		case "net.connection":
 			ip, port := str(d, "remote_ip"), int(num(d, "remote_port"))
 			k := ip + "|" + strconv.Itoa(port) + "|" + str(d, "process")
@@ -256,6 +308,22 @@ func (s *Server) hostActivityFor(agent string, days int, role roleSet) *hostActi
 	if len(v.Changes) > hostActChanges {
 		v.Changes, v.Truncated = v.Changes[:hostActChanges], true
 	}
+	for _, m := range []map[string]*loginUse{keys, sources} {
+		for _, u := range m {
+			for n := range u.users {
+				u.Users = append(u.Users, n)
+			}
+			sort.Strings(u.Users)
+		}
+	}
+	for _, u := range keys {
+		v.Keys = append(v.Keys, u)
+	}
+	for _, u := range sources {
+		v.Sources = append(v.Sources, u)
+	}
+	sort.Slice(v.Keys, func(i, j int) bool { return v.Keys[i].Count > v.Keys[j].Count })
+	sort.Slice(v.Sources, func(i, j int) bool { return v.Sources[i].Last.After(v.Sources[j].Last) })
 	for _, x := range dests {
 		x.GeoInfo = s.geo(x.IP)
 		v.Dests = append(v.Dests, *x)

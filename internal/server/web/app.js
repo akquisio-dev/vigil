@@ -145,7 +145,7 @@ const T = {
     noGroup: "No group", onlyThisGroup: "Only this group", securityShortL: "Security updates", renameGroup: "New name of the group", confirmDeleteGroup: "Remove the group {g} from all its hosts? The hosts stay.",
     saveMembers: "Save members", newGroup: "New group", createGroup: "Create group", noGroups: "No groups yet", groupRoles: "Roles per group", baseRoleOnly: "base role only",
     ht_tabs: "Host sections", ht_overview: "Overview", ht_perf: "Performance", ht_security: "Security", ht_network: "Network", ht_software: "Software", ht_access: "Access", ht_changes: "Changes",
-    ht_openInc: "Open incidents", ht_inSessions: "in {n} sessions", ht_new: "new", ht_noReport: "no report yet", ht_secUpdates: "Security updates", ht_oldestDays: "oldest open for {n} days", ht_oldestOpen: "Oldest open",
+    ht_openInc: "Open incidents", ht_allHostsCount: "attempts on all hosts", ht_inSessions: "in {n} sessions", ht_new: "new", ht_noReport: "no report yet", ht_secUpdates: "Security updates", ht_oldestDays: "oldest open for {n} days", ht_oldestOpen: "Oldest open",
     ht_exploitedN: "exploited", ht_allSev: "all severities", ht_publicPorts: "Public ports", ht_unexpected: "unexpected", ht_unexpectedOne: "unexpected", ht_allExpected: "all expected",
     ht_diskMem: "Disk and memory", ht_openAlerts: "Open alerts", ht_alerts30: "Alerts", ht_mttaHost: "median, this host, 30 days", ht_alertsMonth: "Alerts per day, 30 days",
     ht_latestEvents: "Latest events", ht_olderThan: "open for longer than {n} days", ht_openSince: "Open since", ht_destinations: "Outbound destinations",
@@ -307,7 +307,7 @@ const T = {
     noGroup: "Ohne Gruppe", onlyThisGroup: "Nur diese Gruppe", securityShortL: "Sicherheitsupdates", renameGroup: "Neuer Name der Gruppe", confirmDeleteGroup: "Die Gruppe {g} bei allen Hosts entfernen? Die Hosts bleiben.",
     saveMembers: "Mitglieder speichern", newGroup: "Neue Gruppe", createGroup: "Gruppe anlegen", noGroups: "Noch keine Gruppen", groupRoles: "Rollen je Gruppe", baseRoleOnly: "nur Grundrolle",
     ht_tabs: "Bereiche des Hosts", ht_overview: "Überblick", ht_perf: "Leistung", ht_security: "Sicherheit", ht_network: "Netzwerk", ht_software: "Software", ht_access: "Zugänge", ht_changes: "Änderungen",
-    ht_openInc: "Offene Vorfälle", ht_inSessions: "in {n} Sitzungen", ht_new: "neu", ht_noReport: "noch kein Bericht", ht_secUpdates: "Sicherheitsupdates", ht_oldestDays: "ältestes seit {n} Tagen offen", ht_oldestOpen: "Ältestes offen",
+    ht_openInc: "Offene Vorfälle", ht_allHostsCount: "Versuche auf allen Hosts", ht_inSessions: "in {n} Sitzungen", ht_new: "neu", ht_noReport: "noch kein Bericht", ht_secUpdates: "Sicherheitsupdates", ht_oldestDays: "ältestes seit {n} Tagen offen", ht_oldestOpen: "Ältestes offen",
     ht_exploitedN: "ausgenutzt", ht_allSev: "alle Schweregrade", ht_publicPorts: "Öffentliche Ports", ht_unexpected: "unerwartet", ht_unexpectedOne: "unerwartet", ht_allExpected: "alle erwartet",
     ht_diskMem: "Platte und Speicher", ht_openAlerts: "Offene Alarme", ht_alerts30: "Alarme", ht_mttaHost: "Median, dieser Host, 30 Tage", ht_alertsMonth: "Alarme pro Tag, 30 Tage",
     ht_latestEvents: "Letzte Ereignisse", ht_olderThan: "länger als {n} Tage offen", ht_openSince: "Offen seit", ht_destinations: "Ausgehende Ziele",
@@ -1049,6 +1049,9 @@ async function hostView(id, params) {
     h("nav", { class: "hosttabs", "aria-label": t("ht_tabs") }, HOST_TABS.map((k) =>
       h("a", { class: "tab" + (k === tab ? " on" : ""), href: hostHref(a.id, k), "aria-current": k === tab ? "page" : null }, t("ht_" + k)))),
     body));
+  // on a phone the strip scrolls; keep the open tab in sight
+  const on = document.querySelector(".hosttabs .on");
+  if (on) on.scrollIntoView({ inline: "center", block: "nearest" });
 }
 
 // The state card: one light per area, each with its number; a click opens
@@ -1358,21 +1361,11 @@ async function hostAccessTab(a, d, params) {
   const q = encodeURIComponent(a.id);
   const [ses, act, atk] = await Promise.all([api("/api/ui/sessions?agent=" + q + "&days=30"), api("/api/ui/agents/" + q + "/activity?days=30"),
     api("/api/ui/attacks?agent=" + q + "&days=30").catch(() => null)]);
+  // counts come from the log on disk; the session list is cut at 500
   const list = ses.sessions;
-  const users = {}, keys = {}, ips = {};
-  for (const x of list) {
-    const hr = new Date(x.start).getHours();
-    (users[x.user] = users[x.user] || { user: x.user, hours: Array(24).fill(0), n: 0 }).hours[hr]++;
-    users[x.user].n++;
-    const k = x.key || x.method || "·";
-    const ke = keys[k] = keys[k] || { key: k, method: x.method, users: new Set(), n: 0, last: x.start };
-    ke.users.add(x.user); ke.n++; if (x.start > ke.last) ke.last = x.start;
-    const ie = ips[x.ip] = ips[x.ip] || { ip: x.ip, users: new Set(), n: 0, first: x.start, last: x.start };
-    ie.users.add(x.user); ie.n++;
-    if (x.start < ie.first) ie.first = x.start;
-    if (x.start > ie.last) ie.last = x.start;
-  }
-  const rows = Object.values(users).sort((x, y) => y.n - x.n).slice(0, 12);
+  const users = Object.entries(act.login_hours).map(([user, utc]) => ({ user, hours: localHours(utc), n: utc.reduce((x, y) => x + y, 0) }));
+  const keys = act.keys, ipList = act.sources;
+  const rows = users.sort((x, y) => y.n - x.n).slice(0, 12);
   const max = Math.max(1, ...rows.flatMap((r) => r.hours));
   const grid = h("div", { class: "heatgrid", role: "table", "aria-label": t("ht_loginHeat") });
   grid.append(h("div", { class: "hlabel" }), ...Array.from({ length: 24 }, (_, i) => h("div", { class: "hhead" }, i % 3 === 0 ? String(i) : "")));
@@ -1382,36 +1375,36 @@ async function hostAccessTab(a, d, params) {
   }
   const failedTotal = act.failed_per_day.reduce((x, y) => x + y, 0);
   const failedDays = act.failed_per_day.map((n, i) => ({ day: new Date(Date.parse(act.day_start + "T00:00:00Z") + i * 864e5).toISOString().slice(0, 10), ssh: n, web: 0, ips: act.failed_ips_per_day[i] }));
-  const ipList = Object.values(ips).sort((x, y) => (y.last > x.last ? 1 : -1));
-  // new: first login from it in the last 7 days, none in the 23 before
+  // new: first login from it in the last 7 days, none in the 23 days before
   const isNew = (x) => newSince(x.first, 7 * 24);
   return [
     h("div", { class: "grid metrics six" },
-      metric(null, "key", t("logins"), list.length, null, t("days30").replace("{n}", 30)),
-      metric(null, "user-x", t("ht_usersN"), Object.keys(users).length, null, Object.keys(keys).length + " " + t("ht_keysN")),
+      metric(null, "key", t("logins"), num(act.logins), null, t("days30").replace("{n}", 30)),
+      metric(null, "user-x", t("ht_usersN"), users.length, null, keys.length + " " + t("ht_keysN")),
       metric(null, "world", t("ht_sources"), ipList.length, ipList.some(isNew) ? "bad" : null, ipList.filter(isNew).length + " " + t("ht_newSources")),
       metric(null, "user-x", t("failedTile"), num(failedTotal), null, t("days30").replace("{n}", 30)),
       metric(atk ? "#/attacks?host=" + a.id : null, "radar", t("attackers"), atk ? (atk.ready ? num(atk.totals.ips) : "·") : "·", null, atk && atk.ready ? atk.totals.countries + " " + t("ht_countriesN") : t("ht_rollupWait")),
-      metric("#/sessions?agent=" + a.id, "terminal-2", t("ht_commandsN"), num(list.reduce((x, s) => x + s.commands, 0)), null, t("ht_inSessions").replace("{n}", list.length))),
+      metric("#/sessions?agent=" + a.id, "terminal-2", t("ht_commandsN"), num(list.reduce((x, s) => x + s.commands, 0)), null,
+        t("ht_inSessions").replace("{n}", list.length >= 500 ? "500+" : list.length))),
     h("div", { class: "grid dash-a" },
       panel(t("ht_loginHeat"), t("days30").replace("{n}", 30), rows.length ? h("div", { class: "scrollx" }, grid) : h("div", { class: "empty small" }, t("noEvents"))),
       panel(t("ht_failedDay"), num(failedTotal), sshDays(failedDays))),
     h("div", { class: "grid two mt" },
-      panel(t("ht_keys"), null, Object.keys(keys).length ? h("div", { class: "tablewrap" }, h("table", null,
+      panel(t("ht_keys"), null, keys.length ? h("div", { class: "tablewrap" }, h("table", null,
         h("thead", null, h("tr", null, [t("key"), t("user"), "n", t("ht_lastUse")].map((x) => h("th", null, x)))),
-        h("tbody", null, Object.values(keys).sort((x, y) => y.n - x.n).map((k) => h("tr", null,
+        h("tbody", null, keys.map((k) => h("tr", null,
           h("td", { class: "mono" }, k.key, k.method === "password" ? [" ", h("span", { class: "pill warn" }, t("password"))] : null),
-          h("td", { class: "mono" }, [...k.users].join(", ")), h("td", null, k.n), h("td", { class: "nowrap" }, timeEl(k.last))))))) : h("div", { class: "empty small" }, t("noEvents"))),
+          h("td", { class: "mono" }, k.users.join(", ")), h("td", null, k.n), h("td", { class: "nowrap" }, timeEl(k.last))))))) : h("div", { class: "empty small" }, t("noEvents"))),
       panel(t("ht_sources"), null, ipList.length ? h("div", { class: "tablewrap" }, h("table", null,
         h("thead", null, h("tr", null, [t("ip"), t("user"), "n", t("ht_firstSeen"), t("ht_lastUse")].map((x) => h("th", null, x)))),
         h("tbody", null, ipList.map((x) => h("tr", null,
-          h("td", { class: "mono nowrap" }, entityLink("ip", x.ip) || x.ip, isNew(x) ? [" ", newPill()] : null),
-          h("td", { class: "mono" }, [...x.users].join(", ")), h("td", null, x.n),
+          h("td", { class: "mono nowrap" }, entityLink("ip", x.key) || x.key, isNew(x) ? [" ", newPill()] : null),
+          h("td", { class: "mono" }, x.users.join(", ")), h("td", null, x.n),
           h("td", { class: "nowrap" }, timeEl(x.first)), h("td", { class: "nowrap" }, timeEl(x.last))))))) : h("div", { class: "empty small" }, t("noEvents")))),
     atk && atk.ready && atk.countries.length ? h("div", { class: "grid dash-a mt" },
       h("div", { class: "card panel" }, h("div", { class: "panel-head" }, h("h3", null, t("ht_attackersHost")), h("span", { class: "panel-extra" }, t("days30").replace("{n}", 30))),
         worldMap(atk.countries, (k) => { location.hash = "#/attacks?" + new URLSearchParams({ host: a.id, country: k }); }), geoAttr(atk.geo)),
-      panel(t("ht_topAttackers"), null, rankList(atk.addresses.slice(0, 8).map((x) => ({ key: x.ip, count: x.ssh + x.web,
+      panel(t("ht_topAttackers"), t("ht_allHostsCount"), rankList(atk.addresses.slice(0, 8).map((x) => ({ key: x.ip, count: x.ssh + x.web,
         extra: [x.country ? countryName(x.country) : "", x.org || "", x.class ? t("cls_" + x.class) : ""].filter(Boolean).join("  ·  ") })),
         { mono: true, tone: "red", href: (i) => pivotHref("ip", i.key) }))) : null,
     h("div", { class: "flex mt" }, h("h2", null, t("sessions")), h("a", { class: "right", href: "#/sessions?agent=" + a.id }, t("all"))),
@@ -1440,8 +1433,6 @@ function changeKind(r) {
   if (ty.startsWith("ssh.key_")) return "keys";
   if (ty.startsWith("user.")) return "users";
   if (ty.startsWith("port.")) return "ports";
-  if (ty.startsWith("user.")) return [verb, " ", mono(d.user || d.name || ""), d.uid != null ? h("span", { class: "muted" }, "  ·  uid " + d.uid) : null];
-  if (ty === "agent.stopping") return [verb, d.reason ? h("span", { class: "muted" }, "  ·  " + d.reason) : null];
   if (ty.startsWith("process.")) return "programs";
   if (ty === "packages.changed") return "packages";
   if (ty.startsWith("kernel.")) return "kernel";
@@ -1461,6 +1452,8 @@ function changeText(r) {
     return h("details", null, h("summary", null, t("ht_pkgSummary").replace("{a}", d.added_n).replace("{r}", d.removed_n).replace("{c}", d.changed_n)),
       h("div", { class: "pkgdiff" }, part("added", "+"), part("removed", "−"), part("changed", "~")));
   }
+  if (ty.startsWith("user.")) return [verb, " ", mono(d.user || d.name || ""), d.uid != null ? h("span", { class: "muted" }, "  ·  uid " + d.uid) : null];
+  if (ty === "agent.stopping") return [verb, d.reason ? h("span", { class: "muted" }, "  ·  " + d.reason) : null];
   if (ty.startsWith("process.")) return [verb, " ", mono(d.exe || d.comm || ""), d.parent_comm ? h("span", { class: "muted" }, "  ·  " + d.parent_comm) : null];
   if (ty === "agent.started" || ty === "agent.update") return [verb, " ", mono(d.version || d.to || "")];
   return [verb, " ", dataLine(d)];
