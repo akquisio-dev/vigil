@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.29.0
 
 - New tab **Hosts**: every host with CPU (with waiting for disk and time taken by the hypervisor), memory, swap, the fullest file system, load, network and disk throughput, connections and its busiest processes, and a graph of the hosts with the TCP links between them, per port and program, the vigil server in the middle and the internet above. The host page gets a performance section with graphs for 1 hour to 30 days, disks, interfaces, processes and connections by remote host. UDP (games, WireGuard) only shows as interface traffic.
 - Agents send a load sample once a minute (`metrics`, on by default) beside the events, not in them: a backlog never pushes a security event out of the queue, and the samples stay out of the event log. The server keeps them in `metrics.json`, a minute ring for a day and hourly averages with peaks for 30 days. Processes are named by program only, never by command line. A server before this version ignores the samples, so roll out the server first.
