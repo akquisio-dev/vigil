@@ -2,6 +2,7 @@ package server
 
 import (
 	"errors"
+	"math"
 	"net/http"
 	"os"
 	"regexp"
@@ -492,5 +493,64 @@ func (s *Server) handleUserAction(w http.ResponseWriter, r *http.Request, sess *
 	s.endSessions(name, nil)
 	s.audit(sess.User, "user."+map[string]string{"delete": "removed", "role": "role_changed", "group_roles": "group_roles_changed"}[action],
 		map[string]any{"user": name, "role": req.Role, "group_roles": req.GroupRoles})
+	writeJSON(w, map[string]bool{"ok": true})
+}
+
+// handleTopoLayout: GET /api/ui/account/topology, where the signed-in user
+// placed the boxes of the host map.
+func (s *Server) handleTopoLayout(w http.ResponseWriter, r *http.Request, sess *session) {
+	pos := map[string][2]float64{}
+	if u := s.user(sess.User); u != nil && u.TopoLayout != nil {
+		pos = u.TopoLayout
+	}
+	writeJSON(w, map[string]any{"pos": pos})
+}
+
+var topoKey = regexp.MustCompile(`^[A-Za-z0-9_-]{1,64}$`)
+
+const (
+	topoMaxBoxes = 500
+	topoMaxCoord = 20000
+)
+
+// handleTopoLayoutSave: POST /api/ui/account/topology {pos: {id: [x, y]}}
+// replaces the user's layout; an empty pos goes back to the automatic one.
+func (s *Server) handleTopoLayoutSave(w http.ResponseWriter, r *http.Request, sess *session) {
+	var req struct {
+		Pos map[string][2]float64 `json:"pos"`
+	}
+	if !decode(r, w, &req) {
+		return
+	}
+	if len(req.Pos) > topoMaxBoxes {
+		http.Error(w, "too many boxes", http.StatusBadRequest)
+		return
+	}
+	for k, p := range req.Pos {
+		if !topoKey.MatchString(k) {
+			http.Error(w, "bad box id", http.StatusBadRequest)
+			return
+		}
+		for _, v := range p {
+			if math.IsNaN(v) || math.Abs(v) > topoMaxCoord {
+				http.Error(w, "bad position", http.StatusBadRequest)
+				return
+			}
+		}
+		req.Pos[k] = [2]float64{math.Round(p[0]), math.Round(p[1])}
+	}
+	if len(req.Pos) == 0 {
+		req.Pos = nil
+	}
+	err := UpdateUsers(s.cfg.DataDir, func(users map[string]*User) error {
+		if u := users[sess.User]; u != nil {
+			u.TopoLayout = req.Pos
+		}
+		return nil
+	})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	writeJSON(w, map[string]bool{"ok": true})
 }

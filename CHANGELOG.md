@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.34.0
+
+- Hosts: the connections map is an interactive map: a dotted plane that pans and zooms (Ctrl and the wheel, two fingers, buttons, fit, full screen), boxes that can be dragged and keep their place per account, groups as coloured areas, boxes with CPU, memory, disk, traffic, internet connections, open alerts and a pending reboot, names that show what tells two hosts of a group apart. Links show their kind (database, SSH, vigil agent, internet); a click on a host or link opens a side panel with every connection, its port, service and programs, and the host's busiest internet ports with programs and countries; search, and toggles for the vigil and internet links. See [operations](docs/operations.md#the-host-map). `GET`/`POST /api/ui/account/topology` are new, `/api/ui/hosts` carries `ext_top` per host. No agent update needed.
+
 ## v0.33.2
 
 - Attackers: ubuntu, debian and linux count like root: an address that tries one of these standard users is never counted as aimed. The reason now reads "tried a standard user (root, ubuntu, debian, linux)".

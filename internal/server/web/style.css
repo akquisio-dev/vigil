@@ -663,37 +663,88 @@ fieldset.checks legend { font-size: 12px; color: var(--text-tertiary); padding: 
 .rangepick { display: flex; gap: 4px; flex-wrap: wrap; }
 
 .topo-card { overflow: hidden; }
-.topo-wrap { display: flex; justify-content: center; margin-top: 4px; }
-.topo { display: block; max-width: 100%; height: auto; font-family: var(--font); }
-.topo .edge { fill: none; stroke: var(--text-tertiary); stroke-opacity: 0.55; stroke-linecap: round; }
-.topo .edge:hover { stroke: var(--text-primary); stroke-opacity: 0.9; }
-.topo .edge.ext { stroke-dasharray: 2 5; stroke-opacity: 0.45; }
-.topo .particle { fill: var(--series-1); }
-.topo .particle.vigil { fill: var(--text-primary); }
+.topo-wrap { position: relative; display: grid; grid-template-rows: auto 1fr; height: 640px; margin-top: 8px; border: 1px solid var(--border-light); border-radius: var(--radius); background: var(--bg); overflow: hidden; }
+.topo-wrap.narrow { height: 580px; }
+.topo-wrap.full { position: fixed; inset: 0; z-index: 200; height: auto; margin: 0; border: 0; border-radius: 0; }
+body.topo-noscroll { overflow: hidden; }
+.topo-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; padding: 8px 10px; background: var(--surface); border-bottom: 1px solid var(--border-light); }
+.topo-find { width: 180px; padding: 5px 9px; font-size: 12px; }
+.topo-tools { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+.topo { display: block; width: 100%; height: 100%; min-height: 0; touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab; font-family: var(--font); }
+.topo:active { cursor: grabbing; }
+.topo .tdot { fill: var(--text-tertiary); fill-opacity: 0.35; }
+.topo .hull rect { fill: var(--text-tertiary); fill-opacity: 0.05; stroke: var(--text-tertiary); stroke-opacity: 0.35; stroke-dasharray: 5 5; }
+.topo .hull text { font-size: 12px; font-weight: 600; fill: var(--text-tertiary); letter-spacing: 0.03em; }
+.topo .hull.g1 rect { fill: var(--series-1); stroke: var(--series-1); }
+.topo .hull.g2 rect { fill: var(--series-2); stroke: var(--series-2); }
+.topo .hull.g3 rect { fill: var(--series-3); stroke: var(--series-3); }
+.topo .hull.g1 text { fill: var(--series-1); }
+.topo .hull.g2 text { fill: var(--series-2); }
+.topo .hull.g3 text { fill: var(--series-3); }
+.topo .edge { fill: none; stroke: var(--text-tertiary); stroke-opacity: 0.6; stroke-linecap: round; transition: stroke-opacity 0.15s, opacity 0.15s; pointer-events: none; }
+.topo .edge.db { stroke: var(--text-secondary); stroke-opacity: 0.75; }
+.topo .edge.ssh { stroke-dasharray: 8 5; }
+.topo .edge.vigil { stroke-dasharray: 1 5; stroke-opacity: 0.55; }
+.topo .edge.ext { stroke-dasharray: 2 6; stroke-opacity: 0.4; pointer-events: stroke; }
+.topo .ehit { fill: none; stroke: transparent; stroke-width: 14; pointer-events: stroke; cursor: pointer; }
+.topo .particle { fill: var(--series-1); pointer-events: none; }
+.topo .particle.vigil { fill: var(--text-tertiary); }
+.topo .elabel { cursor: pointer; }
 .topo .elabel rect { fill: var(--surface); stroke: var(--border); }
 .topo .elabel text { font-size: 11px; fill: var(--text-secondary); font-family: var(--font-mono); }
-.topo .netnode rect { fill: var(--bg); stroke: var(--border); stroke-dasharray: 3 3; }
+.topo .elabel.minor { display: none; }
+.topo .netnode rect { fill: var(--surface); stroke: var(--border); stroke-dasharray: 3 3; }
 .topo .netnode text { font-size: 12px; font-weight: 600; fill: var(--text-secondary); }
-.topo .node { cursor: pointer; outline: none; }
-.topo .nbox { fill: var(--surface); stroke: var(--border); stroke-width: 1; }
+.topo .netnode text.nsub { font-size: 10px; font-weight: 500; font-family: var(--font-mono); }
+.topo .node { cursor: pointer; outline: none; transition: opacity 0.15s; }
+.topo .nbox { fill: var(--surface); stroke: var(--border); stroke-width: 1; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.06)); }
 .topo .node.server .nbox { stroke: var(--text-primary); stroke-width: 1.5; }
-.topo .node:hover .nbox, .topo .node:focus-visible .nbox { stroke: var(--text-primary); stroke-width: 2; }
+.topo .node:hover .nbox, .topo .node:focus-visible .nbox, .topo .node.sel .nbox, .topo .node.sel rect:first-child { stroke: var(--text-primary); stroke-width: 2; }
 .topo .node.off .nbox { stroke-dasharray: 4 3; }
 .topo .ndot { fill: var(--text-tertiary); }
 .topo .ndot.online { fill: #639922; }
 .topo .ndot.silent { fill: var(--red); }
 .topo .ndot.stopped, .topo .ndot.pending { fill: var(--sev-medium); }
 .topo .nname { font-size: 14px; font-weight: 600; fill: var(--text-primary); }
+.topo .nhost { font-size: 10.5px; fill: var(--text-tertiary); font-family: var(--font-mono); }
 .topo .nsub { font-size: 11px; fill: var(--text-secondary); }
 .topo .nsub.strong { font-weight: 600; fill: var(--text-primary); }
+.topo .nfoot { font-size: 10.5px; fill: var(--text-secondary); font-family: var(--font-mono); }
 .topo .ntrack { fill: var(--bar-muted); }
 .topo .nfill { fill: var(--green); }
 .topo .nfill.medium { fill: var(--amber); }
 .topo .nfill.critical { fill: var(--red); }
+.topo .nalert text { font-size: 10.5px; font-weight: 700; fill: #fff; }
+.topo .nalert.critical rect { fill: var(--sev-critical); }
+.topo .nalert.high rect { fill: var(--sev-high); }
+.topo .nalert.medium rect { fill: var(--sev-medium); }
+.topo .nalert.low rect { fill: var(--sev-low); }
 .topo .nbadge { font-size: 10px; font-weight: 600; fill: var(--text-tertiary); letter-spacing: 0.04em; text-transform: uppercase; }
+/* a box, link or search picked: the rest steps back */
+.topo.focus .node:not(.on) { opacity: 0.3; }
+.topo.focus .edge:not(.on), .topo.focus .particle:not(.on) { opacity: 0.12; }
+.topo.focus .elabel:not(.on) { opacity: 0.2; }
+.topo .edge.on { stroke: var(--text-primary); stroke-opacity: 0.9; }
+.topo .elabel.on { display: inline; opacity: 1; }
+.topo .elabel.on rect { stroke: var(--text-secondary); }
+.topo-side { position: absolute; top: 58px; right: 10px; bottom: 10px; width: 300px; overflow-y: auto; padding: 14px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); font-size: 13px; display: grid; gap: 6px; align-content: start; }
+.topo-side[hidden] { display: none; }
+.topo-side h4 { margin: 0 24px 2px 0; font-size: 14px; overflow-wrap: anywhere; }
+.topo-side h5 { margin: 10px 0 0; font-size: 11px; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em; }
+.topo-side .ts-x { position: absolute; top: 8px; right: 10px; font-size: 18px; line-height: 1; }
+.topo-side .ts-row { display: flex; justify-content: space-between; gap: 10px; }
+.topo-side .ts-row > span:last-child { text-align: right; overflow-wrap: anywhere; }
+.topo-side .ts-flow { padding: 6px 8px; border: 1px solid var(--border-light); border-radius: var(--radius-sm); display: grid; gap: 2px; }
+.topo-side .ts-flow.click { cursor: pointer; }
+.topo-side .ts-flow.click:hover { background: var(--bg); }
+.topo-side .btn { justify-self: start; }
+.topo-wrap.narrow .topo-side { top: auto; left: 10px; width: auto; max-height: 50%; }
 .topo-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 8px; }
 .lg-line { width: 22px; height: 0; border-top: 2px solid var(--text-tertiary); display: inline-block; }
 .lg-line.ext { border-top-style: dotted; }
+.lg-line.db { border-top-color: var(--text-secondary); }
+.lg-line.ssh { border-top-style: dashed; }
+.lg-line.vigil { border-top-style: dotted; border-top-width: 2px; opacity: 0.6; }
 .lg-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--series-1); display: inline-block; }
 
 .hostgrid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }

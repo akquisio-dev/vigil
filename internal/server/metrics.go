@@ -385,6 +385,71 @@ type hostCard struct {
 	ExtIn   int            `json:"ext_in"` // connections with public addresses that are none of our hosts
 	ExtOut  int            `json:"ext_out"`
 	Stale   bool           `json:"stale"` // the newest sample is older than metricsStale
+	ExtTop  []extPort      `json:"ext_top,omitempty"`
+}
+
+// extPort sums a host's internet connections of one direction, port and
+// program, with the countries most of the addresses are in.
+type extPort struct {
+	Out       bool     `json:"out"`
+	Port      int      `json:"port"`
+	Proc      string   `json:"proc,omitempty"`
+	N         int      `json:"n"`
+	Addrs     int      `json:"addrs"`
+	Countries []string `json:"countries,omitempty"`
+}
+
+// summarizeExt groups the internet peers of one host, the largest first.
+// The agent sends its 64 busiest peers only, so this is the top, not all.
+func summarizeExt(peers []proto.Peer, country func(string) string) []extPort {
+	type k struct {
+		out  bool
+		port int
+		proc string
+	}
+	by := map[k]*extPort{}
+	ccs := map[k]map[string]int{}
+	for _, p := range peers {
+		key := k{p.Out, p.Port, p.Process}
+		e := by[key]
+		if e == nil {
+			e = &extPort{Out: p.Out, Port: p.Port, Proc: p.Process}
+			by[key], ccs[key] = e, map[string]int{}
+		}
+		e.N += p.N
+		e.Addrs++
+		if cc := country(p.IP); cc != "" {
+			ccs[key][cc] += p.N
+		}
+	}
+	out := make([]extPort, 0, len(by))
+	for key, e := range by {
+		cs := make([]string, 0, len(ccs[key]))
+		for cc := range ccs[key] {
+			cs = append(cs, cc)
+		}
+		sort.Slice(cs, func(i, j int) bool {
+			return ccs[key][cs[i]] > ccs[key][cs[j]] || ccs[key][cs[i]] == ccs[key][cs[j]] && cs[i] < cs[j]
+		})
+		if len(cs) > 3 {
+			cs = cs[:3]
+		}
+		e.Countries = cs
+		out = append(out, *e)
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].N != out[j].N {
+			return out[i].N > out[j].N
+		}
+		if out[i].Port != out[j].Port {
+			return out[i].Port < out[j].Port
+		}
+		return !out[i].Out && out[j].Out
+	})
+	if len(out) > 6 {
+		out = out[:6]
+	}
+	return out
 }
 
 // ownAddrs are the server's addresses: the agent sharing one of them runs
@@ -425,8 +490,9 @@ func portOf(addr string) int {
 // with a public address counts as the internet; private addresses of no
 // agent (containers, docker-proxy) and a host's own addresses count as
 // neither. A host whose newest sample is older than metricsStale adds no
-// links, its connections may be long gone.
-func hostGraph(agents map[string]*AgentRec, metrics map[string]*hostMetrics, own map[string]bool, now time.Time) (flows []hostFlow, ext map[string][2]int, serverHost string) {
+// links, its connections may be long gone. extPeers are the peers counted
+// as the internet, per host.
+func hostGraph(agents map[string]*AgentRec, metrics map[string]*hostMetrics, own map[string]bool, now time.Time) (flows []hostFlow, ext map[string][2]int, extPeers map[string][]proto.Peer, serverHost string) {
 	owner := map[string]string{}
 	claim := func(ip, id string) {
 		a, err := netip.ParseAddr(ip)
@@ -470,6 +536,7 @@ func hostGraph(agents map[string]*AgentRec, metrics map[string]*hostMetrics, own
 	}
 	agg := map[fk]*hostFlow{}
 	ext = map[string][2]int{}
+	extPeers = map[string][]proto.Peer{}
 	for _, id := range ids {
 		hm := metrics[id]
 		if hm == nil || hm.Latest == nil || now.Sub(hm.Latest.TS) > metricsStale {
@@ -485,6 +552,8 @@ func hostGraph(agents map[string]*AgentRec, metrics map[string]*hostMetrics, own
 					} else {
 						in -= p.N
 					}
+				} else if other == "" && err == nil {
+					extPeers[id] = append(extPeers[id], p)
 				}
 				continue
 			}
@@ -521,7 +590,7 @@ func hostGraph(agents map[string]*AgentRec, metrics map[string]*hostMetrics, own
 		}
 		return flows[i].Port < flows[j].Port
 	})
-	return flows, ext, serverHost
+	return flows, ext, extPeers, serverHost
 }
 
 // handleHosts: GET /api/ui/hosts, every host with its newest load, the
@@ -564,12 +633,16 @@ func (s *Server) handleHosts(w http.ResponseWriter, r *http.Request, sess *sessi
 	s.metrics.mu.Unlock()
 
 	now := time.Now()
-	flows, ext, serverHost := hostGraph(agents, snap, ownAddrs(s.cfg.AgentListen, s.cfg.Listen), now)
+	flows, ext, extPeers, serverHost := hostGraph(agents, snap, ownAddrs(s.cfg.AgentListen, s.cfg.Listen), now)
+	country := func(ip string) string { return s.geo(ip).Country }
 	for i := range cards {
 		c := &cards[i]
 		c.Stale = c.Metrics != nil && now.Sub(c.Metrics.TS) > metricsStale
 		c.Server = c.ID == serverHost
 		c.ExtIn, c.ExtOut = ext[c.ID][0], ext[c.ID][1]
+		if p := extPeers[c.ID]; len(p) > 0 {
+			c.ExtTop = summarizeExt(p, country)
+		}
 	}
 	sort.Slice(cards, func(i, j int) bool { return cards[i].Name < cards[j].Name })
 	if flows == nil {

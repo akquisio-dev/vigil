@@ -139,6 +139,9 @@ type User struct {
 	GroupRoles      map[string]string `json:"group_roles,omitempty"`
 	Passkeys        []*Passkey        `json:"passkeys,omitempty"`
 	PasswordChanged time.Time         `json:"password_changed,omitempty"`
+	// TopoLayout is where this user dragged the boxes of the host map:
+	// agent ID (or "net", the internet) to x, y.
+	TopoLayout map[string][2]float64 `json:"topo_layout,omitempty"`
 }
 
 type State struct {

@@ -6,6 +6,7 @@ import (
 	"math"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -61,13 +62,14 @@ func TestHostGraph(t *testing.T) {
 		// the game server's database is used by the web host; both see it
 		// plus its own address and a container: neither is the internet
 		"web": lat([]string{"82.165.153.153", "10.90.0.1"}, 10, 5, proto.Peer{IP: "10.90.0.2", Port: 3306, Out: true, N: 2, Process: "node"},
-			proto.Peer{IP: "10.90.0.1", Port: 8471, Out: true, N: 1}, proto.Peer{IP: "172.23.0.2", Port: 5432, Out: true, N: 2, Process: "docker-proxy"}),
+			proto.Peer{IP: "10.90.0.1", Port: 8471, Out: true, N: 1}, proto.Peer{IP: "172.23.0.2", Port: 5432, Out: true, N: 2, Process: "docker-proxy"},
+			proto.Peer{IP: "203.0.113.9", Port: 443, N: 7, Process: "nginx"}),
 		"game": lat([]string{"87.106.34.84", "10.90.0.2"}, 3, 1, proto.Peer{IP: "10.90.0.1", Port: 3306, N: 2, Process: "mysqld"}, proto.Peer{IP: "10.90.0.1", Port: 8471, Out: true, N: 1, Process: "vigil-agent"}),
 		// both Oracle hosts sit behind NAT with the same private address
 		"o1": lat([]string{"10.0.0.5"}, 0, 1, proto.Peer{IP: "10.90.0.1", Port: 8471, Out: true, N: 1}),
 		"o2": lat([]string{"10.0.0.5"}, 0, 1, proto.Peer{IP: "10.0.0.5", Port: 22, Out: true, N: 1}),
 	}
-	flows, ext, srv := hostGraph(agents, metrics, map[string]bool{"82.165.153.153": true}, now)
+	flows, ext, extPeers, srv := hostGraph(agents, metrics, map[string]bool{"82.165.153.153": true}, now)
 	if srv != "web" {
 		t.Fatalf("server host = %q", srv)
 	}
@@ -88,11 +90,85 @@ func TestHostGraph(t *testing.T) {
 	if ext["o2"] != [2]int{0, 0} || ext["web"] != [2]int{10, 0} || ext["game"] != [2]int{1, 0} {
 		t.Fatalf("external = %v", ext)
 	}
+	// only the public address of no host is the internet's
+	if len(extPeers["web"]) != 1 || extPeers["web"][0].IP != "203.0.113.9" || len(extPeers["game"]) != 0 || len(extPeers["o2"]) != 0 {
+		t.Fatalf("external peers = %+v", extPeers)
+	}
 	// a host silent for an hour adds no links
 	metrics["game"].Latest.TS = now.Add(-time.Hour)
-	flows, ext, _ = hostGraph(agents, metrics, map[string]bool{"82.165.153.153": true}, now)
+	flows, ext, _, _ = hostGraph(agents, metrics, map[string]bool{"82.165.153.153": true}, now)
 	if len(flows) != 2 || ext["game"] != [2]int{} {
 		t.Fatalf("stale host linked: %+v %v", flows, ext)
+	}
+}
+
+func TestSummarizeExt(t *testing.T) {
+	cc := map[string]string{"203.0.113.1": "DE", "203.0.113.2": "US", "203.0.113.3": "DE"}
+	peers := []proto.Peer{
+		{IP: "203.0.113.1", Port: 443, N: 5, Process: "nginx"},
+		{IP: "203.0.113.2", Port: 443, N: 2, Process: "nginx"},
+		{IP: "203.0.113.3", Port: 443, N: 4, Process: "nginx"},
+		{IP: "198.51.100.7", Port: 443, Out: true, N: 3, Process: "node"},
+	}
+	for i := 0; i < 8; i++ {
+		peers = append(peers, proto.Peer{IP: "198.51.100.1", Port: 1000 + i, N: 1})
+	}
+	got := summarizeExt(peers, func(ip string) string { return cc[ip] })
+	if len(got) != 6 {
+		t.Fatalf("want the top 6, got %d", len(got))
+	}
+	if g := got[0]; g.Out || g.Port != 443 || g.N != 11 || g.Addrs != 3 || len(g.Countries) != 2 || g.Countries[0] != "DE" {
+		t.Fatalf("top = %+v", g)
+	}
+	if g := got[1]; !g.Out || g.N != 3 || g.Proc != "node" || g.Countries != nil && len(g.Countries) != 0 {
+		t.Fatalf("second = %+v", g)
+	}
+}
+
+func TestTopoLayoutIsPerUser(t *testing.T) {
+	dir := t.TempDir()
+	s, err := New(&Config{DataDir: dir, SessionHours: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	vera, _, _ := NewUser("vera", "viewer")
+	ada, _, _ := NewUser("ada", "admin")
+	if err := SaveUsers(dir, map[string]*User{"vera": vera, "ada": ada}); err != nil {
+		t.Fatal(err)
+	}
+	h := s.uiHandler()
+	call := func(method, body, tok, csrf string) *httptest.ResponseRecorder {
+		r := httptest.NewRequest(method, "/api/ui/account/topology", strings.NewReader(body))
+		r.AddCookie(&http.Cookie{Name: cookieName, Value: tok})
+		r.Header.Set("X-CSRF", csrf)
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, r)
+		return w
+	}
+	vtok, vs := s.newSession("vera", "1.2.3.4")
+	atok, _ := s.newSession("ada", "1.2.3.5")
+	if w := call("POST", `{"pos":{"a1":[120.4,-40],"net":[0,0]}}`, vtok, vs.CSRF); w.Code != 200 {
+		t.Fatalf("a viewer may place boxes: %d %s", w.Code, w.Body.String())
+	}
+	time.Sleep(10 * time.Millisecond)
+	if w := call("GET", "", vtok, ""); !strings.Contains(w.Body.String(), `"a1":[120,-40]`) {
+		t.Fatalf("own layout: %s", w.Body.String())
+	}
+	if w := call("GET", "", atok, ""); strings.TrimSpace(w.Body.String()) != `{"pos":{}}` {
+		t.Fatalf("another user's layout leaked: %s", w.Body.String())
+	}
+	for _, bad := range []string{`{"pos":{"a1":[1e9,0]}}`, `{"pos":{"../x":[0,0]}}`, `{"pos":{"a1":[0,0]}`} {
+		if w := call("POST", bad, vtok, vs.CSRF); w.Code != http.StatusBadRequest {
+			t.Fatalf("%s: %d", bad, w.Code)
+		}
+	}
+	if w := call("POST", `{"pos":{"a1":[0,0]}}`, vtok, ""); w.Code == 200 {
+		t.Fatal("saving needs the CSRF token")
+	}
+	call("POST", `{"pos":{}}`, vtok, vs.CSRF)
+	time.Sleep(10 * time.Millisecond)
+	if w := call("GET", "", vtok, ""); strings.TrimSpace(w.Body.String()) != `{"pos":{}}` {
+		t.Fatalf("reset: %s", w.Body.String())
 	}
 }
 

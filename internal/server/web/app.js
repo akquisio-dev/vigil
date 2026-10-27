@@ -135,6 +135,9 @@ const T = {
     performance: "Performance", lastHour: "last hour", avgCpu: "CPU average", memUsed: "Memory used", throughput: "Throughput", hostLinks: "Between hosts",
     vigilServer: "vigil server", iowait: "waiting for disk", steal: "taken by the hypervisor", fullest: "fullest file system", used: "used", mount: "Mount", size: "Size",
     remote: "Remote", program: "Program", direction: "Direction", outgoing: "outgoing", incoming: "incoming", legendTcp: "TCP connection, line width by count",
+    legendDb: "database", legendVigil: "agent to the vigil server", topoVigil: "vigil links", topoFind: "Find a host", topoFit: "Fit", topoZoomIn: "Zoom in", topoZoomOut: "Zoom out",
+    topoReset: "Reset layout", topoResetAsk: "Drop your own layout of the map?", topoFull: "Full screen", topoFullEnd: "Close full screen", topoOpen: "Open host",
+    topoLinks: "Links to hosts", topoAddrs: "addresses", topoHostname: "Hostname",
     legendNet: "connections to the internet", asOf: "data from", noData: "No data in this period", loadPerCore: "per core", processes: "processes", ofTotal: "of",
     hostScope: "Hosts shown", group: "Group", groups: "Groups", searchL: "Search", allRules: "All rules", anyTime: "Any time", noGrouping: "No grouping",
     byRule: "By rule", byHost: "By host", grouping: "Grouping", searchAlerts: "Title, rule or host", bulkAck: "Acknowledge all shown", bulkResolve: "Resolve all shown",
@@ -304,6 +307,9 @@ const T = {
     performance: "Leistung", lastHour: "letzte Stunde", avgCpu: "CPU im Schnitt", memUsed: "Speicher belegt", throughput: "Durchsatz", hostLinks: "Zwischen Hosts",
     vigilServer: "vigil-Server", iowait: "wartet auf Platte", steal: "vom Hypervisor belegt", fullest: "vollstes Dateisystem", used: "belegt", mount: "Einhängepunkt", size: "Größe",
     remote: "Gegenstelle", program: "Programm", direction: "Richtung", outgoing: "ausgehend", incoming: "eingehend", legendTcp: "TCP-Verbindung, Linienstärke nach Anzahl",
+    legendDb: "Datenbank", legendVigil: "Agent zum vigil-Server", topoVigil: "vigil-Verbindungen", topoFind: "Host suchen", topoFit: "Einpassen", topoZoomIn: "Vergrößern", topoZoomOut: "Verkleinern",
+    topoReset: "Anordnung zurücksetzen", topoResetAsk: "Eigene Anordnung der Karte verwerfen?", topoFull: "Vollbild", topoFullEnd: "Vollbild beenden", topoOpen: "Host öffnen",
+    topoLinks: "Verbindungen zu Hosts", topoAddrs: "Adressen", topoHostname: "Rechnername",
     legendNet: "Verbindungen ins Internet", asOf: "Stand", noData: "Keine Daten in diesem Zeitraum", loadPerCore: "pro Kern", processes: "Prozesse", ofTotal: "von",
     hostScope: "Angezeigte Hosts", group: "Gruppe", groups: "Gruppen", searchL: "Suche", allRules: "Alle Regeln", anyTime: "Gesamter Zeitraum", noGrouping: "Nicht gruppiert",
     byRule: "Nach Regel", byHost: "Nach Host", grouping: "Gruppierung", searchAlerts: "Titel, Regel oder Host", bulkAck: "Alle angezeigten bestätigen", bulkResolve: "Alle angezeigten erledigen",
@@ -377,7 +383,7 @@ async function api(path, opts = {}) {
   const res = await fetch(path + sep + "lang=" + lang, init);
   if (res.status === 401 && !path.endsWith("/login")) {
     // Only a session that just expired re-renders; a missing one is handled by render() itself.
-    if (me) { me = null; render(); }
+    if (me) { me = null; topo.pos = null; render(); }
     throw new Error("unauthorized");
   }
   if (!res.ok) throw new Error((await res.text()).trim() || res.statusText);
@@ -496,7 +502,7 @@ const sections = [
 ];
 let openAlerts = 0;
 
-const logout = async () => { await post("/api/ui/logout").catch(() => {}); me = null; render(); };
+const logout = async () => { await post("/api/ui/logout").catch(() => {}); me = null; topo.pos = null; render(); };
 const setLang = (l) => { lang = l; store("vigil.lang", lang); render(); };
 const theme = () => store("vigil.theme") || "system";
 function setTheme(v) {
@@ -3239,134 +3245,474 @@ function lineChart(opts) {
   return compact ? wrap : h("div", { class: "card" }, wrap);
 }
 
-// topology lays the hosts around the one running the vigil server, the
-// internet above them, and draws every TCP link as a curve whose dots run
-// from client to server. It is drawn at the real width of the page, so its
-// text stays readable on a phone.
-function topology(d) {
-  const hosts = d.hosts;
-  const box = document.querySelector("main.content");
-  const W = Math.max(320, Math.min(1180, (box ? box.clientWidth : window.innerWidth) - 34));
-  const narrow = W < 620;
-  const nw = narrow ? Math.min(150, W / 2 - 16) : 184, nh = 80;
-  const pos = {};
-  const centre = hosts.find((x) => x.server) || hosts[0];
-  const others = hosts.filter((x) => x !== centre);
-  const cx = W / 2, cy = narrow ? 140 : 200;
-  if (centre) pos[centre.id] = [cx, cy];
-  let H;
-  if (narrow) {
-    // a phone: the others in two columns below the centre
-    others.forEach((x, i) => { pos[x.id] = [i % 2 ? W - nw / 2 - 8 : nw / 2 + 8, cy + 150 + Math.floor(i / 2) * 140 + (i % 2) * 40]; });
-    H = (others.length ? cy + 150 + Math.floor((others.length - 1) / 2) * 140 + (others.length > 1 ? 40 : 0) : cy) + nh / 2 + 30;
-  } else {
-    const rx = Math.max(nw * 0.9, W / 2 - nw / 2 - 12), ry = others.length ? 170 : 0;
-    others.forEach((x, i) => {
-      const th = Math.PI - Math.PI * (i + 0.5) / others.length;
-      pos[x.id] = [cx + rx * Math.cos(th), cy + ry * Math.sin(th) * (others.length > 2 ? 1 : 0.85)];
+// The host map: the hosts as boxes on a dotted plane, grouped, the internet
+// above them, every TCP link as a curve whose dots run from client to
+// server. The plane pans and zooms, boxes can be dragged; where a user put
+// them is kept with the account (/api/ui/account/topology). The state lives
+// out here so the page's 30 s refresh keeps view, selection and full screen.
+const TOPO_GRID = 20, TOPO_W = 212, TOPO_H = 132;
+const topo = { view: null, sel: null, full: false, pos: null, drag: false, saveT: null, find: "",
+  showVigil: store("vigil.topoVigil") !== "0", showNet: store("vigil.topoNet") !== "0" };
+const topoBusy = () => topo.drag;
+const DB_PORTS = new Set([3306, 5432, 6379, 27017, 9200, 11211, 5672]);
+const linkKind = (port, agentPort) => port === agentPort ? "vigil" : port === 22 ? "ssh" : DB_PORTS.has(port) ? "db" : "tcp";
+const snap = (v) => Math.round(v / TOPO_GRID) * TOPO_GRID;
+const midCut = (s, n) => s.length <= n ? s : s.slice(0, Math.ceil((n - 1) * 0.4)) + "…" + s.slice(s.length - Math.floor((n - 1) * 0.6));
+
+// shortNames drops the words every host of a group shares, so two boxes
+// named "Oracle 6GB 1vCPU 50GB - <ip>" show what tells them apart.
+function shortNames(hosts) {
+  const by = new Map();
+  for (const x of hosts) { const g = primaryGroup(x); if (!by.has(g)) by.set(g, []); by.get(g).push(x); }
+  const out = {};
+  for (const list of by.values()) {
+    const words = list.map((x) => x.name.split(/\s+/).filter(Boolean));
+    const common = list.length > 1 ? new Set(words[0].filter((w) => words.every((ws) => ws.includes(w)))) : new Set();
+    list.forEach((x, i) => {
+      const kept = words[i].filter((w) => !common.has(w) && /[\p{L}\p{N}]/u.test(w));
+      const last = kept[kept.length - 1];
+      // too long for the box: the last word alone (often the address) if it tells the host apart
+      out[x.id] = !kept.length ? x.name : kept.join(" ").length > 22 && words.filter((ws) => ws[ws.length - 1] === last).length === 1 ? last : kept.join(" ");
     });
-    H = cy + ry + nh / 2 + (centre && centre.server ? 34 : 20);
   }
-  const net = [cx, 34];
-  const svg = sv("svg", { viewBox: "0 0 " + W + " " + H, width: W, height: H, class: "topo", role: "img", "aria-label": t("topology") });
-  const still = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const edges = sv("g"), labels = sv("g"), nodes = sv("g");
-  svg.append(edges, labels, nodes);
+  return out;
+}
+
+// autoLayout places the boxes nobody has placed yet: the server's group in
+// the middle, the other groups around it, a group's hosts side by side.
+// Saved positions win; a new box is pushed off any box it lands on.
+function autoLayout(hosts, centre, saved) {
+  const by = new Map();
+  for (const x of hosts) { const g = primaryGroup(x); if (!by.has(g)) by.set(g, []); by.get(g).push(x); }
+  const mid = centre ? primaryGroup(centre) : null;
+  const names = [...by.keys()].sort((a, b) => (a === mid ? -1 : b === mid ? 1 : (a === "") - (b === "") || a.localeCompare(b, lang)));
+  const gx = TOPO_W + 40, gy = TOPO_H + 60;
+  const block = (list) => { const cols = Math.min(list.length, list.length > 4 ? Math.ceil(Math.sqrt(list.length)) : list.length); return { cols, w: cols * gx, h: Math.ceil(list.length / cols) * gy }; };
+  const pos = {};
+  const place = (list, cx, cy) => {
+    const b = block(list);
+    if (centre) list = [...list].sort((a, z) => (z === centre) - (a === centre));
+    list.forEach((x, i) => { pos[x.id] = [cx - b.w / 2 + gx / 2 + (i % b.cols) * gx, cy - b.h / 2 + gy / 2 + Math.floor(i / b.cols) * gy]; });
+  };
+  const ring = names.filter((g) => g !== mid);
+  if (mid !== null && by.has(mid)) place(by.get(mid), 0, 0);
+  else if (ring.length) place(by.get(ring.shift()), 0, 0);
+  // up to four other groups on an arc below and beside the middle, more
+  // in rows below it; the internet sits on top
+  const span = ring.reduce((s, g) => s + block(by.get(g)).w + 80, 0);
+  const midH = mid !== null && by.has(mid) ? block(by.get(mid)).h : gy;
+  if (ring.length <= 4) {
+    const R = Math.max(360, span / 2.4);
+    ring.forEach((g, i) => {
+      const th = (-10 + 200 * (i + 0.5) / ring.length) * Math.PI / 180;
+      place(by.get(g), R * Math.cos(Math.PI - th), Math.max(0, Math.sin(th)) * (midH / 2 + block(by.get(g)).h / 2 + 40 + R * 0.12));
+    });
+  } else {
+    const maxW = Math.max(1400, Math.sqrt(span * gy * ring.length) * 1.4);
+    const rows = [[]];
+    let w = 0;
+    for (const g of ring) {
+      const bw = block(by.get(g)).w + 80;
+      if (w + bw > maxW && rows[rows.length - 1].length) { rows.push([]); w = 0; }
+      rows[rows.length - 1].push(g); w += bw;
+    }
+    let y = midH / 2 + 120;
+    for (const r of rows) {
+      const rw = r.reduce((s, g) => s + block(by.get(g)).w + 80, -80), rh = Math.max(...r.map((g) => block(by.get(g)).h));
+      let x = -rw / 2;
+      for (const g of r) { const b = block(by.get(g)); place(by.get(g), x + b.w / 2, y + rh / 2); x += b.w + 80; }
+      y += rh + 90;
+    }
+  }
+  for (const id in pos) if (saved[id]) pos[id] = saved[id].slice();
+  // push apart what overlaps; a saved box stays where its user put it
+  const ids = Object.keys(pos), mx = TOPO_W + 24, my = TOPO_H + 34;
+  for (let it = 0; it < 80; it++) {
+    let moved = false;
+    for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) {
+      const a = pos[ids[i]], b = pos[ids[j]];
+      const ox = mx - Math.abs(a[0] - b[0]), oy = my - Math.abs(a[1] - b[1]);
+      if (ox <= 0 || oy <= 0) continue;
+      const fa = saved[ids[i]] ? 0 : 1, fb = saved[ids[j]] ? 0 : 1;
+      if (!fa && !fb) continue;
+      moved = true;
+      const k = 1 / (fa + fb);
+      if (ox / mx < oy / my) { const s = (a[0] <= b[0] ? -1 : 1) * (ox + 1); a[0] += s * fa * k; b[0] -= s * fb * k; }
+      else { const s = (a[1] <= b[1] ? -1 : 1) * (oy + 1); a[1] += s * fa * k; b[1] -= s * fb * k; }
+    }
+    if (!moved) break;
+  }
+  for (const id of ids) if (!saved[id]) pos[id] = [snap(pos[id][0]), snap(pos[id][1])];
+  const top = Math.min(...ids.map((id) => pos[id][1]), 0);
+  pos.net = saved.net ? saved.net.slice() : [snap(pos[centre ? centre.id : ids[0]] ? pos[centre ? centre.id : ids[0]][0] : 0), snap(top - TOPO_H / 2 - 120)];
+  return pos;
+}
+
+function saveTopo() {
+  clearTimeout(topo.saveT);
+  topo.saveT = setTimeout(() => { post("/api/ui/account/topology", { pos: topo.pos }).catch((x) => console.error(x)); }, 600);
+}
+
+function topology(d) {
+  const hosts = d.hosts, agentPort = d.agent_port;
   const byId = Object.fromEntries(hosts.map((x) => [x.id, x]));
+  const centre = hosts.find((x) => x.server) || hosts[0];
+  const names = shortNames(hosts);
+  const saved = topo.pos || {};
+  const pos = autoLayout(hosts, centre, saved);
+  const still = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const narrow = () => (wrap.clientWidth || 800) < 620;
 
-  // links to addresses that are none of our hosts
-  for (const x of hosts) {
-    const n = (x.ext_in || 0) + (x.ext_out || 0);
-    if (!pos[x.id] || !x.metrics) continue;
-    const [x1, y1] = pos[x.id];
-    const ln = hoverTip(sv("line", { x1, y1: y1 - nh / 2, x2: net[0], y2: net[1] + 14, class: "edge ext", "stroke-width": n ? 1 + Math.log10(1 + n) : 1 }),
-      x.name + "  ·  " + t("internet") + ": " + (x.ext_in || 0) + " " + t("connIn") + ", " + (x.ext_out || 0) + " " + t("connOut"));
-    edges.append(ln);
-  }
-
-  // one curve per pair of hosts, the flows of both directions on it
+  // flows the toggles let through, one curve per pair of hosts
+  const flows = d.flows.filter((f) => byId[f.from] && byId[f.to] && (topo.showVigil || f.port !== agentPort));
   const pairs = {};
-  for (const f of d.flows) {
-    if (!pos[f.from] || !pos[f.to]) continue;
-    const k = [f.from, f.to].sort().join("|");
-    (pairs[k] = pairs[k] || []).push(f);
+  for (const f of flows) { const k = [f.from, f.to].sort().join("|"); (pairs[k] = pairs[k] || []).push(f); }
+  const links = (id) => flows.filter((f) => f.from === id || f.to === id);
+  const neighbours = (id) => new Set(links(id).flatMap((f) => [f.from, f.to]));
+
+  const svg = sv("svg", { class: "topo", role: "img", "aria-label": t("topology") });
+  const defs = sv("defs", {}, sv("pattern", { id: "topo-dots", width: TOPO_GRID, height: TOPO_GRID, patternUnits: "userSpaceOnUse" },
+    sv("circle", { cx: 1, cy: 1, r: 1, class: "tdot" })));
+  const bg = sv("rect", { width: "100%", height: "100%", fill: "url(#topo-dots)", class: "topo-bg" });
+  const world = sv("g"), hullL = sv("g"), edgeL = sv("g"), labelL = sv("g"), nodeL = sv("g");
+  world.append(hullL, edgeL, labelL, nodeL);
+  svg.append(defs, bg, world);
+  const side = h("div", { class: "topo-side", hidden: true });
+  const wrap = h("div", { class: "topo-wrap" + (topo.full ? " full" : "") }, svg, side);
+
+  // ---- view: pan and zoom
+  const applyView = () => {
+    const v = topo.view;
+    world.setAttribute("transform", "translate(" + v.x + "," + v.y + ") scale(" + v.k + ")");
+    defs.firstChild.setAttribute("patternTransform", "translate(" + v.x + "," + v.y + ") scale(" + v.k + ")");
+  };
+  const bbox = () => {
+    const ps = Object.entries(pos).filter(([id]) => id !== "net" || topo.showNet).map(([, p]) => p);
+    return [Math.min(...ps.map((p) => p[0])) - TOPO_W / 2 - 30, Math.min(...ps.map((p) => p[1])) - TOPO_H / 2 - 40,
+      Math.max(...ps.map((p) => p[0])) + TOPO_W / 2 + 30, Math.max(...ps.map((p) => p[1])) + TOPO_H / 2 + 40];
+  };
+  const fit = () => {
+    const W = svg.clientWidth || wrap.clientWidth, H = svg.clientHeight || 520;
+    if (!W) return;
+    const [x0, y0, x1, y1] = bbox();
+    const k = Math.max(0.25, Math.min(1.1, W / (x1 - x0), H / (y1 - y0)));
+    topo.view = { k, x: W / 2 - (x0 + x1) / 2 * k, y: H / 2 - (y0 + y1) / 2 * k };
+    applyView();
+  };
+  const zoomAt = (f, sx, sy) => {
+    const v = topo.view, k = Math.max(0.2, Math.min(2.5, v.k * f));
+    topo.view = { k, x: sx - (sx - v.x) * k / v.k, y: sy - (sy - v.y) * k / v.k };
+    applyView();
+  };
+  const local = (e) => { const r = svg.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+
+  // ---- drawing; boxes stay, links and group areas follow them
+  const nodeEls = {};
+  function drawHulls() {
+    hullL.replaceChildren();
+    const by = new Map();
+    for (const x of hosts) { const g = primaryGroup(x); if (g) { if (!by.has(g)) by.set(g, []); by.get(g).push(pos[x.id]); } }
+    for (const [g, ps] of by) {
+      const x0 = Math.min(...ps.map((p) => p[0])) - TOPO_W / 2 - 18, y0 = Math.min(...ps.map((p) => p[1])) - TOPO_H / 2 - 38;
+      const x1 = Math.max(...ps.map((p) => p[0])) + TOPO_W / 2 + 18, y1 = Math.max(...ps.map((p) => p[1])) + TOPO_H / 2 + 30;
+      hullL.append(sv("g", { class: "hull " + groupClass(g) },
+        sv("rect", { x: x0, y: y0, width: x1 - x0, height: y1 - y0, rx: 18 }),
+        sv("text", { x: x0 + 16, y: y0 + 22 }, g)));
+    }
   }
-  let pid = 0;
-  for (const [k, flows] of Object.entries(pairs)) {
-    const [a, b] = k.split("|");
-    const [x1, y1] = pos[a], [x2, y2] = pos[b];
-    const mx = (x1 + x2) / 2, my = (y1 + y2) / 2, len = Math.hypot(x2 - x1, y2 - y1) || 1;
-    const bend = Math.min(60, len * 0.18);
-    const qx = mx - (y2 - y1) / len * bend, qy = my + (x2 - x1) / len * bend;
-    const id = "tp" + (pid++);
-    const n = flows.reduce((s, f) => s + f.n, 0);
-    const path = sv("path", { id, d: "M" + x1 + "," + y1 + " Q" + qx + "," + qy + " " + x2 + "," + y2, class: "edge", "stroke-width": (1.5 + Math.log2(1 + n)).toFixed(1) });
-    const text = flows.map((f) => portName(f.port, d.agent_port) + " ×" + f.n).join("  ·  ");
-    const detail = flows.map((f) => (byId[f.from] || {}).name + " → " + (byId[f.to] || {}).name + "  " + portName(f.port, d.agent_port) + " (" + f.port + ")  ·  " + f.n + "  " +
-      [f.client_proc, f.server_proc].filter(Boolean).join(" → ")).join("\n");
-    edges.append(hoverTip(path, detail));
-    if (!still) {
-      for (const f of flows) {
-        const forward = f.from === a;
-        const dots = Math.min(3, 1 + Math.floor(Math.log2(f.n)));
-        for (let i = 0; i < dots; i++) {
-          const dur = 3.2;
-          edges.append(sv("circle", { r: 3, class: "particle" + (f.port === d.agent_port ? " vigil" : "") },
-            sv("animateMotion", { dur: dur + "s", repeatCount: "indefinite", begin: (-dur * i / dots).toFixed(2) + "s",
-              keyPoints: forward ? "0;1" : "1;0", keyTimes: "0;1", calcMode: "linear" }, sv("mpath", { href: "#" + id }))));
-        }
+  const flowText = (f) => (byId[f.from] || {}).name + " → " + (byId[f.to] || {}).name + "  " + portName(f.port, agentPort) + " (" + f.port + ")  ×" + f.n +
+    ([f.client_proc, f.server_proc].some(Boolean) ? "  " + [f.client_proc || "?", f.server_proc || "?"].join(" → ") : "");
+  function drawEdges() {
+    edgeL.replaceChildren(); labelL.replaceChildren();
+    if (topo.showNet && pos.net) {
+      const [nx, ny] = pos.net;
+      for (const x of hosts) {
+        const n = (x.ext_in || 0) + (x.ext_out || 0);
+        if (!x.metrics) continue;
+        const [x1, y1] = pos[x.id];
+        edgeL.append(hoverTip(sv("line", { x1, y1: y1 - TOPO_H / 2, x2: nx, y2: ny + 16, class: "edge ext", "data-a": x.id, "data-b": "net", "stroke-width": n ? 1 + Math.log10(1 + n) : 1 }),
+          x.name + "  ·  " + t("internet") + ": " + (x.ext_in || 0) + " " + t("connIn") + ", " + (x.ext_out || 0) + " " + t("connOut")));
       }
     }
-    // label at the curve's middle
-    const lx = (x1 + 2 * qx + x2) / 4, ly = (y1 + 2 * qy + y2) / 4;
-    const tw = Math.min(narrow ? 132 : 220, text.length * 6.4 + 14);
-    const shown = text.length * 6.4 + 14 > tw ? text.slice(0, Math.floor((tw - 20) / 6.4)) + "…" : text;
-    const covers = Object.values(pos).some(([nx, ny]) => Math.abs(nx - lx) < nw / 2 + tw / 2 && Math.abs(ny - ly) < nh / 2 + 10);
-    if (!covers) labels.append(hoverTip(sv("g", { class: "elabel" },
-      sv("rect", { x: lx - tw / 2, y: ly - 10, width: tw, height: 20, rx: 10 }),
-      sv("text", { x: lx, y: ly + 4, "text-anchor": "middle" }, shown)), detail));
-  }
-
-  // the internet
-  const extIn = hosts.reduce((s, x) => s + (x.ext_in || 0), 0), extOut = hosts.reduce((s, x) => s + (x.ext_out || 0), 0);
-  nodes.append(hoverTip(sv("g", { class: "netnode" },
-    sv("rect", { x: net[0] - 62, y: net[1] - 16, width: 124, height: 32, rx: 16 }),
-    sv("text", { x: net[0], y: net[1] + 4, "text-anchor": "middle" }, t("internet"))),
-    t("internet") + ": " + extIn + " " + t("connIn") + ", " + extOut + " " + t("connOut")));
-
-  for (const x of hosts) {
-    const [px, py] = pos[x.id];
-    const m = x.metrics;
-    const cpu = m ? m.cpu : 0, mem = m ? pctOf(m.mem_used, m.mem_total) : 0;
-    const g = sv("g", { class: "node" + (x.server ? " server" : "") + (x.status !== "online" || x.stale ? " off" : "") + (d.focus && !d.focus.has(x.id) ? " dim" : ""), tabindex: 0, role: "link", "aria-label": x.name });
-    g.append(sv("rect", { x: px - nw / 2, y: py - nh / 2, width: nw, height: nh, rx: 10, class: "nbox" }));
-    if (primaryGroup(x)) g.append(sv("rect", { x: px - nw / 2 + 1, y: py - nh / 2 + 8, width: 3, height: nh - 16, rx: 1.5, class: "ngroup " + groupClass(primaryGroup(x)) }));
-    g.append(sv("circle", { cx: px - nw / 2 + 15, cy: py - nh / 2 + 16, r: 4, class: "ndot " + x.status }));
-    const name = x.name.length > (narrow ? 14 : 19) ? x.name.slice(0, narrow ? 13 : 18) + "…" : x.name;
-    g.append(sv("text", { x: px - nw / 2 + 24, y: py - nh / 2 + 20, class: "nname" }, name));
-    if (m) {
-      const bw = nw - 26;
-      [[t("cpu"), cpu, 0], [narrow ? "RAM" : t("memory"), mem, 1]].forEach(([lab, v, i]) => {
-        const y = py - nh / 2 + 40 + i * 21;
-        g.append(sv("text", { x: px - nw / 2 + 13, y, class: "nsub" }, lab));
-        g.append(sv("text", { x: px + nw / 2 - 13, y, class: "nsub strong", "text-anchor": "end" }, Math.round(v) + " %"));
-        g.append(sv("rect", { x: px - nw / 2 + 13, y: y + 5, width: bw, height: 4, rx: 2, class: "ntrack" }));
-        g.append(sv("rect", { x: px - nw / 2 + 13, y: y + 5, width: Math.max(2, bw * Math.min(100, v) / 100), height: 4, rx: 2, class: "nfill " + level(v) }));
-      });
-    } else {
-      g.append(sv("text", { x: px - nw / 2 + 13, y: py + 12, class: "nsub" }, x.status === "online" ? "·" : t(x.status)));
+    let pid = 0;
+    for (const [k, fl] of Object.entries(pairs)) {
+      const [a, b] = k.split("|");
+      const [x1, y1] = pos[a], [x2, y2] = pos[b];
+      const mx = (x1 + x2) / 2, my = (y1 + y2) / 2, len = Math.hypot(x2 - x1, y2 - y1) || 1;
+      const bend = Math.min(60, len * 0.18);
+      const qx = mx - (y2 - y1) / len * bend, qy = my + (x2 - x1) / len * bend;
+      const id = "tp" + (pid++);
+      const n = fl.reduce((s, f) => s + f.n, 0);
+      const kinds = fl.map((f) => linkKind(f.port, agentPort));
+      const kind = ["db", "tcp", "ssh", "vigil"].find((x) => kinds.includes(x));
+      const detail = fl.map(flowText).join("\n");
+      const path = sv("path", { id, d: "M" + x1 + "," + y1 + " Q" + qx + "," + qy + " " + x2 + "," + y2, class: "edge " + kind, "data-a": a, "data-b": b,
+        "stroke-width": (kind === "vigil" ? 1.2 : 1.5 + Math.log2(1 + n)).toFixed(1) });
+      // a wide invisible twin makes thin links easy to hit
+      const hit = sv("path", { d: path.getAttribute("d"), class: "ehit", "data-a": a, "data-b": b });
+      hit.addEventListener("click", (e) => { e.stopPropagation(); select({ kind: "edge", id: k }); });
+      edgeL.append(path, hoverTip(hit, detail));
+      if (!still) {
+        for (const f of fl) {
+          const forward = f.from === a;
+          const dots = Math.min(3, 1 + Math.floor(Math.log2(f.n)));
+          for (let i = 0; i < dots; i++) {
+            const dur = 3.2;
+            edgeL.append(sv("circle", { r: 3, class: "particle " + linkKind(f.port, agentPort), "data-a": a, "data-b": b },
+              sv("animateMotion", { dur: dur + "s", repeatCount: "indefinite", begin: (-dur * i / dots).toFixed(2) + "s",
+                keyPoints: forward ? "0;1" : "1;0", keyTimes: "0;1", calcMode: "linear" }, sv("mpath", { href: "#" + id }))));
+          }
+        }
+      }
+      const text = fl.map((f) => portName(f.port, agentPort) + " ×" + f.n).join("  ·  ");
+      const lx = (x1 + 2 * qx + x2) / 4, ly = (y1 + 2 * qy + y2) / 4;
+      const tw = Math.min(240, text.length * 6.4 + 16);
+      const shown = text.length * 6.4 + 16 > tw ? text.slice(0, Math.floor((tw - 22) / 6.4)) + "…" : text;
+      const covers = Object.entries(pos).some(([nid, [nx, ny]]) => nid !== "net" && Math.abs(nx - lx) < TOPO_W / 2 + tw / 2 && Math.abs(ny - ly) < TOPO_H / 2 + 10);
+      const lab = sv("g", { class: "elabel " + kind + (covers || kind === "vigil" ? " minor" : ""), "data-a": a, "data-b": b },
+        sv("rect", { x: lx - tw / 2, y: ly - 10, width: tw, height: 20, rx: 10 }),
+        sv("text", { x: lx, y: ly + 4, "text-anchor": "middle" }, shown));
+      lab.addEventListener("click", (e) => { e.stopPropagation(); select({ kind: "edge", id: k }); });
+      labelL.append(hoverTip(lab, detail));
     }
-    if (x.server) g.append(sv("text", { x: px, y: py + nh / 2 + 16, "text-anchor": "middle", class: "nbadge" }, t("vigilServer")));
-    const info = [x.name, x.hostname, m && x.stale ? t("asOf") + " " + ago(m.ts) : "", m ? t("cpu") + " " + fmtPct(cpu) + "  ·  " + t("memory") + " " + fmtPct(mem) + "  ·  " + t("disk") + " " + fmtPct(m.disk_pct) : "",
-      m ? t("load") + " " + m.load.map((v) => v.toFixed(2)).join(" ") + "  ·  ↓ " + fmtRate(m.rx) + "  ↑ " + fmtRate(m.tx) : "",
-      m ? t("upFor") + " " + fmtUptime(m.uptime) : ""].filter(Boolean).join("\n");
-    hoverTip(g, info);
-    const go = () => { location.hash = "#/hosts/" + x.id; };
-    g.addEventListener("click", go);
-    g.addEventListener("keydown", (e) => { if (e.key === "Enter") go(); });
-    nodes.append(g);
+    mark();
   }
-  return h("div", { class: "topo-wrap" }, svg);
+
+  function hostNode(x) {
+    const m = x.metrics, W2 = TOPO_W / 2, H2 = TOPO_H / 2;
+    const g = sv("g", { class: "node" + (x.server ? " server" : "") + (x.status !== "online" || x.stale ? " off" : "") + (d.focus && !d.focus.has(x.id) ? " dim" : ""),
+      tabindex: 0, role: "button", "aria-label": x.name, "data-id": x.id });
+    g.append(sv("rect", { x: -W2, y: -H2, width: TOPO_W, height: TOPO_H, rx: 12, class: "nbox" }));
+    if (primaryGroup(x)) g.append(sv("rect", { x: -W2 + 1, y: -H2 + 10, width: 3, height: TOPO_H - 20, rx: 1.5, class: "ngroup " + groupClass(primaryGroup(x)) }));
+    g.append(sv("circle", { cx: -W2 + 16, cy: -H2 + 19, r: 4, class: "ndot " + x.status }));
+    const sevs = x.open_by_severity || {}, worst = SEVS.find((s) => sevs[s]);
+    const badgeW = worst ? 14 + String(sevs[worst]).length * 7 : 0;
+    g.append(sv("text", { x: -W2 + 26, y: -H2 + 24, class: "nname" }, midCut(names[x.id], worst ? 19 : 22)));
+    if (worst) g.append(sv("g", { class: "nalert " + worst },
+      sv("rect", { x: W2 - 12 - badgeW, y: -H2 + 11, width: badgeW, height: 17, rx: 8.5 }),
+      sv("text", { x: W2 - 12 - badgeW / 2, y: -H2 + 23.5, "text-anchor": "middle" }, sevs[worst])));
+    const sub = [x.hostname, x.last_ip].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join("  ·  ");
+    g.append(sv("text", { x: -W2 + 14, y: -H2 + 42, class: "nhost" }, midCut(sub, 32) + (x.updates && x.updates.reboot_required ? "  ↻" : "")));
+    if (m) {
+      const bw = TOPO_W - 28;
+      [[t("cpu"), m.cpu], ["RAM", pctOf(m.mem_used, m.mem_total)], [t("disk"), m.disk_pct]].forEach(([lab, v], i) => {
+        const y = -H2 + 62 + i * 19;
+        g.append(sv("text", { x: -W2 + 14, y, class: "nsub" }, lab));
+        g.append(sv("text", { x: W2 - 14, y, class: "nsub strong", "text-anchor": "end" }, Math.round(v) + " %"));
+        g.append(sv("rect", { x: -W2 + 14, y: y + 4, width: bw, height: 3, rx: 1.5, class: "ntrack" }));
+        g.append(sv("rect", { x: -W2 + 14, y: y + 4, width: Math.max(2, bw * Math.min(100, v) / 100), height: 3, rx: 1.5, class: "nfill " + level(v) }));
+      });
+      g.append(sv("text", { x: -W2 + 14, y: H2 - 10, class: "nfoot" }, "↓ " + fmtRate(m.rx) + "  ↑ " + fmtRate(m.tx)));
+      g.append(sv("text", { x: W2 - 14, y: H2 - 10, class: "nfoot", "text-anchor": "end" }, "⇅ " + (x.ext_in || 0) + " / " + (x.ext_out || 0)));
+    } else {
+      g.append(sv("text", { x: -W2 + 14, y: 8, class: "nsub" }, x.status === "online" ? "·" : t(x.status)));
+    }
+    if (x.server) g.append(sv("text", { x: 0, y: H2 + 17, "text-anchor": "middle", class: "nbadge" }, t("vigilServer")));
+    hoverTip(g, () => topo.drag ? null : x.name);
+    return g;
+  }
+  function netNode() {
+    const extIn = hosts.reduce((s, x) => s + (x.ext_in || 0), 0), extOut = hosts.reduce((s, x) => s + (x.ext_out || 0), 0);
+    return sv("g", { class: "node netnode", tabindex: 0, role: "button", "aria-label": t("internet"), "data-id": "net" },
+      sv("rect", { x: -78, y: -18, width: 156, height: 36, rx: 18 }),
+      sv("text", { x: 0, y: -1, "text-anchor": "middle" }, t("internet")),
+      sv("text", { x: 0, y: 12, "text-anchor": "middle", class: "nsub" }, "⇅ " + extIn + " / " + extOut));
+  }
+  const place = (id) => { const [x, y] = pos[id]; nodeEls[id].setAttribute("transform", "translate(" + x + "," + y + ")"); };
+  for (const x of hosts) nodeL.append(nodeEls[x.id] = hostNode(x));
+  if (topo.showNet) nodeL.append(nodeEls.net = netNode());
+
+  // ---- highlight: a box, its links and neighbours; the search
+  let hover = null;
+  function mark() {
+    const id = hover || (topo.sel && topo.sel.kind !== "edge" ? topo.sel.id : null);
+    const pair = !hover && topo.sel && topo.sel.kind === "edge" ? topo.sel.id.split("|") : null;
+    const q = topo.find.trim().toLowerCase();
+    const found = q ? new Set(hosts.filter((x) => [x.name, x.hostname, x.last_ip, ...(x.tags || [])].some((v) => (v || "").toLowerCase().includes(q))).map((x) => x.id)) : null;
+    const near = id === "net" ? new Set(["net", ...hosts.filter((x) => x.metrics).map((x) => x.id)]) : id ? neighbours(id).add(id) : pair ? new Set(pair) : found;
+    if (near && topo.sel && topo.sel.kind !== "edge") near.add(topo.sel.id);
+    svg.classList.toggle("focus", !!near);
+    for (const [nid, el] of Object.entries(nodeEls)) { el.classList.toggle("on", !!near && near.has(nid)); el.classList.toggle("sel", !!topo.sel && topo.sel.id === nid); }
+    svg.querySelectorAll("[data-a]").forEach((el) => {
+      const a = el.dataset.a, b = el.dataset.b;
+      const on = id ? a === id || b === id : pair ? a === pair[0] && b === pair[1] : !!found && (found.has(a) || found.has(b));
+      el.classList.toggle("on", on);
+    });
+  }
+
+  // ---- side panel
+  const row = (k, v) => h("div", { class: "ts-row" }, h("span", { class: "muted" }, k), h("span", null, v));
+  function sidePanel() {
+    const s = topo.sel;
+    if (!s || (s.kind === "node" && !byId[s.id]) || (s.kind === "edge" && !pairs[s.id])) { side.hidden = true; return; }
+    const close = h("button", { class: "linkbtn ts-x", "aria-label": t("close"), onclick: () => select(null) }, "×");
+    let body;
+    if (s.kind === "net") {
+      const list = hosts.filter((x) => (x.ext_in || 0) + (x.ext_out || 0)).sort((a, b) => (b.ext_in + b.ext_out) - (a.ext_in + a.ext_out));
+      body = [h("h4", null, t("internet")),
+        list.map((x) => h("div", { class: "ts-flow click", onclick: () => select({ kind: "node", id: x.id }) },
+          h("span", { class: "strong" }, names[x.id]), h("span", { class: "muted" }, "↓ " + (x.ext_in || 0) + "  ↑ " + (x.ext_out || 0))))];
+    } else if (s.kind === "edge") {
+      const [a, b] = s.id.split("|");
+      body = [h("h4", null, names[a] + " ⇄ " + names[b]),
+        pairs[s.id].map((f) => h("div", { class: "ts-flow" },
+          h("div", null, h("span", { class: "strong" }, portName(f.port, agentPort)), h("span", { class: "muted" }, "  :" + f.port + "  ×" + f.n)),
+          h("div", { class: "muted small" }, names[f.from] + " → " + names[f.to]),
+          f.client_proc || f.server_proc ? h("div", { class: "mono small" }, (f.client_proc || "?") + " → " + (f.server_proc || "?")) : null))];
+    } else {
+      const x = byId[s.id], m = x.metrics;
+      const mine = links(x.id).sort((f, g) => (f.port === agentPort) - (g.port === agentPort) || g.n - f.n);
+      body = [h("h4", null, x.name),
+        h("div", { class: "flex wrap" }, statusChip(x.status), primaryGroup(x) ? h("span", { class: "chip" }, h("span", { class: "gmark " + groupClass(primaryGroup(x)) }), primaryGroup(x)) : null,
+          Object.keys(x.open_by_severity || {}).length ? sevCounts(x.open_by_severity) : null),
+        row(t("topoHostname"), x.hostname || "·"), row("IP", x.last_ip || "·"),
+        m ? [row(t("cpu"), fmtPct(m.cpu) + "  ·  " + t("load") + " " + m.load.map((v) => v.toFixed(2)).join(" ")),
+          row(t("memory"), fmtPct(pctOf(m.mem_used, m.mem_total)) + "  ·  " + fmtBytes(m.mem_used) + " " + t("ofTotal") + " " + fmtBytes(m.mem_total)),
+          row(t("disk"), fmtPct(m.disk_pct)), row(t("traffic"), "↓ " + fmtRate(m.rx) + "  ↑ " + fmtRate(m.tx)),
+          row(t("connections"), m.conn_in + " " + t("netIn") + "  ·  " + m.conn_out + " " + t("netOut")), row(t("upFor"), fmtUptime(m.uptime)),
+          x.stale ? row(t("asOf"), ago(m.ts)) : null] : null,
+        h("h5", null, t("topoLinks")),
+        mine.length ? mine.map((f) => {
+          const other = f.from === x.id ? f.to : f.from;
+          return h("div", { class: "ts-flow click", onclick: () => select({ kind: "node", id: other }) },
+            h("div", null, h("span", { class: "strong" }, (f.from === x.id ? "→ " : "← ") + names[other]), h("span", { class: "muted" }, "  " + portName(f.port, agentPort) + " :" + f.port + "  ×" + f.n)),
+            f.client_proc || f.server_proc ? h("div", { class: "mono small" }, (f.client_proc || "?") + " → " + (f.server_proc || "?")) : null);
+        }) : h("div", { class: "muted small" }, "·"),
+        h("h5", null, t("internet") + "  ·  ↓ " + (x.ext_in || 0) + "  ↑ " + (x.ext_out || 0)),
+        (x.ext_top || []).map((e) => h("div", { class: "ts-flow" },
+          h("div", null, h("span", { class: "strong" }, (e.out ? "→ " : "← ") + portName(e.port) + (PORT_NAMES[e.port] ? " :" + e.port : "")), h("span", { class: "muted" }, "  ×" + e.n + "  ·  " + e.addrs + " " + t("topoAddrs"))),
+          h("div", { class: "muted small" }, [e.proc ? h("span", { class: "mono" }, e.proc) : null, e.proc && (e.countries || []).length ? "  ·  " : null, (e.countries || []).map(countryName).join(", ")]))),
+        h("a", { class: "btn ghost mt", href: "#/hosts/" + x.id }, t("topoOpen"))];
+    }
+    side.replaceChildren(close, ...[body].flat(3).filter(Boolean));
+    side.hidden = false;
+  }
+  function select(s) { topo.sel = s; sidePanel(); mark(); }
+
+  // ---- pointers: drag a box, pan the plane, pinch to zoom
+  const pts = new Map();
+  let act = null, lastTap = {};
+  svg.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0 && e.pointerType === "mouse") return;
+    if (!pts.size && e.target.closest && e.target.closest(".ehit, .elabel")) return;
+    pts.set(e.pointerId, local(e));
+    const node = e.target.closest && e.target.closest(".node");
+    if (pts.size === 2) { const [p, q] = [...pts.values()]; act = { kind: "pinch", d: Math.hypot(p[0] - q[0], p[1] - q[1]) }; return; }
+    const [sx, sy] = local(e);
+    act = node ? { kind: "node", id: node.dataset.id, sx, sy, p0: pos[node.dataset.id].slice(), moved: false }
+      : { kind: "pan", sx, sy, v0: { ...topo.view }, moved: false };
+    svg.setPointerCapture(e.pointerId);
+  });
+  svg.addEventListener("pointermove", (e) => {
+    if (!pts.has(e.pointerId) || !act) return;
+    pts.set(e.pointerId, local(e));
+    if (act.kind === "pinch" && pts.size === 2) {
+      const [p, q] = [...pts.values()], dd = Math.hypot(p[0] - q[0], p[1] - q[1]);
+      zoomAt(dd / (act.d || dd), (p[0] + q[0]) / 2, (p[1] + q[1]) / 2);
+      act.d = dd;
+      return;
+    }
+    const [sx, sy] = local(e);
+    if (!act.moved && Math.hypot(sx - act.sx, sy - act.sy) < 4) return;
+    act.moved = true;
+    if (act.kind === "pan") {
+      topo.view = { ...act.v0, x: act.v0.x + sx - act.sx, y: act.v0.y + sy - act.sy };
+      applyView();
+    } else if (act.kind === "node") {
+      topo.drag = true; tip(null, null);
+      const k = topo.view.k;
+      pos[act.id] = [snap(act.p0[0] + (sx - act.sx) / k), snap(act.p0[1] + (sy - act.sy) / k)];
+      place(act.id); drawHulls(); drawEdges();
+    }
+  });
+  const up = (e) => {
+    if (!pts.has(e.pointerId)) return;
+    pts.delete(e.pointerId);
+    if (!act || pts.size) { if (!pts.size) act = null; return; }
+    const a = act; act = null;
+    if (a.kind === "node" && a.moved) {
+      topo.drag = false;
+      topo.pos = Object.fromEntries(Object.entries(pos).map(([k, p]) => [k, p.slice()]));
+      saveTopo();
+    } else if (a.kind === "node") {
+      const now = Date.now();
+      if (a.id !== "net" && lastTap.id === a.id && now - lastTap.t < 400) { location.hash = "#/hosts/" + a.id; return; }
+      lastTap = { id: a.id, t: now };
+      select({ kind: a.id === "net" ? "net" : "node", id: a.id });
+    }
+    else if (a.kind === "pan" && !a.moved) select(null);
+  };
+  svg.addEventListener("pointerup", up);
+  svg.addEventListener("pointercancel", (e) => { if (act && act.kind === "node") topo.drag = false; up(e); });
+  // the wheel scrolls the page; with Ctrl (or a pinch on a touchpad), or
+  // in full screen, it zooms the map
+  svg.addEventListener("wheel", (e) => {
+    if (!(e.ctrlKey || e.metaKey || topo.full)) return;
+    e.preventDefault();
+    const [sx, sy] = local(e);
+    zoomAt(Math.exp(-e.deltaY * (e.deltaMode ? 0.05 : 0.0018)), sx, sy);
+  }, { passive: false });
+  svg.addEventListener("pointerover", (e) => { const n = e.target.closest && e.target.closest(".node"); const id = n ? n.dataset.id : null; if (id !== hover && !topo.drag) { hover = id; mark(); } });
+  svg.addEventListener("pointerleave", () => { if (hover) { hover = null; mark(); } });
+  wrap.addEventListener("keydown", (e) => {
+    const node = e.target.closest && e.target.closest(".node");
+    if (e.key === "Escape") { if (topo.sel) select(null); else if (topo.full) toggleFull(); return; }
+    if (e.target.tagName === "INPUT") return;
+    if (!node) return;
+    const id = node.dataset.id;
+    if (e.key === "Enter") { select({ kind: id === "net" ? "net" : "node", id }); return; }
+    const step = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+    if (!step) return;
+    e.preventDefault();
+    pos[id] = [pos[id][0] + step[0] * TOPO_GRID, pos[id][1] + step[1] * TOPO_GRID];
+    place(id); drawHulls(); drawEdges();
+    topo.pos = Object.fromEntries(Object.entries(pos).map(([k, p]) => [k, p.slice()]));
+    saveTopo();
+  });
+
+  // ---- toolbar
+  function toggleFull() {
+    topo.full = !topo.full;
+    wrap.classList.toggle("full", topo.full);
+    document.body.classList.toggle("topo-noscroll", topo.full);
+    fullBtn.textContent = topo.full ? t("topoFullEnd") : t("topoFull");
+    requestAnimationFrame(fit);
+  }
+  const toggle = (key, label, storeKey) => h("label", { class: "check" }, h("input", { type: "checkbox", checked: topo[key] ? true : null,
+    onchange: (e) => { topo[key] = e.target.checked; store(storeKey, topo[key] ? "1" : "0"); render(); } }), label);
+  const find = h("input", { type: "search", class: "topo-find", placeholder: t("topoFind"), value: topo.find,
+    oninput: () => { topo.find = find.value; mark(); },
+    onkeydown: (e) => {
+      if (e.key !== "Enter") return;
+      const id = [...svg.querySelectorAll(".node.on")].map((n) => n.dataset.id).find((nid) => nid !== "net");
+      if (!id) return;
+      const W = svg.clientWidth, H = svg.clientHeight, v = topo.view;
+      topo.view = { k: v.k, x: W / 2 - pos[id][0] * v.k, y: H / 2 - pos[id][1] * v.k };
+      applyView(); select({ kind: "node", id });
+    } });
+  const btn = (label, title, onclick) => h("button", { class: "btn ghost small", title, "aria-label": title, onclick }, label);
+  const fullBtn = btn(topo.full ? t("topoFullEnd") : t("topoFull"), t("topoFull"), toggleFull);
+  const bar = h("div", { class: "topo-bar" }, find,
+    toggle("showVigil", t("topoVigil"), "vigil.topoVigil"), toggle("showNet", t("internet"), "vigil.topoNet"),
+    h("span", { class: "topo-tools" },
+      btn("−", t("topoZoomOut"), () => zoomAt(1 / 1.25, svg.clientWidth / 2, svg.clientHeight / 2)),
+      btn("+", t("topoZoomIn"), () => zoomAt(1.25, svg.clientWidth / 2, svg.clientHeight / 2)),
+      btn(t("topoFit"), t("topoFit"), fit),
+      topo.pos ? btn(t("topoReset"), t("topoReset"), async () => {
+        if (!confirm(t("topoResetAsk"))) return;
+        clearTimeout(topo.saveT);
+        await post("/api/ui/account/topology", { pos: {} }).catch(() => null);
+        topo.pos = null; topo.view = null; render();
+      }) : null,
+      fullBtn));
+  wrap.prepend(bar);
+
+  for (const id in nodeEls) place(id);
+  drawHulls(); drawEdges(); sidePanel();
+  if (topo.full) document.body.classList.add("topo-noscroll");
+  // the size is known once the page is mounted
+  requestAnimationFrame(() => { if (topo.view) applyView(); else fit(); if (narrow()) wrap.classList.add("narrow"); });
+  return wrap;
 }
 
 function hostCard(x, agentPort) {
@@ -3401,7 +3747,8 @@ function hostCard(x, agentPort) {
 }
 
 async function hostsView() {
-  const d = await api("/api/ui/hosts");
+  const [d, lay] = await Promise.all([api("/api/ui/hosts"), topo.pos ? null : api("/api/ui/account/topology").catch(() => null)]);
+  if (lay && Object.keys(lay.pos || {}).length) topo.pos = lay.pos;
   scopeHosts = d.hosts; scopeHostsAt = Date.now();
   const everyHost = d.hosts;
   const hosts = d.hosts.filter(hostFilterMatch);
@@ -3435,8 +3782,10 @@ async function hostsView() {
       topology({ ...d, focus: hosts.length < everyHost.length ? new Set(hosts.map((x) => x.id)) : null }),
       h("div", { class: "topo-legend" },
         h("span", { class: "chip" }, h("span", { class: "lg-line" }), t("legendTcp")),
+        h("span", { class: "chip" }, h("span", { class: "lg-line db" }), t("legendDb")),
+        h("span", { class: "chip" }, h("span", { class: "lg-line ssh" }), "SSH"),
+        h("span", { class: "chip" }, h("span", { class: "lg-line vigil" }), t("legendVigil")),
         h("span", { class: "chip" }, h("span", { class: "lg-line ext" }), t("legendNet")),
-        h("span", { class: "chip" }, h("span", { class: "lg-dot" }), "vigil"),
         mainGroups().map((g) => h("span", { class: "chip" }, h("span", { class: "gmark " + groupClass(g) }), g)))),
     ...[groupedCards(hosts, d.agent_port)].flat());
 }
@@ -3887,6 +4236,8 @@ async function render() {
   const [path, query] = (location.hash.slice(1) || "/").split("?");
   const params = new URLSearchParams(query || "");
   const parts = path.split("/").filter(Boolean);
+  if (parts[0] !== "hosts" || parts[1]) topo.full = false;
+  document.body.classList.remove("topo-noscroll");
   // links may carry a scope: #/alerts?host=ID or ?group=TAG
   if (params.get("host")) setScope({ agent: params.get("host") }, true);
   else if (params.get("group")) setScope({ group: params.get("group") }, true);
@@ -3918,7 +4269,7 @@ async function render() {
   }
   // The overview and alert list refresh themselves; forms are left alone.
   // not while someone types into a filter
-  const later = () => { const el = document.activeElement; if (el && /^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName)) refreshTimer = setTimeout(later, 10000); else render(); };
+  const later = () => { const el = document.activeElement; if (topoBusy() || el && /^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName)) refreshTimer = setTimeout(later, 10000); else render(); };
   if (!parts.length || (parts[0] === "alerts" && !parts[1]) || (parts[0] === "hosts" && !parts[1])) refreshTimer = setTimeout(later, 30000);
   // A running self test finishes within minutes; follow it on the host page.
   if (parts[0] === "hosts" && selftestOpen) refreshTimer = setTimeout(render, 10000);

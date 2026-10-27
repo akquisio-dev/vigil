@@ -128,6 +128,8 @@ func (s *Server) uiHandler() http.Handler {
 	mux.HandleFunc("POST /api/ui/passkey/finish", s.handlePasskeyLoginFinish)
 	mux.HandleFunc("GET /api/ui/account", s.auth(s.handleAccount))
 	mux.HandleFunc("POST /api/ui/account/password", s.auth(s.handlePassword))
+	mux.HandleFunc("GET /api/ui/account/topology", s.auth(s.handleTopoLayout))
+	mux.HandleFunc("POST /api/ui/account/topology", s.auth(s.handleTopoLayoutSave))
 	mux.HandleFunc("POST /api/ui/account/passkeys/begin", s.auth(s.handlePasskeyBegin))
 	mux.HandleFunc("POST /api/ui/account/passkeys/finish", s.auth(s.handlePasskeyFinish))
 	mux.HandleFunc("POST /api/ui/account/passkeys/{id}/delete", s.auth(s.handlePasskeyDelete))

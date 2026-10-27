@@ -35,6 +35,22 @@ The alert list filters by severity, rule, period and text, and groups by rule
 or host. Analysts can acknowledge or resolve everything the filter shows at
 once (`POST /api/ui/alerts/bulk`, at most 1000, each audited).
 
+### The host map
+
+The hosts page (cards view) starts with a map of the hosts and the TCP
+connections between them, read from the agents' connection lists every
+minute. Each group of hosts sits on a coloured area, the vigil server's group
+in the middle, the internet on top. The map pans by dragging the background
+and zooms with Ctrl and the wheel, two fingers or the buttons; in full screen
+the wheel zooms too. Boxes can be dragged and keep their place per account
+(`GET`/`POST /api/ui/account/topology`, any role, only the own layout;
+"Reset layout" goes back to the automatic one). A click on a host lists its
+links with port, service and programs and its busiest internet ports with
+programs and countries (`ext_top` on `/api/ui/hosts`, from the agents' 64
+busiest peers); a click on a link lists both directions; a double click opens
+the host. Links of the agents to the vigil server and the internet links can
+be hidden.
+
 ### The host page
 
 A host's page has seven tabs; the tab and its options are part of the link
