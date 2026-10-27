@@ -30,20 +30,26 @@ func TestSpoofedLog(t *testing.T) {
 
 func TestJournalEntry(t *testing.T) {
 	for _, c := range []struct {
-		uid, comm, exe, ident string
-		use, spoofed          bool
+		uid, comm, exe, ident, msg string
+		use, spoofed               bool
 	}{
-		{"0", "sshd", "/usr/sbin/sshd", "sshd", true, false},
+		{"0", "sshd", "/usr/sbin/sshd", "sshd", "", true, false},
 		// a user's sudo and sshd's process for a user's session
-		{"1001", "sudo", "/usr/bin/sudo", "sudo", false, false},
-		{"1001", "sshd", "/usr/sbin/sshd", "sshd", false, false},
-		{"1001", "sshd-session", "/usr/lib/openssh/sshd-session", "sshd-session", false, false},
+		{"1001", "sudo", "/usr/bin/sudo", "sudo", "", false, false},
+		{"1001", "sshd", "/usr/sbin/sshd", "sshd", "", false, false},
+		{"1001", "sshd-session", "/usr/lib/openssh/sshd-session", "sshd-session", "", false, false},
 		// logger -t sshd, or a copy of sshd elsewhere
-		{"1001", "logger", "/usr/bin/logger", "sshd", false, true},
-		{"1001", "sshd", "/tmp/sshd", "sshd", false, true},
-		{"0", "logger", "/usr/bin/logger", "sudo", false, true},
+		{"1001", "logger", "/usr/bin/logger", "sshd", "", false, true},
+		{"1001", "sshd", "/tmp/sshd", "sshd", "", false, true},
+		{"0", "logger", "/usr/bin/logger", "sudo", "", false, true},
+		// the session process gone before journald read _EXE (Ubuntu 24.04, OpenSSH 9.6)
+		{"1001", "sshd", "", "sshd", "Disconnected from user ubuntu 192.0.2.1 port 38660", false, false},
+		{"1001", "sshd", "", "sshd", "Received disconnect from 192.0.2.1 port 38660:11: disconnected by user", false, false},
+		// but nothing else without _EXE, and never a login line
+		{"1001", "sshd", "", "sshd", "Accepted publickey for root from 192.0.2.1 port 22 ssh2", false, true},
+		{"1001", "logger", "", "sshd", "Disconnected from user ubuntu 192.0.2.1 port 1", false, true},
 	} {
-		use, spoofed := journalEntry(c.uid, c.comm, c.exe, c.ident)
+		use, spoofed := journalEntry(c.uid, c.comm, c.exe, c.ident, c.msg)
 		if use != c.use || spoofed != c.spoofed {
 			t.Errorf("%+v: use %v spoofed %v", c, use, spoofed)
 		}

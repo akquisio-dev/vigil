@@ -127,7 +127,7 @@ func (a *Agent) followJournal(ctx context.Context, bin string) error {
 		comm, _ := entry["_COMM"].(string)
 		uid, _ := entry["_UID"].(string)
 		exe, _ := entry["_EXE"].(string)
-		if use, spoofed := journalEntry(uid, comm, exe, ident); !use {
+		if use, spoofed := journalEntry(uid, comm, exe, ident, msg); !use {
 			if spoofed {
 				a.emit(proto.NewEvent("log.spoofed", map[string]any{"identifier": ident, "comm": clip(comm), "uid": uid, "message": clip(msg)}))
 			}
@@ -287,14 +287,27 @@ func atoi(s string) int {
 // whether dropping it is worth a log.spoofed. sudo run by a user and sshd's
 // process for a user's session write without being root; they are genuine,
 // but no login is read from them.
-func journalEntry(uid, comm, exe, ident string) (use, spoofed bool) {
+//
+// The session process often exits before journald reads its _EXE: the
+// last lines of a logout come without one. Without _EXE, a user's process
+// named sshd is taken as sshd's only for the two lines a session ends
+// with; a user writing those lines himself learns nothing and fakes no
+// login.
+func journalEntry(uid, comm, exe, ident, msg string) (use, spoofed bool) {
 	if uid != "0" && trustedExe[exe] {
+		return false, false
+	}
+	if uid != "0" && exe == "" && comm == "sshd" && ident == "sshd" && sessionEnd(msg) {
 		return false, false
 	}
 	if spoofedLog(uid, comm) {
 		return false, ident != "" && trustedComm[ident]
 	}
 	return true, false
+}
+
+func sessionEnd(msg string) bool {
+	return strings.HasPrefix(msg, "Received disconnect from ") || strings.HasPrefix(msg, "Disconnected from user ")
 }
 
 func spoofedLog(uid, comm string) bool {

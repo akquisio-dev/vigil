@@ -2,6 +2,7 @@
 
 ## v0.29.1
 
+- `log.spoofed` no longer fires when a user other than root logs out over SSH. The process sshd runs for the session often exits before journald reads its program, so its last two lines (`Received disconnect from`, `Disconnected from user`) came without one and were taken for a fake. Without the program, only these two lines from a process named sshd are let through, and no login is ever read from them. Seen on every logout of `ubuntu` on the Oracle hosts.
 - Hosts tab: the host running the vigil server is marked again. The packaged unit allows no netlink socket, so the server could not list its own interface addresses; it now also takes the address `agent_listen` (and `listen`) is bound to.
 
 ## v0.29.0
