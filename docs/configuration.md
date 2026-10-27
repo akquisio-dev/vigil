@@ -191,11 +191,36 @@ it came from the proxy.
 | `forward` | none | send events and alerts to syslog, HTTP or a file, see below |
 | `map_home` | none | `[latitude, longitude]` of the hosts, for the live arcs on the attack map, for example `[50.1, 8.7]`; a rough location is enough |
 | `geoip` | false | show the country and network of attacking addresses: the free DB-IP Lite country and AS databases (CC BY 4.0, about 12 MB) are downloaded once a month and looked up on the server, about 16 MB in memory. Enabling it accepts the [DB-IP Lite licence](https://db-ip.com/db/lite.php); the dashboard and reports link to DB-IP as it asks. For servers without internet access, place `country.csv.gz` and `asn.csv.gz` from DB-IP in `data_dir/geo` |
+| `perf` | defaults | thresholds of the load rules, see [below](#load-alerts) |
 | `threat_intel` | false | download public block lists (abuse.ch Feodo Tracker and ThreatFox, Spamhaus DROP, Tor exits) twice a day and match outbound connections against them. Only plain downloads, nothing about this installation is sent |
 
 Only enable `trust_proxy` when the dashboard listener is reachable through the
 proxy alone. Otherwise clients can choose their own address for rate limits
 and the audit log.
+
+### Load alerts
+
+The load rules (`perf.*`, see [the rule catalogue](rules.md#load)) are on with
+these defaults. Each alerts once when its condition begins and is resolved by
+the server when it ends; each ends only well below where it began.
+
+```json
+"perf": {
+  "cpu_pct": 90, "cpu_minutes": 15,
+  "disk_pct": 90, "disk_days": 7,
+  "mem_pct": 92, "swap_rise": 5,
+  "traffic_floor": 50000,
+  "off": ["perf.host_down_load"]
+}
+```
+
+| Key | Default | Meaning |
+|---|---|---|
+| `cpu_pct`, `cpu_minutes` | 90, 15 | `perf.cpu_high`: all cores together at or above this for this many minutes |
+| `disk_pct`, `disk_days` | 90, 7 | `perf.disk_full`: the fullest file system at or above this, or full within this many days by the trend of the last week |
+| `mem_pct`, `swap_rise` | 92, 5 | `perf.mem_pressure`: memory in use at or above this for 10 minutes while swap grew this many points in 30 minutes |
+| `traffic_floor` | 50000 | `perf.host_down_load`: bytes per second the host averaged over the last day before its traffic fell below 5 % |
+| `off` | none | rules to leave out |
 
 ## Your own name and logo
 

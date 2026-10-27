@@ -28,6 +28,7 @@ var areas = []struct{ prefix, title string }{
 	{"malware.", "Malware"},
 	{"posture. tls. backup. secret.", "Hardening, certificates, backups and secrets"},
 	{"canary.", "Canaries"},
+	{"perf.", "Load"},
 	{"", "Integrity of vigil itself"},
 }
 

@@ -56,15 +56,15 @@ type metricPoint struct {
 }
 
 type hostMetrics struct {
-	Minutes []metricPoint  `json:"minutes"`
-	Hours   []metricPoint  `json:"hours"`
+	Minutes []metricPoint `json:"minutes"`
+	Hours   []metricPoint `json:"hours"`
 	// the busiest programs of each minute (a day) and hour (a week), and
 	// when the host booted (a month)
-	ProcMinutes []procSample `json:"proc_minutes,omitempty"`
-	ProcHours   []procSample `json:"proc_hours,omitempty"`
-	Boots       []int64      `json:"boots,omitempty"`
-	Latest  *proto.Metrics `json:"latest,omitempty"` // newest sample that carried detail
-	Last    *proto.Metrics `json:"last,omitempty"`   // newest sample of all
+	ProcMinutes []procSample   `json:"proc_minutes,omitempty"`
+	ProcHours   []procSample   `json:"proc_hours,omitempty"`
+	Boots       []int64        `json:"boots,omitempty"`
+	Latest      *proto.Metrics `json:"latest,omitempty"` // newest sample that carried detail
+	Last        *proto.Metrics `json:"last,omitempty"`   // newest sample of all
 }
 
 type metricsSet struct {

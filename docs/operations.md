@@ -45,7 +45,18 @@ A host's page has seven tabs; the tab and its options are part of the link
   weaknesses, public ports, the last self test, disk and memory); each opens
   the tab with the detail. Below are the host's facts, its admin actions and
   open alerts.
-- **Performance**: load, memory, network, disks, processes and peers.
+- **Performance**: load, memory, network (also per interface, so VPN traffic
+  shows), disk I/O and connections, with marks for alerts, logins, agent
+  starts, package changes and reboots (each can be hidden). A click on a
+  graph lists the programs of that minute (of that hour beyond the last day),
+  with their CPU as a share of one core and of the host. Drag across a graph
+  with the mouse to zoom into the minutes of the last day or the hours
+  before; the points shown download as CSV. Below: the busiest and the
+  largest programs of the span, the outlook (disk trend and the days until
+  it is full, the memory trend, both from the last week and only with two
+  days of data) and the normal range per hour of the week, drawn as a band
+  behind CPU and memory once three samples per hour exist (per hour of the
+  day until three weeks are known). Points clearly above it are marked.
 - **Security**: alerts per day over 30 days, the rules that fired most, the
   median time until someone looked at an alert of this host, open incidents,
   hardening, containment, response, snapshots, self tests and the latest

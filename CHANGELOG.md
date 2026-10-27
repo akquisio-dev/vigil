@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Performance tab: a click on a graph lists the programs of that minute (of that hour beyond the last day), with CPU as a share of one core and of the host; the busiest and largest programs of the span; marks for alerts, logins, agent starts, package changes and reboots; drag with the mouse to zoom, CSV of the points shown; traffic per interface (eth0, wg0); the outlook for disk and memory from the trend of the last week; the normal range per hour of the week as a band behind CPU and memory, points clearly above it marked. Needs no agent update: the agents already send their busiest programs every minute. `GET /api/ui/agents/{id}/metrics` takes `from` and `to`, `GET /api/ui/agents/{id}/procs?at=` is new.
+- Load rules, on by default with thresholds under `perf` in server.json: `perf.cpu_high` (90 % for 15 minutes, names the busiest program), `perf.disk_full` (90 % or full within 7 days), `perf.mem_pressure` (92 % while swap grows), `perf.host_down_load` (traffic down to 5 % of the day's average). They alert when a condition begins and are resolved when it ends, each only well below where it began. See [configuration](docs/configuration.md#load-alerts).
+
 ## v0.32.0
 
 - The host page in tabs: Overview, Performance, Security, Network, Software, Access and Changes. The overview starts with a state card, one light per area with its number, each opening its tab. Security shows alerts per day over 30 days, the top rules and the median reaction time for this host; Network the outbound destinations by first contact with country and network, destinations per program, port history and data volume over 14 days; Software one weakness table for system and applications, filtered by severity, ecosystem and "exploited"; Access logins by user and hour, keys, source addresses with new ones marked (counted from the log on disk, not the session list), failed logins per day and the attackers of this host; Changes a changelog of the host by day and kind, including package differences between two package lists. See [operations](docs/operations.md#the-host-page).

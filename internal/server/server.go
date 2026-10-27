@@ -526,6 +526,9 @@ func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 	a.Silent = false
 	s.mu.Unlock()
 	s.metricsReceived(a.ID, b.Metrics)
+	if len(b.Metrics) > 0 {
+		s.checkPerf(a.ID)
+	}
 
 	recs := make([]*Record, 0, len(b.Events)+1)
 	if back {

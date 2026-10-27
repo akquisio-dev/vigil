@@ -2,7 +2,7 @@
 
 # Detection rules
 
-vigil ships 107 rules. Every alert carries the rule id, so an alert can be looked up here.
+vigil ships 111 rules. Every alert carries the rule id, so an alert can be looked up here.
 
 Severity decides who is woken up: each notifier has a `min_severity`, `high` by default.
 
@@ -50,6 +50,7 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 | [`net.retro_hit`](#net-retro_hit) | high | [T1071](https://attack.mitre.org/techniques/T1071/) |
 | [`net.service_outbound`](#net-service_outbound) | high | [T1572](https://attack.mitre.org/techniques/T1572/) |
 | [`notify.failed`](#notify-failed) | high |  |
+| [`perf.disk_full`](#perf-disk_full) | high |  |
 | [`port.docker`](#port-docker) | high |  |
 | [`posture.permissions`](#posture-permissions) | high |  |
 | [`posture.ssh_root_login`](#posture-ssh_root_login) | high | [T1110](https://attack.mitre.org/techniques/T1110/) |
@@ -87,6 +88,9 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 | [`kernel.tainted`](#kernel-tainted) | medium | [T1014](https://attack.mitre.org/techniques/T1014/) |
 | [`net.tor`](#net-tor) | medium | [T1090.003](https://attack.mitre.org/techniques/T1090/003/) |
 | [`net.volume_spike`](#net-volume_spike) | medium | [T1048](https://attack.mitre.org/techniques/T1048/) |
+| [`perf.cpu_high`](#perf-cpu_high) | medium | [T1496](https://attack.mitre.org/techniques/T1496/) |
+| [`perf.host_down_load`](#perf-host_down_load) | medium |  |
+| [`perf.mem_pressure`](#perf-mem_pressure) | medium |  |
 | [`port.public`](#port-public) | medium |  |
 | [`posture.aslr`](#posture-aslr) | medium |  |
 | [`posture.firewall`](#posture-firewall) | medium |  |
@@ -1185,6 +1189,56 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 **Known false positives:** None.
 
 **What to do:** Inspect the file by hand before removing it.
+
+## Load
+
+### `perf.disk_full` {#perf-disk_full}
+
+**Severity:** high
+
+**Alert:** `Disk of {host} at {disk} %, full in {days} days by the trend`
+
+**Fires when:** The fullest file system is at or above `perf.disk_pct` (90 %), or the trend of the last week reaches 100 % within `perf.disk_days` (7). The trend needs two days of data. Ends 5 points lower and with the trend more than three days beyond.
+
+**Known false positives:** A large download or backup that will be removed again.
+
+**What to do:** Find what grows: logs, backups, container images, a database. A full disk stops logging and with it vigil's view of the host.
+
+### `perf.cpu_high` {#perf-cpu_high}
+
+**Severity:** medium · **ATT&CK:** [T1496](https://attack.mitre.org/techniques/T1496/)
+
+**Alert:** `CPU of {host} at {cpu} % for {minutes} minutes (busiest: {program})`
+
+**Fires when:** The host's CPU (all cores together) stayed at or above `perf.cpu_pct` (90 %) for `perf.cpu_minutes` (15). The alert names the busiest program; the host page's performance tab shows who was busy at each minute. Ends after 10 minutes 10 points lower.
+
+**Known false positives:** Builds, backups, game servers under load, a batch job.
+
+**What to do:** Open the performance tab and click into the CPU graph. An unknown program or one from /tmp is the reason this rule exists: miners take every core they get.
+
+### `perf.host_down_load` {#perf-host_down_load}
+
+**Severity:** medium
+
+**Alert:** `Traffic of {host} dropped to {now} (normal {normal})`
+
+**Fires when:** The host's traffic of the last 10 minutes fell below 5 % of its average of the last 24 hours, which was at least `perf.traffic_floor` (50 KB/s). Needs a day of data. Ends at 20 %.
+
+**Known false positives:** A service stopped on purpose, a quiet night after a busy day.
+
+**What to do:** Check whether the service the host is there for still runs. Turn the rule off with `perf.off` for hosts whose traffic comes in bursts.
+
+### `perf.mem_pressure` {#perf-mem_pressure}
+
+**Severity:** medium
+
+**Alert:** `Memory of {host} at {mem} %, swap grew by {rise} points to {swap} %`
+
+**Fires when:** Memory in use stayed at or above `perf.mem_pct` (92 %) for 10 minutes while swap grew by `perf.swap_rise` (5) points in 30 minutes.
+
+**Known false positives:** Hosts that are sized to use their memory fully (databases, caches) during a peak.
+
+**What to do:** Find the program on the performance tab (largest programs). Growing swap ends with the kernel killing processes.
 
 ## Integrity of vigil itself
 

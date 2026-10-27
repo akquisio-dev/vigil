@@ -377,6 +377,26 @@ var ruleDocs = map[string]ruleDoc{
 		"Old certificates still on disk but no longer served. Remove them from the configuration.",
 		"Renew it (`certbot renew`) and reload the web server. Check why automatic renewal failed (`systemctl status certbot.timer`).",
 	},
+	"perf.cpu_high": {
+		"The host's CPU (all cores together) stayed at or above `perf.cpu_pct` (90 %) for `perf.cpu_minutes` (15). The alert names the busiest program; the host page's performance tab shows who was busy at each minute. Ends after 10 minutes 10 points lower.",
+		"Builds, backups, game servers under load, a batch job.",
+		"Open the performance tab and click into the CPU graph. An unknown program or one from /tmp is the reason this rule exists: miners take every core they get.",
+	},
+	"perf.disk_full": {
+		"The fullest file system is at or above `perf.disk_pct` (90 %), or the trend of the last week reaches 100 % within `perf.disk_days` (7). The trend needs two days of data. Ends 5 points lower and with the trend more than three days beyond.",
+		"A large download or backup that will be removed again.",
+		"Find what grows: logs, backups, container images, a database. A full disk stops logging and with it vigil's view of the host.",
+	},
+	"perf.mem_pressure": {
+		"Memory in use stayed at or above `perf.mem_pct` (92 %) for 10 minutes while swap grew by `perf.swap_rise` (5) points in 30 minutes.",
+		"Hosts that are sized to use their memory fully (databases, caches) during a peak.",
+		"Find the program on the performance tab (largest programs). Growing swap ends with the kernel killing processes.",
+	},
+	"perf.host_down_load": {
+		"The host's traffic of the last 10 minutes fell below 5 % of its average of the last 24 hours, which was at least `perf.traffic_floor` (50 KB/s). Needs a day of data. Ends at 20 %.",
+		"A service stopped on purpose, a quiet night after a busy day.",
+		"Check whether the service the host is there for still runs. Turn the rule off with `perf.off` for hosts whose traffic comes in bursts.",
+	},
 	"tls.expiring": {
 		"A certificate expires within 14 days. certbot renews 30 days before expiry, so this means renewal has been failing for two weeks.",
 		"Certificates renewed by hand on a schedule.",
