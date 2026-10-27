@@ -54,9 +54,16 @@ func TestProcHistory(t *testing.T) {
 	if _, _, ok := hm.procsAt(start.Add(-time.Hour).Unix()); ok {
 		t.Fatal("nothing an hour before")
 	}
-	cpu, mem := hm.consumers(start.Unix(), start.Add(time.Hour).Unix())
+	// a span reaching back before the first minute with programs still
+	// uses the minutes
+	cpu, mem := hm.consumers(start.Add(-time.Hour).Unix(), start.Add(time.Hour).Unix())
 	if cpu[0].Name != "php-fpm" || cpu[0].CPU != 50 || mem[0].Name != "redis" || mem[0].RSS != 900<<20 {
 		t.Fatalf("consumers: %+v %+v", cpu, mem)
+	}
+	// just after an update: minutes with programs, no hours yet
+	fresh := &hostMetrics{Minutes: hm.Minutes, ProcMinutes: hm.ProcMinutes}
+	if cpu, _ := fresh.consumers(start.Add(-time.Hour).Unix(), start.Add(time.Hour).Unix()); len(cpu) == 0 {
+		t.Fatal("no hours yet: the minutes count")
 	}
 }
 

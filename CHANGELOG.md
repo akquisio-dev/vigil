@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.33.1
+
+- Performance tab: the busiest and largest programs of a span within the last day come from the minutes even before the first hour with programs exists (right after the update to v0.33.0 the lists stayed empty).
+
 ## v0.33.0
 
 - Performance tab: a click on a graph lists the programs of that minute (of that hour beyond the last day), with CPU as a share of one core and of the host; the busiest and largest programs of the span; marks for alerts, logins, agent starts, package changes and reboots; drag with the mouse to zoom, CSV of the points shown; traffic per interface (eth0, wg0); the outlook for disk and memory from the trend of the last week; the normal range per hour of the week as a band behind CPU and memory, points clearly above it marked. Needs no agent update: the agents already send their busiest programs every minute. `GET /api/ui/agents/{id}/metrics` takes `from` and `to`, `GET /api/ui/agents/{id}/procs?at=` is new.

@@ -202,8 +202,10 @@ func (hm *hostMetrics) procsAt(at int64) (procSample, int64, bool) {
 
 // consumers are the busiest programs from..to: by average CPU and by memory.
 func (hm *hostMetrics) consumers(from, to int64) (cpu, mem []procLoad) {
+	// minutes for a span within the last day, even while they only began
+	// recently (after an update); hours before that
 	src := hm.ProcMinutes
-	if len(hm.ProcMinutes) == 0 || from < hm.ProcMinutes[0].T-60 {
+	if n := len(hm.Minutes); n == 0 || from < hm.Minutes[n-1].T-int64(metricsMinutes)*60-60 {
 		src = hm.ProcHours
 	}
 	agg := map[string]*procLoad{}
