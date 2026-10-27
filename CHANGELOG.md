@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.30.0
 
 - One host or one group everywhere: a selector at the top of the overview, hosts, alerts, incidents, events, sessions and attackers narrows them, holds across pages and reloads, and comes with links as `?host=` or `?group=`. API: `agent` and `group` on `/api/ui/overview`, `/api/ui/alerts`, `/api/ui/incidents`, `/api/ui/events`, `agent` on `/api/ui/attacks` (the addresses that tried that host).
 - Host groups: up to eight tags per host (owner, role, place), set on the host page by admins and shown on the hosts tab, host cards and host table.
