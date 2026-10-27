@@ -141,7 +141,7 @@ const T = {
     legendNet: "connections to the internet", asOf: "data from", noData: "No data in this period", loadPerCore: "per core", processes: "processes", ofTotal: "of",
     hostScope: "Hosts shown", group: "Group", groups: "Groups", searchL: "Search", allRules: "All rules", anyTime: "Any time", noGrouping: "No grouping",
     byRule: "By rule", byHost: "By host", grouping: "Grouping", searchAlerts: "Title, rule or host", bulkAck: "Acknowledge all shown", bulkResolve: "Resolve all shown",
-    confirmBulkAck: "Acknowledge {n} alerts?", confirmBulkResolve: "Resolve {n} alerts?", resetFilters: "Reset filters", cards: "Cards", table: "Table",
+    confirmBulkAck: "Acknowledge {n} alerts?", confirmBulkResolve: "Resolve {n} alerts?", resetFilters: "Reset filters", cards: "Cards", table: "Table", rows: "List", pagePrev: "Previous page", pageNext: "Next page", hostOpen: "Open host", moreDetails: "Show details",
     allStates: "Any state", notOnline: "not online", onlyCritical: "critical or high alerts", onlyReboot: "reboot pending", noHostsFilter: "No host matches the filter",
     onlyScope: "Only {s}", attacksOnHost: "Addresses that tried {h}", attacksNoGroup: "Attacks can be narrowed to one host, not to a group. Shown for all hosts.",
     attacksHostNote: "Counts per address cover every host it tried. Hours of day and tried user names are kept for all hosts together and are left out here.",
@@ -313,7 +313,7 @@ const T = {
     legendNet: "Verbindungen ins Internet", asOf: "Stand", noData: "Keine Daten in diesem Zeitraum", loadPerCore: "pro Kern", processes: "Prozesse", ofTotal: "von",
     hostScope: "Angezeigte Hosts", group: "Gruppe", groups: "Gruppen", searchL: "Suche", allRules: "Alle Regeln", anyTime: "Gesamter Zeitraum", noGrouping: "Nicht gruppiert",
     byRule: "Nach Regel", byHost: "Nach Host", grouping: "Gruppierung", searchAlerts: "Titel, Regel oder Host", bulkAck: "Alle angezeigten bestätigen", bulkResolve: "Alle angezeigten erledigen",
-    confirmBulkAck: "{n} Alarme bestätigen?", confirmBulkResolve: "{n} Alarme als erledigt markieren?", resetFilters: "Filter zurücksetzen", cards: "Karten", table: "Tabelle",
+    confirmBulkAck: "{n} Alarme bestätigen?", confirmBulkResolve: "{n} Alarme als erledigt markieren?", resetFilters: "Filter zurücksetzen", cards: "Karten", table: "Tabelle", rows: "Liste", pagePrev: "Vorherige Seite", pageNext: "Nächste Seite", hostOpen: "Host öffnen", moreDetails: "Details zeigen",
     allStates: "Jeder Zustand", notOnline: "nicht online", onlyCritical: "kritische oder hohe Alarme", onlyReboot: "Neustart nötig", noHostsFilter: "Kein Host passt zum Filter",
     onlyScope: "Nur {s}", attacksOnHost: "Adressen, die {h} angegriffen haben", attacksNoGroup: "Angriffe lassen sich auf einen Host eingrenzen, nicht auf eine Gruppe. Angezeigt für alle Hosts.",
     attacksHostNote: "Die Zahlen je Adresse umfassen alle Hosts, die sie angegriffen hat. Tageszeiten und versuchte Benutzernamen gibt es nur für alle Hosts zusammen, sie fehlen hier.",
@@ -461,7 +461,7 @@ function summary(data) {
 }
 
 // Tabler Icons (MIT, https://tabler.io/icons), outline paths.
-const ICONS = {"affiliate": ["M5.931 6.936l1.275 4.249m5.607 5.609l4.251 1.275", "M11.683 12.317l5.759 -5.759", "M5.5 5.5m-1.5 0a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0 -3 0", "M18.5 5.5m-1.5 0a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0 -3 0", "M18.5 18.5m-1.5 0a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0 -3 0", "M8.5 15.5m-4.5 0a4.5 4.5 0 1 0 9 0a4.5 4.5 0 1 0 -9 0"], "world": ["M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0", "M3.6 9h16.8", "M3.6 15h16.8", "M11.5 3a17 17 0 0 0 0 18", "M12.5 3a17 17 0 0 1 0 18"], "terminal-2": ["M8 9l3 3l-3 3", "M13 15l3 0", "M3 4m0 2a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2z"], "radar": ["M21 12h-8a1 1 0 1 0 -1 1v8a9 9 0 0 0 9 -9", "M16 9a5 5 0 1 0 -7 7", "M20.486 9a9 9 0 1 0 -11.482 11.495"], "key": ["M16.555 3.843l3.602 3.602a2.877 2.877 0 0 1 0 4.069l-2.643 2.643a2.877 2.877 0 0 1 -4.069 0l-.301 -.301l-6.558 6.558a2 2 0 0 1 -1.239 .578l-.175 .008h-1.172a1 1 0 0 1 -.993 -.883l-.007 -.117v-1.172a2 2 0 0 1 .467 -1.284l.119 -.13l.414 -.414h2v-2h2v-2l2.144 -2.144l-.301 -.301a2.877 2.877 0 0 1 0 -4.069l2.643 -2.643a2.877 2.877 0 0 1 4.069 0z", "M15 9h.01"], "book": ["M3 19a9 9 0 0 1 9 0a9 9 0 0 1 9 0", "M3 6a9 9 0 0 1 9 0a9 9 0 0 1 9 0", "M3 6l0 13", "M12 6l0 13", "M21 6l0 13"], "stack-2": ["M12 4l-8 4l8 4l8 -4l-8 -4", "M4 12l8 4l8 -4", "M4 16l8 4l8 -4"], "bell-off": ["M9.346 5.353c.21 -.129 .428 -.246 .654 -.353a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3m-1 3h-13a4 4 0 0 0 2 -3v-3a6.996 6.996 0 0 1 1.273 -3.707", "M9 17v1a3 3 0 0 0 6 0v-1", "M3 3l18 18"], "clock": ["M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0", "M12 7v5l3 3"], "user-x": ["M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0", "M6 21v-2a4 4 0 0 1 4 -4h3.5", "M22 22l-5 -5", "M17 22l5 -5"], "plus": ["M12 5l0 14", "M5 12l14 0"], "alert-triangle": ["M12 9v4", "M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z", "M12 16h.01"], "fish-hook": ["M16 9v6a5 5 0 0 1 -10 0v-4l3 3", "M16 7m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0", "M16 5v-2"], "layout-dashboard": ["M5 4h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1", "M5 16h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1", "M15 12h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1", "M15 4h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1"], "list-details": ["M13 5h8", "M13 9h5", "M13 15h8", "M13 19h5", "M3 4m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z", "M3 14m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z"], "logout": ["M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2", "M9 12h12l-3 -3", "M18 15l3 -3"], "server": ["M3 4m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z", "M3 12m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z", "M7 8l0 .01", "M7 16l0 .01"], "settings": ["M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z", "M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"], "shield-check": ["M11.46 20.846a12 12 0 0 1 -7.96 -14.846a12 12 0 0 0 8.5 -3a12 12 0 0 0 8.5 3a12 12 0 0 1 -.09 7.06", "M15 19l2 2l4 -4"]};
+const ICONS = {"affiliate": ["M5.931 6.936l1.275 4.249m5.607 5.609l4.251 1.275", "M11.683 12.317l5.759 -5.759", "M5.5 5.5m-1.5 0a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0 -3 0", "M18.5 5.5m-1.5 0a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0 -3 0", "M18.5 18.5m-1.5 0a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0 -3 0", "M8.5 15.5m-4.5 0a4.5 4.5 0 1 0 9 0a4.5 4.5 0 1 0 -9 0"], "world": ["M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0", "M3.6 9h16.8", "M3.6 15h16.8", "M11.5 3a17 17 0 0 0 0 18", "M12.5 3a17 17 0 0 1 0 18"], "terminal-2": ["M8 9l3 3l-3 3", "M13 15l3 0", "M3 4m0 2a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2z"], "radar": ["M21 12h-8a1 1 0 1 0 -1 1v8a9 9 0 0 0 9 -9", "M16 9a5 5 0 1 0 -7 7", "M20.486 9a9 9 0 1 0 -11.482 11.495"], "key": ["M16.555 3.843l3.602 3.602a2.877 2.877 0 0 1 0 4.069l-2.643 2.643a2.877 2.877 0 0 1 -4.069 0l-.301 -.301l-6.558 6.558a2 2 0 0 1 -1.239 .578l-.175 .008h-1.172a1 1 0 0 1 -.993 -.883l-.007 -.117v-1.172a2 2 0 0 1 .467 -1.284l.119 -.13l.414 -.414h2v-2h2v-2l2.144 -2.144l-.301 -.301a2.877 2.877 0 0 1 0 -4.069l2.643 -2.643a2.877 2.877 0 0 1 4.069 0z", "M15 9h.01"], "book": ["M3 19a9 9 0 0 1 9 0a9 9 0 0 1 9 0", "M3 6a9 9 0 0 1 9 0a9 9 0 0 1 9 0", "M3 6l0 13", "M12 6l0 13", "M21 6l0 13"], "stack-2": ["M12 4l-8 4l8 4l8 -4l-8 -4", "M4 12l8 4l8 -4", "M4 16l8 4l8 -4"], "bell-off": ["M9.346 5.353c.21 -.129 .428 -.246 .654 -.353a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3m-1 3h-13a4 4 0 0 0 2 -3v-3a6.996 6.996 0 0 1 1.273 -3.707", "M9 17v1a3 3 0 0 0 6 0v-1", "M3 3l18 18"], "clock": ["M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0", "M12 7v5l3 3"], "user-x": ["M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0", "M6 21v-2a4 4 0 0 1 4 -4h3.5", "M22 22l-5 -5", "M17 22l5 -5"], "plus": ["M12 5l0 14", "M5 12l14 0"], "alert-triangle": ["M12 9v4", "M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z", "M12 16h.01"], "fish-hook": ["M16 9v6a5 5 0 0 1 -10 0v-4l3 3", "M16 7m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0", "M16 5v-2"], "layout-dashboard": ["M5 4h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1", "M5 16h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1", "M15 12h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1", "M15 4h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1"], "list-details": ["M13 5h8", "M13 9h5", "M13 15h8", "M13 19h5", "M3 4m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z", "M3 14m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z"], "logout": ["M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2", "M9 12h12l-3 -3", "M18 15l3 -3"], "server": ["M3 4m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z", "M3 12m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z", "M7 8l0 .01", "M7 16l0 .01"], "settings": ["M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z", "M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"], "shield-check": ["M11.46 20.846a12 12 0 0 1 -7.96 -14.846a12 12 0 0 0 8.5 -3a12 12 0 0 0 8.5 3a12 12 0 0 1 -.09 7.06", "M15 19l2 2l4 -4"], "brand-debian": ["M12 17c-2.397 -.943 -4 -3.153 -4 -5.635c0 -2.19 1.039 -3.14 1.604 -3.595c2.646 -2.133 6.396 -.27 6.396 3.23c0 2.5 -2.905 2.121 -3.5 1.5c-.595 -.621 -1 -1.5 -.5 -2.5", "M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"], "brand-ubuntu": ["M12 5m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0", "M17.723 7.41a7.992 7.992 0 0 0 -3.74 -2.162m-3.971 0a7.993 7.993 0 0 0 -3.789 2.216m-1.881 3.215a8 8 0 0 0 -.342 2.32c0 .738 .1 1.453 .287 2.132m1.96 3.428a7.993 7.993 0 0 0 3.759 2.19m4 0a7.993 7.993 0 0 0 3.747 -2.186m1.962 -3.43a8.008 8.008 0 0 0 .287 -2.131c0 -.764 -.107 -1.503 -.307 -2.203", "M5 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0", "M19 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"], "brand-redhat": ["M6 10.5l1.436 -4c.318 -.876 .728 -1.302 1.359 -1.302c.219 0 1.054 .365 1.88 .583c.825 .219 .733 -.329 .908 -.487c.176 -.158 .355 -.294 .61 -.294c.242 0 .553 .048 1.692 .448c.759 .267 1.493 .574 2.204 .922c1.175 .582 1.426 .913 1.595 1.507l.816 4.623c2.086 .898 3.5 2.357 3.5 3.682c0 1.685 -1.2 3.818 -5.957 3.818c-6.206 0 -14.043 -4.042 -14.043 -7.32c0 -1.044 1.333 -1.77 4 -2.18z", "M6 10.5c0 .969 4.39 3.5 9.5 3.5c1.314 0 3 .063 3 -1.5"], "cpu": ["M5 5m0 1a1 1 0 0 1 1 -1h12a1 1 0 0 1 1 1v12a1 1 0 0 1 -1 1h-12a1 1 0 0 1 -1 -1z", "M9 9h6v6h-6z", "M3 10h2", "M3 14h2", "M10 3v2", "M14 3v2", "M21 10h-2", "M21 14h-2", "M14 21v-2", "M10 21v-2"], "adjustments-horizontal": ["M14 6m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0", "M4 6l8 0", "M16 6l4 0", "M8 12m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0", "M4 12l2 0", "M10 12l10 0", "M17 18m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0", "M4 18l11 0", "M19 18l1 0"], "chevron-down": ["M6 9l6 6l6 -6"], "chevron-left": ["M15 6l-6 6l6 6"], "chevron-right": ["M9 6l6 6l-6 6"], "layout-grid": ["M4 4m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z", "M14 4m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z", "M4 14m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z", "M14 14m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z"]};
 
 const SVG = "http://www.w3.org/2000/svg";
 function icon(name, viewBox = "0 0 24 24", paths = ICONS[name]) {
@@ -3776,6 +3776,7 @@ async function hostsView() {
   // the graph needs the content's real width, known once the page is mounted
   const content = document.querySelector("main.content");
   if (hostsMode === "table") { content.append(h("div", { class: "mt" }, hostTable(hosts))); return; }
+  if (hostsMode === "rows") { content.append(hostRows(hosts)); return; }
   content.append(
     h("div", { class: "card mt topo-card" },
       h("div", { class: "panel-head" }, h("h3", null, t("topology")), h("span", { class: "panel-extra" }, t("topologySub"))),
@@ -4090,11 +4091,86 @@ function hostTable(hosts) {
         cell(x.version || "·", "muted nowrap"));
     }))));
 }
+// ---------- hosts tab: list with rings, one host per row ----------
+const HOST_PAGE = 10;
+let hostPage = 0;
+const hostOpen = new Set();
+// osOf reads the release the vulnerability check found ("debian:bookworm").
+function osOf(x) {
+  const rel = (x.vulns && x.vulns.release) || "";
+  const id = rel.split(":")[0];
+  const ic = { debian: "brand-debian", raspbian: "brand-debian", ubuntu: "brand-ubuntu", rhel: "brand-redhat", redhat: "brand-redhat" }[id] || "server";
+  return { ic, label: rel || "·" };
+}
+// ring draws one value as a circle, starting at twelve o'clock.
+function ring(value, label, cls, title) {
+  const r = 26, c = 2 * Math.PI * r, p = Math.max(0, Math.min(100, value));
+  const svg = sv("svg", { viewBox: "0 0 60 60", class: "hr-ring " + cls, "aria-hidden": "true" },
+    sv("circle", { cx: 30, cy: 30, r, class: "hr-track" }),
+    sv("circle", { cx: 30, cy: 30, r, class: "hr-arc", "stroke-dasharray": (c * p / 100).toFixed(1) + " " + c.toFixed(1), transform: "rotate(-90 30 30)" }));
+  return hoverTip(h("div", { class: "hr-gauge", role: "img", "aria-label": label + " " + title },
+    svg, h("div", { class: "hr-mid" }, h("span", { class: "hr-val" }, title), h("span", { class: "hr-lab" }, label))), label + ": " + title);
+}
+function hostRow(x) {
+  const m = x.metrics, os = osOf(x), open = hostOpen.has(x.id);
+  const sevs = x.open_by_severity || {};
+  const bars = h("a", { class: "hr-sev", href: "#/alerts", "aria-label": t("alertsOpen") + ": " + (x.open_alerts || 0),
+    onclick: (e) => { e.preventDefault(); setScope({ agent: x.id }, true); location.hash = "#/alerts"; } },
+    ["critical", "high", "medium"].map((s) => h("span", { class: sevs[s] ? s : null })));
+  hoverTip(bars, x.open_alerts ? ["critical", "high", "medium", "low"].filter((s) => sevs[s]).map((s) => sevs[s] + " " + t(s)).join("  ·  ") : "0 " + t("alertsOpen"));
+  const act = (ic, label, onclick, href) => hoverTip(h(href ? "a" : "button", { class: "hr-act", href, onclick, "aria-label": label }, icon(ic)), label);
+  const toggle = act("chevron-down", t("moreDetails"), () => { open ? hostOpen.delete(x.id) : hostOpen.add(x.id); render(); });
+  toggle.setAttribute("aria-expanded", open);
+  const row = h("div", { class: "hr" + (x.stale ? " stale" : "") + (open ? " open" : "") },
+    hoverTip(h("span", { class: "hr-os" }, icon(os.ic)), os.label),
+    h("div", { class: "hr-name" },
+      h("a", { href: "#/hosts/" + x.id, class: "strong" }, x.name),
+      h("div", { class: "muted mono small" }, [x.hostname !== x.name ? x.hostname : null, x.last_ip].filter(Boolean).join("  ·  ") || "·")),
+    h("div", { class: "hr-state" }, statusChip(x.status), x.server ? h("span", { class: "pill" }, "vigil") : null,
+      x.stale && m ? h("span", { class: "pill warn" }, t("asOf") + " " + ago(m.ts)) : null),
+    h("div", { class: "hr-hw" },
+      h("span", null, icon("cpu"), m ? m.cores + " " + t("cores") : "·"),
+      h("span", null, icon("stack-2"), m ? fmtBytes(m.mem_total) : "·")),
+    h("div", { class: "hr-rings" },
+      m ? ring(m.cpu, t("cpu"), level(m.cpu), Math.round(m.cpu) + " %") : ring(0, t("cpu"), "none", "·"),
+      m ? ring(pctOf(m.mem_used, m.mem_total), "RAM", level(pctOf(m.mem_used, m.mem_total)), Math.round(pctOf(m.mem_used, m.mem_total)) + " %") : ring(0, "RAM", "none", "·"),
+      ring(x.ports ? 100 : 0, t("ports"), "count", String(x.ports || 0))),
+    bars,
+    h("div", { class: "hr-acts" },
+      act("layout-grid", t("hostOpen"), null, "#/hosts/" + x.id),
+      act("adjustments-horizontal", t("performance"), null, "#/hosts/" + x.id + "?tab=perf"),
+      toggle));
+  if (!open) return row;
+  const fact = (k, v) => h("div", null, h("div", { class: "hc-label" }, k), h("div", null, v));
+  return h("div", null, row, h("div", { class: "hr-more" },
+    m ? [fact(t("disk"), fmtPct(m.disk_pct)),
+      fact(t("load"), m.load.map((v) => v.toFixed(2)).join(" ")),
+      fact(t("traffic"), "↓ " + fmtRate(m.rx) + "  ↑ " + fmtRate(m.tx)),
+      fact(t("connections"), m.conn_in + " " + t("netIn") + "  ·  " + m.conn_out + " " + t("netOut")),
+      fact(t("upFor"), fmtUptime(m.uptime))] : fact(t("cpu"), t("noMetrics")),
+    fact(t("updates"), updatesCell(x.updates)),
+    fact(t("version"), x.version || "·"),
+    (x.tags || []).length ? fact(t("groups"), tagChips(x.tags)) : null));
+}
+function hostRows(hosts) {
+  const pages = Math.ceil(hosts.length / HOST_PAGE);
+  hostPage = Math.min(hostPage, pages - 1);
+  const go = (n) => () => { hostPage = n; render(); };
+  const pager = pages > 1 ? h("nav", { class: "hr-pager", "aria-label": t("hosts") },
+    hoverTip(h("button", { class: "hr-act", disabled: hostPage === 0 ? true : null, onclick: go(hostPage - 1), "aria-label": t("pagePrev") }, icon("chevron-left")), t("pagePrev")),
+    Array.from({ length: pages }, (_, i) => h("button", { class: "hr-page" + (i === hostPage ? " on" : ""), "aria-current": i === hostPage ? "page" : null, onclick: go(i) }, String(i + 1))),
+    hoverTip(h("button", { class: "hr-act", disabled: hostPage === pages - 1 ? true : null, onclick: go(hostPage + 1), "aria-label": t("pageNext") }, icon("chevron-right")), t("pageNext"))) : null;
+  return h("div", { class: "card mt hostrows" },
+    h("div", { class: "panel-head" }, h("h3", null, t("hosts")), h("span", { class: "panel-extra" }, hosts.length + " " + t("hosts").toLowerCase())),
+    hosts.slice(hostPage * HOST_PAGE, (hostPage + 1) * HOST_PAGE).map(hostRow),
+    pager);
+}
+
 function hostFilterBar(hosts, all) {
   const statusSel = h("select", { onchange: () => { hostFilt.status = statusSel.value; render(); } },
     [["", t("allStates")], ["online", t("online")], ["offline", t("notOnline")]].map(([v, l]) => h("option", { value: v, selected: v === hostFilt.status }, l)));
   const check = (k, label) => h("label", { class: "check" }, h("input", { type: "checkbox", checked: hostFilt[k] ? true : null, onchange: (e) => { hostFilt[k] = e.target.checked; render(); } }), t(label));
-  const mode = h("div", { class: "tabs" }, [["cards", t("cards")], ["table", t("table")]].map(([k, l]) =>
+  const mode = h("div", { class: "tabs" }, [["cards", t("cards")], ["table", t("table")], ["rows", t("rows")]].map(([k, l]) =>
     h("button", { class: hostsMode === k ? "on" : null, onclick: () => { hostsMode = k; store("vigil.hostsMode", k); render(); } }, l)));
   return h("div", { class: "flex wrap mt hostbar" }, mode, h("label", { class: "inline-l" }, t("status"), statusSel), check("crit", "onlyCritical"), check("reboot", "onlyReboot"),
     h("span", { class: "muted right" }, hosts.length + " " + t("ofTotal") + " " + all.length));

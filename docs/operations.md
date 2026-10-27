@@ -51,6 +51,16 @@ busiest peers); a click on a link lists both directions; a double click opens
 the host. Links of the agents to the vigil server and the internet links can
 be hidden.
 
+### The host list
+
+The List view of the hosts page shows one host per row: its system (from the
+release the weakness check found), name and address, state, cores and memory,
+rings for CPU and memory (amber from 70 %, red from 90 %) and the number of
+listening ports. Three marks show open critical, high and medium alerts; a
+click on them opens the alerts of that host. The arrow at the end of a row
+shows disk, load, network, connections, uptime, updates, version and groups.
+Ten hosts per page; the view is remembered per browser like Cards and Table.
+
 ### The host page
 
 A host's page has seven tabs; the tab and its options are part of the link

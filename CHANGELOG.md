@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Hosts tab: a third view, List, next to Cards and Table. One host per row: system logo (from the release the weakness check found), name, hostname and address, state, cores and memory, rings for CPU and memory (green, amber from 70 %, red from 90 %) and the number of listening ports, three marks for open critical, high and medium alerts (a click opens the alerts of the host), and links to the host page and its Performance tab. The arrow opens disk, load, network, connections, uptime, updates, version and groups. Ten hosts per page. See [operations](docs/operations.md#the-host-list). No agent update needed.
+
 ## v0.34.0
 
 - Hosts: the connections map is an interactive map: a dotted plane that pans and zooms (Ctrl and the wheel, two fingers, buttons, fit, full screen), boxes that can be dragged and keep their place per account, groups as coloured areas, boxes with CPU, memory, disk, traffic, internet connections, open alerts and a pending reboot, names that show what tells two hosts of a group apart. Links show their kind (database, SSH, vigil agent, internet); a click on a host or link opens a side panel with every connection, its port, service and programs, and the host's busiest internet ports with programs and countries; search, and toggles for the vigil and internet links. See [operations](docs/operations.md#the-host-map). `GET`/`POST /api/ui/account/topology` are new, `/api/ui/hosts` carries `ext_top` per host. No agent update needed.
