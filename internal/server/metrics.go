@@ -356,10 +356,19 @@ type hostCard struct {
 	Stale   bool           `json:"stale"` // the newest sample is older than metricsStale
 }
 
-// ownAddrs are the server's interface addresses: the agent sharing one of
-// them runs on the same machine as the server.
-func ownAddrs() map[string]bool {
+// ownAddrs are the server's addresses: the agent sharing one of them runs
+// on the same machine as the server. The packaged unit allows no netlink
+// socket, so the interfaces cannot be listed there; the address the agent
+// API listens on (a VPN address) names the machine as well.
+func ownAddrs(listen ...string) map[string]bool {
 	out := map[string]bool{}
+	for _, l := range listen {
+		if host, _, err := net.SplitHostPort(l); err == nil {
+			if a, err := netip.ParseAddr(host); err == nil && !a.IsLoopback() && !a.IsUnspecified() {
+				out[a.Unmap().String()] = true
+			}
+		}
+	}
 	addrs, _ := net.InterfaceAddrs()
 	for _, a := range addrs {
 		if ipn, ok := a.(*net.IPNet); ok && !ipn.IP.IsLoopback() && !ipn.IP.IsLinkLocalUnicast() {
@@ -524,7 +533,7 @@ func (s *Server) handleHosts(w http.ResponseWriter, r *http.Request, sess *sessi
 	s.metrics.mu.Unlock()
 
 	now := time.Now()
-	flows, ext, serverHost := hostGraph(agents, snap, ownAddrs(), now)
+	flows, ext, serverHost := hostGraph(agents, snap, ownAddrs(s.cfg.AgentListen, s.cfg.Listen), now)
 	for i := range cards {
 		c := &cards[i]
 		c.Stale = c.Metrics != nil && now.Sub(c.Metrics.TS) > metricsStale

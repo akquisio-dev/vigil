@@ -142,3 +142,10 @@ func TestMetricsStayOutOfStore(t *testing.T) {
 		t.Fatalf("metrics endpoint: %s", rec.Body)
 	}
 }
+
+func TestOwnAddrsFromListen(t *testing.T) {
+	own := ownAddrs("10.90.0.2:8471", "127.0.0.1:8470", "0.0.0.0:1", "bad")
+	if !own["10.90.0.2"] || own["127.0.0.1"] || own["0.0.0.0"] {
+		t.Fatalf("own = %v", own)
+	}
+}

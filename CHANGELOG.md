@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.29.1
+
+- Hosts tab: the host running the vigil server is marked again. The packaged unit allows no netlink socket, so the server could not list its own interface addresses; it now also takes the address `agent_listen` (and `listen`) is bound to.
+
 ## v0.29.0
 
 - New tab **Hosts**: every host with CPU (with waiting for disk and time taken by the hypervisor), memory, swap, the fullest file system, load, network and disk throughput, connections and its busiest processes, and a graph of the hosts with the TCP links between them, per port and program, the vigil server in the middle and the internet above. The host page gets a performance section with graphs for 1 hour to 30 days, disks, interfaces, processes and connections by remote host. UDP (games, WireGuard) only shows as interface traffic.
