@@ -58,6 +58,10 @@ func TestGroupRoles(t *testing.T) {
 		{"moritz", "POST", "/api/ui/incidents/new/create", `{"alert":"am"}`, 200},
 		// the rest of the network: viewer
 		{"moritz", "POST", "/api/ui/agents/g1/rename", `{"name":"x"}`, 403},
+		// reading a host's analysis is a viewer's right; the POST of the
+		// same path is an unknown host action
+		{"moritz", "GET", "/api/ui/agents/g1/activity?days=7", "", 200},
+		{"moritz", "POST", "/api/ui/agents/g1/activity", `{}`, 403},
 		{"moritz", "POST", "/api/ui/alerts/ag/ack", `{}`, 403},
 		{"moritz", "POST", "/api/ui/alerts/as/ack", `{}`, 403}, // the server's own alerts
 		{"moritz", "POST", "/api/ui/incidents/ig/note", `{"note":"x"}`, 403},

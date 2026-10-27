@@ -48,6 +48,7 @@ type Server struct {
 	intel      intelSet
 	geodb      geoState
 	attacks    attackRollup
+	hostAct    hostActSet
 	vdb        vulnDB
 	hashes     hashSet
 	fwd        []*forwarder

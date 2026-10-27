@@ -170,7 +170,7 @@ func TestDashboardAggregates(t *testing.T) {
 		ev(3*time.Hour, "ssh.failed", map[string]any{"ip": "198.51.100.7", "count": float64(5)}),
 		ev(30*time.Hour, "ssh.failed", map[string]any{"ip": "192.0.2.1", "count": float64(99)}),
 		ev(time.Minute, "ssh.login", map[string]any{"user": "root", "ip": "192.0.2.50", "method": "publickey", "key_comment": "joey-pc"}),
-	}, nil)
+	}, nil, 0)
 	if d["ssh_failed_24h"] != 55 || d["ssh_failed_ips"] != 2 {
 		t.Fatalf("failed logins: %v from %v addresses", d["ssh_failed_24h"], d["ssh_failed_ips"])
 	}

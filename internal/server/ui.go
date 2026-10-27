@@ -162,6 +162,7 @@ func (s *Server) uiHandler() http.Handler {
 	mux.HandleFunc("POST /api/ui/agents/{id}/snapshot", s.onHost("analyst", s.hostByAgent, s.handleSnapshotRequest))
 	mux.HandleFunc("GET /api/ui/agents/{id}", s.auth(s.handleAgent))
 	mux.HandleFunc("GET /api/ui/agents/{id}/metrics", s.auth(s.handleAgentMetrics))
+	mux.HandleFunc("GET /api/ui/agents/{id}/activity", s.auth(s.handleHostActivity))
 	mux.HandleFunc("GET /api/ui/hosts", s.auth(s.handleHosts))
 	mux.HandleFunc("GET /api/ui/groups", s.auth(s.handleGroups))
 	mux.HandleFunc("POST /api/ui/groups", s.adminOnly(s.handleGroupAction))
@@ -425,7 +426,8 @@ func (s *Server) handleOverview(w http.ResponseWriter, r *http.Request, sess *se
 		}
 	}
 	seq, head := s.store.Head()
-	out := s.dashboard(now, window, in)
+	days, _ := strconv.Atoi(r.URL.Query().Get("days"))
+	out := s.dashboard(now, window, in, days)
 	for k, v := range map[string]any{
 		"agents": agents, "open_by_severity": bySev, "recent_alerts": recent,
 		"events_per_hour": hours, "ssh_failed_per_hour": sshFailed,
@@ -518,9 +520,10 @@ func (s *Server) handleAgent(w http.ResponseWriter, r *http.Request, sess *sessi
 		ports = append(ports, cp)
 	}
 	view := s.viewAgent(a)
+	volume := append([]VolumeHour{}, a.Volume...)
 	s.mu.Unlock()
 	logins := s.store.Recent(Query{Agent: a.ID, Prefix: "ssh.login", Limit: 50})
-	writeJSON(w, map[string]any{"agent": view, "ports": ports, "logins": logins})
+	writeJSON(w, map[string]any{"agent": view, "ports": ports, "logins": logins, "volume": volume})
 }
 
 func (s *Server) handleAgentAction(w http.ResponseWriter, r *http.Request, sess *session) {

@@ -102,11 +102,15 @@ type loginView struct {
 
 // dashboard aggregates what the overview shows beyond the raw counters:
 // alerts per day by severity, ATT&CK tactics, top rules, attacking addresses,
-// recent logins and the time until a person looked at an alert.
+// recent logins and the time until a person looked at an alert. Alerts are
+// counted over the last days (7 unless 1 to 30 is asked for).
 // The caller holds s.mu.
-func (s *Server) dashboard(now time.Time, events []Record, in map[string]bool) map[string]any {
-	dayStart := now.Truncate(24 * time.Hour).Add(-6 * 24 * time.Hour)
-	perDay := make([]map[string]int, 7)
+func (s *Server) dashboard(now time.Time, events []Record, in map[string]bool, days int) map[string]any {
+	if days < 1 || days > 30 {
+		days = 7
+	}
+	dayStart := now.Truncate(24 * time.Hour).Add(-time.Duration(days-1) * 24 * time.Hour)
+	perDay := make([]map[string]int, days)
 	for i := range perDay {
 		perDay[i] = map[string]int{}
 	}
@@ -121,7 +125,7 @@ func (s *Server) dashboard(now time.Time, events []Record, in map[string]bool) m
 			ackTimes = append(ackTimes, al.Acked.Sub(al.Created))
 		}
 		i := int(al.Created.Sub(dayStart) / (24 * time.Hour))
-		if al.Created.Before(dayStart) || i > 6 { // i > 6 only when the clock stepped back
+		if al.Created.Before(dayStart) || i >= days { // only when the clock stepped back
 			continue
 		}
 		perDay[i][al.Severity]++
@@ -205,7 +209,7 @@ func (s *Server) dashboard(now time.Time, events []Record, in map[string]bool) m
 		tacticList = append(tacticList, countItem{Key: t, Count: tacticCount[t]})
 	}
 	return map[string]any{
-		"day_start": dayStart, "alerts_per_day": perDay,
+		"days": days, "day_start": dayStart, "alerts_per_day": perDay,
 		"tactics": tacticList, "top_rules": topN(ruleCount, nil, 6),
 		"ssh_failed_24h": failedTotal, "ssh_failed_ips": len(failedIP), "top_attackers": attackers(failedIP, failedUsers, webIP, webPaths),
 		"web_flagged_24h": sumValues(webIP), "web_ips": len(webIP),

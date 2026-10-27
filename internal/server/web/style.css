@@ -219,8 +219,9 @@ h3 { font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: 
 .tiles { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
 .metrics { grid-template-columns: repeat(4, 1fr); }
 .metrics.six { grid-template-columns: repeat(6, 1fr); }
-@media (max-width: 1180px) { .metrics.six { grid-template-columns: repeat(3, 1fr); } }
-@media (max-width: 900px) { .metrics, .metrics.six { grid-template-columns: 1fr 1fr; } }
+.metrics.seven { grid-template-columns: repeat(7, 1fr); }
+@media (max-width: 1180px) { .metrics.six { grid-template-columns: repeat(3, 1fr); } .metrics.seven { grid-template-columns: repeat(4, 1fr); } }
+@media (max-width: 900px) { .metrics, .metrics.six, .metrics.seven { grid-template-columns: 1fr 1fr; } }
 .dash-a { grid-template-columns: 2fr 1fr; margin-top: 10px; }
 .dash-b { grid-template-columns: repeat(3, 1fr); }
 @media (max-width: 1000px) { .dash-a, .dash-b { grid-template-columns: 1fr; } }
@@ -292,6 +293,21 @@ td.nowrap, table.nowrap td { white-space: nowrap; overflow-wrap: normal; }
 .tabs button { background: transparent; border: 0; border-radius: var(--radius-sm); padding: 5px 12px; cursor: pointer; font-size: 12px; font-weight: 500; color: var(--text-secondary); }
 .tabs button:hover { background: var(--surface); color: var(--text-primary); }
 .tabs button.on { background: var(--accent); color: var(--accent-fg); }
+.tabs a.tab { border-radius: var(--radius-sm); padding: 5px 12px; font-size: 12px; font-weight: 500; color: var(--text-secondary); text-decoration: none; }
+.tabs a.tab:hover { background: var(--surface); color: var(--text-primary); }
+.tabs a.tab.on { background: var(--accent); color: var(--accent-fg); }
+
+/* host page: one row of tabs, scrolled sideways on a phone */
+.hosttabs { display: flex; gap: 2px; margin: 4px 0 16px; border-bottom: 1px solid var(--border); overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.hosttabs::-webkit-scrollbar { display: none; }
+.hosttabs a.tab { flex: none; padding: 8px 12px; font-size: 13px; font-weight: 500; color: var(--text-secondary); text-decoration: none; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
+.hosttabs a.tab:hover { color: var(--text-primary); }
+.hosttabs a.tab.on { color: var(--text-primary); border-bottom-color: var(--accent); }
+.pill.new { background: var(--accent); color: var(--accent-fg); }
+.filters { gap: 8px; margin: 8px 0; flex-wrap: wrap; }
+.bad-text { color: var(--red); }
+.pkgdiff { margin-top: 6px; font-size: 12px; max-height: 260px; overflow: auto; }
+.list.changes .row .title { white-space: normal; overflow-wrap: anywhere; }
 
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 7px 14px;

@@ -144,6 +144,27 @@ const T = {
     attacksHostNote: "Counts per address cover every host it tried. Hours of day and tried user names are kept for all hosts together and are left out here.",
     noGroup: "No group", onlyThisGroup: "Only this group", securityShortL: "Security updates", renameGroup: "New name of the group", confirmDeleteGroup: "Remove the group {g} from all its hosts? The hosts stay.",
     saveMembers: "Save members", newGroup: "New group", createGroup: "Create group", noGroups: "No groups yet", groupRoles: "Roles per group", baseRoleOnly: "base role only",
+    ht_tabs: "Host sections", ht_overview: "Overview", ht_perf: "Performance", ht_security: "Security", ht_network: "Network", ht_software: "Software", ht_access: "Access", ht_changes: "Changes",
+    ht_new: "new", ht_noReport: "no report yet", ht_secUpdates: "Security updates", ht_oldestDays: "oldest open for {n} days", ht_oldestOpen: "Oldest open",
+    ht_exploitedN: "exploited", ht_allSev: "all severities", ht_publicPorts: "Public ports", ht_unexpected: "unexpected", ht_unexpectedOne: "unexpected", ht_allExpected: "all expected",
+    ht_diskMem: "Disk and memory", ht_openAlerts: "Open alerts", ht_alerts30: "Alerts", ht_mttaHost: "median, this host, 30 days", ht_alertsMonth: "Alerts per day, 30 days",
+    ht_latestEvents: "Latest events", ht_olderThan: "open for longer than {n} days", ht_openSince: "Open since", ht_destinations: "Outbound destinations",
+    ht_partial: "The scan of the log ran out of time; the result is incomplete.", ht_newDest: "Destinations by first contact", ht_public: "public", ht_private: "private",
+    ht_firstSeen: "First seen", ht_origin: "Country and network", ht_noDest: "No outbound connections in this period.", ht_destByProg: "Destinations per program",
+    ht_portHistory: "Port history", ht_opened: "Opened", ht_closed: "Closed", ht_times: "Times opened", ht_volume: "Data sent and received per hour, 14 days",
+    ht_sent: "sent", ht_received: "received", ht_sevLabel: "Severity", ht_ecosystem: "Ecosystem", ht_allEco: "all ecosystems", ht_onlyExploited: "only exploited or malicious",
+    ht_vulnList: "Weaknesses", ht_exploited: "exploited", ht_noMatch: "Nothing matches the filter.", ht_lockfiles: "Lock files",
+    ht_loginHeat: "Logins by user and hour", ht_loginsN: "logins", ht_usersN: "Users", ht_keysN: "keys or methods", ht_sources: "Source addresses", ht_newSources: "new in 7 days",
+    ht_countriesN: "countries", ht_rollupWait: "being counted", ht_commandsN: "Commands", ht_failedDay: "Failed logins per day", ht_keys: "Keys and methods", ht_lastUse: "Last used",
+    ht_attackersHost: "Attackers of this host", ht_topAttackers: "Most attempts", ht_duration: "Duration",
+    ht_changesTitle: "What changed on this host", ht_truncated: "Only the newest 1000 changes are shown.", ht_noChanges: "No changes in this period.",
+    ht_diffOnTimeline: "lines on the timeline", ht_pkgSummary: "Packages: {a} added, {r} removed, {c} updated",
+    ck_file: "File", ck_systemd: "Systemd", ck_cron: "Cron", ck_keys: "Key", ck_users: "Account", ck_ports: "Port", ck_programs: "Program", ck_packages: "Packages",
+    ck_kernel: "Kernel", ck_containers: "Container", ck_agent: "Agent",
+    ch_file_added: "Added", ch_file_changed: "Changed", ch_file_removed: "Removed", ch_file_suid: "New SUID file", ch_file_suid_removed: "SUID file gone",
+    ch_ssh_key_added: "Key added", ch_ssh_key_removed: "Key removed", ch_user_added: "Account added", ch_user_removed: "Account removed", ch_user_uid_changed: "Account ID changed",
+    ch_port_opened: "Port opened", ch_port_closed: "Port closed", ch_process_rare: "New program", ch_process_rare_child: "New program start",
+    ch_kernel_module_loaded: "Module loaded", ch_kernel_module_unloaded: "Module unloaded", ch_agent_started: "Agent started", ch_agent_stopping: "Agent stopped", ch_agent_update: "Agent update",
   },
   de: {
     overview: "Lage", alerts: "Alarme", events: "Ereignisse", canaries: "Köder", settings: "Einstellungen",
@@ -285,6 +306,27 @@ const T = {
     attacksHostNote: "Die Zahlen je Adresse umfassen alle Hosts, die sie angegriffen hat. Tageszeiten und versuchte Benutzernamen gibt es nur für alle Hosts zusammen, sie fehlen hier.",
     noGroup: "Ohne Gruppe", onlyThisGroup: "Nur diese Gruppe", securityShortL: "Sicherheitsupdates", renameGroup: "Neuer Name der Gruppe", confirmDeleteGroup: "Die Gruppe {g} bei allen Hosts entfernen? Die Hosts bleiben.",
     saveMembers: "Mitglieder speichern", newGroup: "Neue Gruppe", createGroup: "Gruppe anlegen", noGroups: "Noch keine Gruppen", groupRoles: "Rollen je Gruppe", baseRoleOnly: "nur Grundrolle",
+    ht_tabs: "Bereiche des Hosts", ht_overview: "Überblick", ht_perf: "Leistung", ht_security: "Sicherheit", ht_network: "Netzwerk", ht_software: "Software", ht_access: "Zugänge", ht_changes: "Änderungen",
+    ht_new: "neu", ht_noReport: "noch kein Bericht", ht_secUpdates: "Sicherheitsupdates", ht_oldestDays: "ältestes seit {n} Tagen offen", ht_oldestOpen: "Ältestes offen",
+    ht_exploitedN: "ausgenutzt", ht_allSev: "alle Schweregrade", ht_publicPorts: "Öffentliche Ports", ht_unexpected: "unerwartet", ht_unexpectedOne: "unerwartet", ht_allExpected: "alle erwartet",
+    ht_diskMem: "Platte und Speicher", ht_openAlerts: "Offene Alarme", ht_alerts30: "Alarme", ht_mttaHost: "Median, dieser Host, 30 Tage", ht_alertsMonth: "Alarme pro Tag, 30 Tage",
+    ht_latestEvents: "Letzte Ereignisse", ht_olderThan: "länger als {n} Tage offen", ht_openSince: "Offen seit", ht_destinations: "Ausgehende Ziele",
+    ht_partial: "Die Suche im Protokoll hat die Zeit überschritten, das Ergebnis ist unvollständig.", ht_newDest: "Ziele nach erstem Kontakt", ht_public: "öffentlich", ht_private: "privat",
+    ht_firstSeen: "Zuerst gesehen", ht_origin: "Land und Netz", ht_noDest: "Keine ausgehenden Verbindungen in diesem Zeitraum.", ht_destByProg: "Ziele je Programm",
+    ht_portHistory: "Verlauf der Ports", ht_opened: "Geöffnet", ht_closed: "Geschlossen", ht_times: "Mal geöffnet", ht_volume: "Gesendet und empfangen pro Stunde, 14 Tage",
+    ht_sent: "gesendet", ht_received: "empfangen", ht_sevLabel: "Schweregrad", ht_ecosystem: "Ökosystem", ht_allEco: "alle Ökosysteme", ht_onlyExploited: "nur ausgenutzt oder bösartig",
+    ht_vulnList: "Schwachstellen", ht_exploited: "ausgenutzt", ht_noMatch: "Nichts passt zum Filter.", ht_lockfiles: "Lockfiles",
+    ht_loginHeat: "Anmeldungen nach Benutzer und Stunde", ht_loginsN: "Anmeldungen", ht_usersN: "Benutzer", ht_keysN: "Schlüssel oder Verfahren", ht_sources: "Herkunftsadressen", ht_newSources: "neu in 7 Tagen",
+    ht_countriesN: "Länder", ht_rollupWait: "wird gezählt", ht_commandsN: "Befehle", ht_failedDay: "Fehlversuche pro Tag", ht_keys: "Schlüssel und Verfahren", ht_lastUse: "Zuletzt",
+    ht_attackersHost: "Angreifer dieses Hosts", ht_topAttackers: "Meiste Versuche", ht_duration: "Dauer",
+    ht_changesTitle: "Was sich auf diesem Host geändert hat", ht_truncated: "Nur die neuesten 1000 Änderungen werden gezeigt.", ht_noChanges: "Keine Änderungen in diesem Zeitraum.",
+    ht_diffOnTimeline: "Zeilen in der Zeitachse", ht_pkgSummary: "Pakete: {a} neu, {r} entfernt, {c} aktualisiert",
+    ck_file: "Datei", ck_systemd: "Systemd", ck_cron: "Cron", ck_keys: "Schlüssel", ck_users: "Konto", ck_ports: "Port", ck_programs: "Programm", ck_packages: "Pakete",
+    ck_kernel: "Kernel", ck_containers: "Container", ck_agent: "Agent",
+    ch_file_added: "Neu", ch_file_changed: "Geändert", ch_file_removed: "Entfernt", ch_file_suid: "Neue SUID-Datei", ch_file_suid_removed: "SUID-Datei weg",
+    ch_ssh_key_added: "Schlüssel hinzugefügt", ch_ssh_key_removed: "Schlüssel entfernt", ch_user_added: "Konto angelegt", ch_user_removed: "Konto entfernt", ch_user_uid_changed: "Konto-ID geändert",
+    ch_port_opened: "Port geöffnet", ch_port_closed: "Port geschlossen", ch_process_rare: "Neues Programm", ch_process_rare_child: "Neuer Programmstart",
+    ch_kernel_module_loaded: "Modul geladen", ch_kernel_module_unloaded: "Modul entladen", ch_agent_started: "Agent gestartet", ch_agent_stopping: "Agent beendet", ch_agent_update: "Agent-Update",
   },
 };
 
@@ -608,7 +650,9 @@ function severityChart(days, start) {
     chart.append(h("div", { class: "slot", onmousemove: (e) => tip(e, text), onmouseleave: (e) => tip(e, null) }, col));
   });
   return h("div", null, chart,
-    h("div", { class: "axis days" }, days.map((_, i) => h("span", null, day(i).toLocaleDateString(lang, { weekday: "short" })))),
+    days.length > 10
+      ? h("div", { class: "axis" }, [0, Math.floor(days.length / 2), days.length - 1].map((i) => h("span", null, day(i).toLocaleDateString(lang, { day: "numeric", month: "numeric" }))))
+      : h("div", { class: "axis days" }, days.map((_, i) => h("span", null, day(i).toLocaleDateString(lang, { weekday: "short" })))),
     h("div", { class: "legend" }, SEVS.map((s) => h("span", null, h("span", { class: "dot " + s }), t(s)))));
 }
 
@@ -657,8 +701,8 @@ function updatesCell(u) {
 }
 
 function postureSection(a) {
-  const p = a.posture, v = a.vulns, av = a.app_vulns, cs = a.containers || [];
-  if (!p && !v && !av && !cs.length) return null;
+  const p = a.posture;
+  if (!p) return null;
   const out = [];
   if (p) {
     const checks = p.checks || [];
@@ -693,50 +737,12 @@ function postureSection(a) {
           : b.age_hours + " " + t("hoursOld") + (b.max_age_hours ? " (" + t("limit") + " " + b.max_age_hours + ")" : "") + (b.problem === "small" ? ", " + t("bkSmall") : "")),
         h("td", { class: "mono muted" }, b.newest || b.path))))))));
   }
-  if (v) {
-    const rows = (list) => h("div", { class: "tablewrap" }, h("table", null,
-      h("thead", null, h("tr", null, ["", t("cve"), t("pkg"), t("installed"), t("fixedIn")].map((x) => h("th", null, x)))),
-      h("tbody", null, list.map((x) => h("tr", null,
-        h("td", null, h("span", { class: "sev " + (x.severity in { critical: 1, high: 1, medium: 1, low: 1 } ? x.severity : "low") }, x.severity)),
-        h("td", { class: "mono" }, h("a", { href: "https://www.cve.org/CVERecord?id=" + encodeURIComponent(x.cve), target: "_blank", rel: "noopener noreferrer" }, x.cve)),
-        h("td", { class: "mono" }, x.package),
-        h("td", { class: "mono" }, x.installed),
-        h("td", { class: "mono" }, x.fixed ? x.fixed + (x.pro ? " (" + t("proOnly") + ")" : "") : "·"))))));
-    const fixable = (v.top || []).filter((x) => !x.kev);
-    out.push(h("div", { class: "card mt" },
-      h("div", { class: "flex" }, h("h3", null, t("vulns")), h("span", { class: "muted right" }, v.release || "", v.checked ? "  ·  " + t("checked") + " " : "", v.checked ? timeEl(v.checked) : null)),
-      v.error ? h("div", { class: "muted mt" }, v.error) : h("dl", { class: "kv" },
-        h("dt", null, t("fixable")), h("dd", null, SEVS.some((s) => (v.fixable || {})[s]) ? sevCounts(v.fixable) : h("span", { class: "chip" }, h("span", { class: "dot ok" }), t("noVulns"))),
-        h("dt", null, t("unfixed")), h("dd", null, sevCounts(v.unfixed))),
-      (v.exploited || []).length ? [h("h3", { class: "mt" }, t("exploitedNow")), rows(v.exploited)] : null,
-      fixable.length ? [h("h3", { class: "mt" }, t("fixable")), rows(fixable.slice(0, 25))] : null));
-  }
-  if (av && av.manifests) {
-    const sev = (x) => x.severity in { critical: 1, high: 1, medium: 1, low: 1 } ? x.severity : "low";
-    const rows = (list) => h("div", { class: "tablewrap" }, h("table", null,
-      h("thead", null, h("tr", null, ["", t("vulnId"), t("pkg"), t("installed"), t("fixedIn"), t("lockFile")].map((x) => h("th", null, x)))),
-      h("tbody", null, list.map((x) => h("tr", null,
-        h("td", null, h("span", { class: "sev " + sev(x) }, x.malicious ? t("maliciousPkg") : x.severity || t("unknownSev"))),
-        h("td", { class: "mono nowrap" }, h("a", { href: "https://osv.dev/vulnerability/" + encodeURIComponent(x.id), target: "_blank", rel: "noopener noreferrer", title: x.summary || "" }, (x.cves || [])[0] || x.id)),
-        h("td", { class: "mono nowrap" }, x.package, h("span", { class: "muted" }, " " + x.ecosystem)),
-        h("td", { class: "mono nowrap" }, x.installed),
-        h("td", { class: "mono nowrap" }, x.fixed || "·"),
-        h("td", { class: "mono muted nowrap" }, x.path))))));
-    const counts = Object.assign({}, av.counts || {});
-    const unknown = counts.unknown || 0;
-    delete counts.unknown;
-    out.push(h("div", { class: "card mt" },
-      h("div", { class: "flex" }, h("h3", null, t("appVulns")), h("span", { class: "muted right" },
-        t("appFiles").replace("{n}", av.manifests).replace("{m}", av.packages) + (av.truncated ? ", " + t("appTruncated") : ""),
-        av.checked ? "  ·  " + t("checked") + " " : "", av.checked ? timeEl(av.checked) : null)),
-      (av.missing || []).length ? h("div", { class: "muted mt" }, t("appMissing") + " " + av.missing.join(", ")) : null,
-      h("dl", { class: "kv" },
-        h("dt", null, t("vulns")), h("dd", null, SEVS.some((s) => counts[s]) || unknown
-          ? [sevCounts(counts), unknown ? h("span", { class: "muted" }, " " + unknown + " " + t("unknownSev")) : null]
-          : h("span", { class: "chip" }, h("span", { class: "dot ok" }), t("noVulns")))),
-      (av.malicious || []).length ? [h("h3", { class: "mt" }, t("appMalicious")), rows(av.malicious)] : null,
-      (av.top || []).length ? rows(av.top.slice(0, 25)) : null));
-  }
+  return out;
+}
+
+function containersCard(a) {
+  const cs = a.containers || [];
+  const out = [];
   if (cs.length) {
     const socket = (c) => (c.mounts || []).some((m) => /^\/(var\/)?run\/docker(\.sock)?$/.test(m.source));
     out.push(h("div", { class: "card mt" },
@@ -1009,46 +1015,86 @@ async function alertDetail(id) {
     box, await causingEvents(a), a.agent ? await snapshotsCard(a.agent, a.id) : null, await responseCard(a)));
 }
 
-async function hostView(id) {
-  const [d, actions, tests, hostsData] = await Promise.all([api("/api/ui/agents/" + encodeURIComponent(id)), api("/api/ui/actions?agent=" + encodeURIComponent(id)),
-    api("/api/ui/selftests?agent=" + encodeURIComponent(id)), api("/api/ui/hosts").catch(() => null)]);
+// ---------- host page: one host in tabs ----------
+// The tab and its options live in the hash (#/hosts/ID?tab=network&days=7),
+// so links, the back button and a refresh keep them. A tab loads only its
+// own data. The parameter is never called host: that sets the scope.
+const HOST_TABS = ["overview", "perf", "security", "network", "software", "access", "changes"];
+const hostHref = (id, tab, extra = {}) => "#/hosts/" + id + (tab && tab !== "overview" ? "?" + new URLSearchParams({ tab, ...extra }) : "");
+const DAY_CHOICES = [["1", "day1"], ["7", "days7"], ["30", "days30"]];
+const dayLabel = (k, l) => k === "30" ? t(l).replace("{n}", 30) : t(l);
+function hostDays(params, def) {
+  const d = params.get("days") || def;
+  return DAY_CHOICES.some(([k]) => k === d) ? d : def;
+}
+function daysPick(id, tab, cur, params) {
+  return h("div", { class: "tabs" }, DAY_CHOICES.map(([k, l]) => h("a", { class: "tab" + (k === cur ? " on" : ""),
+    href: hostHref(id, tab, { ...Object.fromEntries(params), tab, days: k }) }, dayLabel(k, l))));
+}
+const newSince = (ts, hours) => ts && Date.now() - new Date(ts).getTime() < hours * 3600e3;
+const newPill = () => h("span", { class: "pill new" }, t("ht_new"));
+const geoCell = (g) => g.country || g.asn ? [g.country ? countryName(g.country) : "", g.asn ? h("span", { class: "muted" }, (g.country ? "  ·  " : "") + "AS" + g.asn + " " + (g.org || "")) : null] : h("span", { class: "muted" }, "·");
+
+async function hostView(id, params) {
+  const tab = HOST_TABS.includes(params.get("tab")) ? params.get("tab") : "overview";
+  selftestOpen = false;
+  const d = await api("/api/ui/agents/" + encodeURIComponent(id));
   const a = d.agent;
+  const body = await ({ overview: hostOverviewTab, perf: hostPerfTab, security: hostSecurityTab, network: hostNetworkTab,
+    software: hostSoftwareTab, access: hostAccessTab, changes: hostChangesTab }[tab])(a, d, params);
+  mount(shell("hosts",
+    h("div", { class: "crumbs" }, h("a", { href: "#/hosts" }, t("hosts")), " / ", a.name),
+    h("div", { class: "flex" }, h("h1", null, a.name), statusChip(a.status), tagChips(a.tags)),
+    h("nav", { class: "hosttabs", "aria-label": t("ht_tabs") }, HOST_TABS.map((k) =>
+      h("a", { class: "tab" + (k === tab ? " on" : ""), href: hostHref(a.id, k), "aria-current": k === tab ? "page" : null }, t("ht_" + k)))),
+    body));
+}
+
+// The state card: one light per area, each with its number; a click opens
+// the tab with the detail.
+function hostStatus(a, d, tests, hostsData) {
+  const tiles = [];
+  const urgent = (a.open_by_severity.critical || 0) + (a.open_by_severity.high || 0);
+  tiles.push(metric(hostHref(a.id, "security"), "alert-triangle", t("alertsTile"), a.open_alerts, urgent ? "bad" : a.open_alerts ? null : "good",
+    SEVS.filter((s) => a.open_by_severity[s]).map((s) => a.open_by_severity[s] + " " + t(s)).join(", ") || t("noAlerts")));
+  const checks = (a.posture && a.posture.checks) || [];
+  const failed = new Set(checks.filter((c) => !c.ok).map((c) => c.check));
+  const names = new Set(checks.map((c) => c.check));
+  tiles.push(metric(hostHref(a.id, "security"), "settings", t("posture"), a.posture ? failed.size : "·", failed.size ? "bad" : a.posture ? "good" : null,
+    a.posture ? t("checksOk").replace("{n}", names.size - failed.size).replace("{m}", names.size) : t("ht_noReport")));
+  const u = a.updates;
+  tiles.push(metric(hostHref(a.id, "software"), "stack-2", t("ht_secUpdates"), u ? u.security || 0 : "·",
+    u && u.security ? (u.security_oldest_days >= 7 ? "bad" : null) : u ? "good" : null,
+    !u ? t("ht_noReport") : u.security ? t("ht_oldestDays").replace("{n}", u.security_oldest_days || 0) : u.reboot_required ? t("rebootShort") : t("upToDate")));
+  const v = a.vulns, av = a.app_vulns;
+  const sum = (m) => SEVS.reduce((x, s) => x + ((m || {})[s] || 0), 0);
+  const vulnN = (v ? sum(v.fixable) + sum(v.unfixed) : 0) + (av ? sum(av.counts) : 0);
+  const exploited = (v ? (v.exploited || []).length : 0) + (av ? (av.top || []).filter((x) => x.kev).length + (av.malicious || []).length : 0);
+  const critical = ((v && v.fixable) || {}).critical || ((av && av.counts) || {}).critical;
+  tiles.push(metric(hostHref(a.id, "software"), "radar", t("vulns"), v || av ? vulnN : "·", exploited || critical ? "bad" : v || av ? (vulnN ? null : "good") : null,
+    !v && !av ? t("ht_noReport") : exploited ? exploited + " " + t("ht_exploitedN") : critical ? critical + " " + t("critical") : t("ht_allSev")));
+  const pub = d.ports.filter((p) => p.scope !== "loopback");
+  const unexpected = pub.filter((p) => !p.expected).length;
+  tiles.push(metric(hostHref(a.id, "network"), "world", t("ht_publicPorts"), pub.length, unexpected ? "bad" : null,
+    unexpected ? unexpected + " " + t("ht_unexpected") : t("ht_allExpected")));
+  const last = tests[0];
+  const stTone = { passed: "good", warning: null, failed: "bad" };
+  tiles.push(metric(hostHref(a.id, "security"), "shield-check", t("selftest"), last ? t("st_" + last.status) : "·",
+    last ? stTone[last.status] : null, last ? ago(last.created) : a.selftest ? t("noSelftests") : t("selftestOff")));
+  const hx = ((hostsData && hostsData.hosts) || []).find((x) => x.id === a.id);
+  const m = hx && hx.metrics;
+  const mem = m ? pctOf(m.mem_used, m.mem_total) : 0;
+  const worst = m ? Math.max(m.disk_pct || 0, mem) : 0;
+  tiles.push(metric(hostHref(a.id, "perf"), "server", t("ht_diskMem"), m ? fmtPct(m.disk_pct || 0) : "·", m ? (worst >= 90 ? "bad" : worst < 70 ? "good" : null) : null,
+    m ? t("memory") + " " + fmtPct(mem) : t("noMetrics")));
+  return h("div", { class: "grid metrics seven" }, tiles);
+}
+
+async function hostOverviewTab(a, d) {
+  const [tests, hostsData, open] = await Promise.all([api("/api/ui/selftests?agent=" + encodeURIComponent(a.id)), api("/api/ui/hosts").catch(() => null),
+    api("/api/ui/alerts?" + new URLSearchParams({ agent: a.id, status: "open" }))]);
   if (hostsData) { scopeHosts = hostsData.hosts; scopeHostsAt = Date.now(); }
-  const perf = await performanceSection(a, hostsData);
-  selftestOpen = tests.some((x) => x.status === "pending" || x.status === "running");
-  const stErr = h("div", { class: "err" });
-  const stDot = { passed: "ok", warning: "medium", failed: "critical", pending: "stopped", running: "stopped", ok: "ok", suppressed: "medium", skipped: "medium", missing: "critical", waiting: "stopped" };
-  const testRow = (x) => h("div", { class: "row" },
-    h("span", { class: "chip" }, h("span", { class: "dot " + (stDot[x.status] || "") }), t("st_" + x.status)),
-    h("div", null,
-      h("div", { class: "title steps" }, x.steps.map((st) => h("span", { class: "chip", title: st.detail || "" }, h("span", { class: "dot " + (stDot[st.status] || "") }), st.rule + ": " + t("st_" + st.status)))),
-      h("div", { class: "sub" }, [x.by, x.error, x.notified ? t("notifiedTo") + " " + Object.entries(x.notified).map(([k, v]) => k + (v === "ok" ? "" : " (" + v + ")")).join(", ") : ""].filter(Boolean).join("  ·  "))),
-    h("div", { class: "meta" }, timeEl(x.created)));
-  const selftestCard = h("div", null, h("div", { class: "flex" }, h("h2", null, t("selftest")),
-      can("admin", a.id) && a.selftest ? h("button", { class: "btn small right", onclick: async () => {
-        stErr.textContent = "";
-        try { await post("/api/ui/agents/" + a.id + "/selftest"); render(); } catch (x) { stErr.textContent = x.message; }
-      } }, t("runSelftest")) : null),
-    stErr,
-    !a.selftest ? h("div", { class: "card empty" }, t("selftestOff"))
-      : tests.length ? h("div", { class: "list" }, tests.slice(0, 5).map(testRow)) : h("div", { class: "card empty" }, t("noSelftests")));
   const action = (name, body) => async () => { await post("/api/ui/agents/" + a.id + "/" + name, body || {}); render(); };
-  const portRows = d.ports.map((p) => h("tr", null,
-    h("td", { class: "mono" }, p.proto + "/" + p.port),
-    h("td", { class: "mono" }, p.addr),
-    h("td", null, p.scope),
-    h("td", null, p.via),
-    h("td", { class: "mono" }, p.process || p.target || ""),
-    h("td", null, p.expected ? h("span", { class: "pill" }, t("expected"))
-      : h("div", { class: "flex" },
-        h("button", { class: "btn small", onclick: action("accept-port", { key: p.key }) }, t("accept")),
-        p.proc_key ? h("button", { class: "btn small ghost", title: p.proc_key, onclick: action("accept-port", { key: p.proc_key }) }, t("acceptProcess")) : null))));
-  const loginRows = d.logins.map((r) => h("tr", null,
-    h("td", { class: "nowrap" }, timeEl(r.event.ts)),
-    h("td", null, r.event.data.user),
-    h("td", { class: "mono" }, r.event.data.ip),
-    h("td", null, r.event.data.method),
-    h("td", { class: "mono" }, r.event.data.key_comment || r.event.data.fingerprint || "")));
   const renameInput = h("input", { value: a.name, maxlength: 100 });
   const updErr = h("div", { class: "err" });
   const u = a.update;
@@ -1068,13 +1114,10 @@ async function hostView(id) {
       } catch (x) { updErr.textContent = x.message; }
     } }, t("updateAgent")), updErr);
   const minutesSel = h("select", null, [30, 60, 120, 240].map((m) => h("option", { value: m }, m + " " + t("minutes"))));
-
-  mount(shell("hosts",
-    h("div", { class: "crumbs" }, h("a", { href: "#/hosts" }, t("hosts")), " / ", a.name),
-    h("h1", null, a.name),
-    h("div", { class: "grid two" },
+  return [
+    hostStatus(a, d, tests, hostsData),
+    h("div", { class: "grid two mt" },
       h("div", { class: "card" },
-        h("div", { class: "flex" }, statusChip(a.status)),
         h("dl", { class: "kv" },
           h("dt", null, "Hostname"), h("dd", null, a.hostname),
           h("dt", null, t("groups")), h("dd", null, tagChips(a.tags) || h("span", { class: "muted" }, t("none"))),
@@ -1097,31 +1140,347 @@ async function hostView(id) {
         h("div", { class: "actions" },
           h("a", { class: "btn ghost", href: "#/events?agent=" + a.id }, t("events")),
           h("a", { class: "btn ghost", href: tlHref(a.id, new Date().toISOString(), { minutes: 60 }) }, t("timeline")),
-          h("a", { class: "btn ghost", href: "#/sessions?agent=" + a.id }, t("sessions")),
           h("a", { class: "btn ghost", href: "#/alerts?host=" + a.id }, t("alerts")),
           h("a", { class: "btn ghost", href: "#/attacks?host=" + a.id }, t("attacks")),
           can("admin", "") ? h("button", { class: "btn danger", onclick: async () => { if (confirm(t("confirmDelete"))) { await post("/api/ui/agents/" + a.id + "/delete"); location.hash = "#/"; } } }, t("deleteHost")) : null))),
-    perf,
-    a.updates ? h("div", { class: "card mt" }, h("h3", null, t("updates")), h("dl", { class: "kv" },
-      h("dt", null, t("updates")), h("dd", null, updatesCell(a.updates)),
-      h("dt", null, t("securityPackages")), h("dd", { class: "mono" }, (a.updates.security_packages || []).join("  ") || "·"),
-      h("dt", null, t("kernel")), h("dd", { class: "mono" }, a.updates.kernel_running + (a.updates.kernel_newest && a.updates.kernel_newest !== a.updates.kernel_running ? "  (" + t("newestInstalled") + " " + a.updates.kernel_newest + ")" : "")),
-      h("dt", null, t("unattended")), h("dd", null, t(a.updates.unattended_upgrades ? "on" : "off")),
-      h("dt", null, t("listsAge")), h("dd", null, a.updates.lists_age_days >= 0 ? a.updates.lists_age_days + " " + t("daysAgo") : "·"))) : null,
+    h("div", { class: "flex mt" }, h("h2", null, t("ht_openAlerts")), open.length > 8 ? h("a", { class: "right", href: hostHref(a.id, "security") }, t("all")) : null),
+    open.length ? h("div", { class: "list" }, open.slice(0, 8).map(alertRow)) : h("div", { class: "card empty" }, t("noAlerts")),
+  ];
+}
+
+async function hostPerfTab(a) {
+  const hostsData = await api("/api/ui/hosts").catch(() => null);
+  if (hostsData) { scopeHosts = hostsData.hosts; scopeHostsAt = Date.now(); }
+  return performanceSection(a, hostsData);
+}
+
+function selftestSection(a, tests) {
+  selftestOpen = tests.some((x) => x.status === "pending" || x.status === "running");
+  const stErr = h("div", { class: "err" });
+  const stDot = { passed: "ok", warning: "medium", failed: "critical", pending: "stopped", running: "stopped", ok: "ok", suppressed: "medium", skipped: "medium", missing: "critical", waiting: "stopped" };
+  const testRow = (x) => h("div", { class: "row" },
+    h("span", { class: "chip" }, h("span", { class: "dot " + (stDot[x.status] || "") }), t("st_" + x.status)),
+    h("div", null,
+      h("div", { class: "title steps" }, x.steps.map((st) => h("span", { class: "chip", title: st.detail || "" }, h("span", { class: "dot " + (stDot[st.status] || "") }), st.rule + ": " + t("st_" + st.status)))),
+      h("div", { class: "sub" }, [x.by, x.error, x.notified ? t("notifiedTo") + " " + Object.entries(x.notified).map(([k, v]) => k + (v === "ok" ? "" : " (" + v + ")")).join(", ") : ""].filter(Boolean).join("  ·  "))),
+    h("div", { class: "meta" }, timeEl(x.created)));
+  return h("div", null, h("div", { class: "flex" }, h("h2", null, t("selftest")),
+      can("admin", a.id) && a.selftest ? h("button", { class: "btn small right", onclick: async () => {
+        stErr.textContent = "";
+        try { await post("/api/ui/agents/" + a.id + "/selftest"); render(); } catch (x) { stErr.textContent = x.message; }
+      } }, t("runSelftest")) : null),
+    stErr,
+    !a.selftest ? h("div", { class: "card empty" }, t("selftestOff"))
+      : tests.length ? h("div", { class: "list" }, tests.slice(0, 5).map(testRow)) : h("div", { class: "card empty" }, t("noSelftests")));
+}
+
+async function hostSecurityTab(a) {
+  const q = encodeURIComponent(a.id);
+  const [o, inc, open, tests, actions, recent] = await Promise.all([api("/api/ui/overview?agent=" + q + "&days=30"),
+    api("/api/ui/incidents?agent=" + q + "&status=active"), api("/api/ui/alerts?agent=" + q + "&status=open"),
+    api("/api/ui/selftests?agent=" + q), api("/api/ui/actions?agent=" + q), api("/api/ui/events?agent=" + q + "&limit=12")]);
+  const total30 = o.alerts_per_day.reduce((x, d) => x + SEVS.reduce((y, s) => y + (d[s] || 0), 0), 0);
+  return [
+    h("div", { class: "grid metrics" },
+      metric(null, "alert-triangle", t("alertsTile"), a.open_alerts, (a.open_by_severity.critical || a.open_by_severity.high) ? "bad" : null, sevText(a.open_by_severity)),
+      metric(null, "list-details", t("ht_alerts30"), total30, null, t("days30").replace("{n}", 30)),
+      metric(null, "clock", t("mtta"), duration(o.mtta_seconds), null, o.acked_30d ? t("ht_mttaHost") : t("noneYet")),
+      metric(null, "radar", t("activeInc"), inc.incidents.length, inc.incidents.length ? "bad" : null, inc.incidents.length ? t("openInc") : t("noIncidents"))),
+    h("div", { class: "grid dash-a" },
+      panel(t("ht_alertsMonth"), null, severityChart(o.alerts_per_day, o.day_start)),
+      panel(t("topRules"), t("days30").replace("{n}", 30), rankList(o.top_rules, { mono: true, empty: t("noAlerts"), href: () => "#/alerts?host=" + a.id }))),
+    inc.incidents.length ? [h("h2", null, t("incidents")), h("div", { class: "list" }, inc.incidents.map(incRow))] : null,
+    h("div", { class: "flex mt" }, h("h2", null, t("ht_openAlerts")), h("a", { class: "right", href: "#/alerts?host=" + a.id }, t("all"))),
+    open.length ? h("div", { class: "list" }, open.slice(0, 25).map(alertRow)) : h("div", { class: "card empty" }, t("noAlerts")),
     postureSection(a),
-    h("div", { class: "flex" }, h("h2", null, t("ports")),
-      d.ports.some((p) => !p.expected) ? h("button", { class: "btn small right", onclick: action("accept-port", { key: "*" }) }, t("acceptAll")) : null),
-    h("div", { class: "tablewrap" }, h("table", { class: "nowrap" },
-      h("thead", null, h("tr", null, ["Port", "Addr", t("scope"), t("via"), t("process"), ""].map((x) => h("th", null, x)))),
-      h("tbody", null, portRows))),
     containCard(a),
     actions.length ? [h("h2", null, t("response")), actionRows(actions)] : null,
     await snapshotsCard(a.id),
-    selftestCard,
-    h("h2", null, t("logins")),
-    d.logins.length ? h("div", { class: "tablewrap" }, h("table", null,
-      h("thead", null, h("tr", null, [t("time"), t("user"), t("ip"), t("method"), t("key")].map((x) => h("th", null, x)))),
-      h("tbody", null, loginRows))) : h("div", { class: "card empty" }, t("noEvents"))));
+    selftestSection(a, tests),
+    h("div", { class: "flex mt" }, h("h2", null, t("ht_latestEvents")),
+      h("a", { class: "right", href: tlHref(a.id, new Date().toISOString(), { minutes: 60 }) }, t("timeline"))),
+    recent.length ? h("div", { class: "tablewrap" }, h("table", null, h("tbody", null, recent.map(eventRow)))) : h("div", { class: "card empty" }, t("noEvents")),
+  ];
+}
+const sevText = (m) => SEVS.filter((s) => m[s]).map((s) => m[s] + " " + t(s)).join(", ") || t("noAlerts");
+
+async function hostNetworkTab(a, d, params) {
+  const days = hostDays(params, "7");
+  const act = await api("/api/ui/agents/" + encodeURIComponent(a.id) + "/activity?days=" + days);
+  const action = (name, body) => async () => { await post("/api/ui/agents/" + a.id + "/" + name, body || {}); render(); };
+  const opened = {};
+  for (const p of act.ports) if (p.opened && !p.closed) opened[p.key] = p.opened;
+  const portRows = d.ports.map((p) => h("tr", null,
+    h("td", { class: "mono" }, p.proto + "/" + p.port),
+    h("td", { class: "mono" }, p.addr),
+    h("td", null, p.scope),
+    h("td", null, p.via),
+    h("td", { class: "mono" }, p.process || p.target || ""),
+    h("td", { class: "nowrap" }, opened[p.key] ? [timeEl(opened[p.key]), newSince(opened[p.key], 24) ? [" ", newPill()] : null] : h("span", { class: "muted", title: t("ht_olderThan").replace("{n}", act.days) }, "·")),
+    h("td", null, p.expected ? h("span", { class: "pill" }, t("expected"))
+      : !can("admin", a.id) ? h("span", { class: "pill warn" }, t("ht_unexpectedOne"))
+      : h("div", { class: "flex" },
+        h("button", { class: "btn small", onclick: action("accept-port", { key: p.key }) }, t("accept")),
+        p.proc_key ? h("button", { class: "btn small ghost", title: p.proc_key, onclick: action("accept-port", { key: p.proc_key }) }, t("acceptProcess")) : null))));
+  const hist = act.ports.filter((p) => p.closed || p.times > 1 || opened[p.key]);
+  const pub = act.destinations.filter((x) => !x.private);
+  const byProg = {};
+  for (const x of act.destinations) {
+    const k = x.process || "?";
+    byProg[k] = byProg[k] || { key: k, count: 0, set: new Set() };
+    byProg[k].count++;
+    if (x.country) byProg[k].set.add(x.country);
+  }
+  const progs = Object.values(byProg).sort((x, y) => y.count - x.count).slice(0, 10)
+    .map((x) => ({ key: x.key, count: x.count, extra: [...x.set].slice(0, 6).map(countryName).join(", ") }));
+  const vol = (d.volume || []).map((x) => ({ t: Date.parse(x.at) / 1000, tx: x.tx, rx: x.rx }));
+  return [
+    h("div", { class: "flex" }, h("h2", null, t("ports")),
+      can("admin", a.id) && d.ports.some((p) => !p.expected) ? h("button", { class: "btn small right", onclick: action("accept-port", { key: "*" }) }, t("acceptAll")) : null),
+    h("div", { class: "tablewrap" }, h("table", { class: "nowrap" },
+      h("thead", null, h("tr", null, ["Port", "Addr", t("scope"), t("via"), t("process"), t("ht_openSince"), ""].map((x) => h("th", null, x)))),
+      h("tbody", null, portRows))),
+    h("div", { class: "flex mt" }, h("h2", null, t("ht_destinations")), h("div", { class: "right" }, daysPick(a.id, "network", days, params))),
+    act.partial ? scopeNote(t("ht_partial")) : null,
+    h("div", { class: "grid dash-a" },
+      h("div", { class: "card panel" }, h("div", { class: "panel-head" }, h("h3", null, t("ht_newDest")),
+        h("span", { class: "panel-extra" }, pub.length + " " + t("ht_public") + "  ·  " + (act.destinations.length - pub.length) + " " + t("ht_private"))),
+        act.destinations.length ? h("div", { class: "tablewrap" }, h("table", null,
+          h("thead", null, h("tr", null, [t("ht_firstSeen"), t("remote"), "Port", t("program"), t("ht_origin"), "n"].map((x) => h("th", null, x)))),
+          h("tbody", null, act.destinations.slice(0, 60).map((x) => h("tr", null,
+            h("td", { class: "nowrap" }, timeEl(x.first), newSince(x.first, 24) ? [" ", newPill()] : null),
+            h("td", { class: "mono nowrap" }, entityLink("ip", x.ip) || x.ip, x.private ? h("span", { class: "muted" }, " " + t("ht_private")) : null,
+              x.net === "tor" ? [" ", h("span", { class: "pill warn" }, "Tor")] : null),
+            h("td", { class: "nowrap" }, portName(x.port) + (PORT_NAMES[x.port] ? " (" + x.port + ")" : "")),
+            h("td", { class: "mono", title: x.exe || "" }, x.process || "·"),
+            h("td", null, x.private ? h("span", { class: "muted" }, "·") : geoCell(x)),
+            h("td", null, x.n)))))) : h("div", { class: "empty small" }, t("ht_noDest"))),
+      panel(t("ht_destByProg"), null, rankList(progs, { mono: true, empty: t("ht_noDest") }))),
+    hist.length ? [h("h3", { class: "mt" }, t("ht_portHistory")), h("div", { class: "tablewrap" }, h("table", { class: "nowrap" },
+      h("thead", null, h("tr", null, ["Port", "Addr", t("process"), t("ht_opened"), t("ht_closed"), t("ht_times")].map((x) => h("th", null, x)))),
+      h("tbody", null, hist.map((p) => h("tr", null,
+        h("td", { class: "mono" }, p.proto + "/" + p.port), h("td", { class: "mono" }, p.addr), h("td", { class: "mono" }, p.process || "·"),
+        h("td", null, p.opened ? timeEl(p.opened) : "·"), h("td", null, p.closed ? timeEl(p.closed) : h("span", { class: "chip" }, h("span", { class: "dot ok" }), t("open"))),
+        h("td", null, p.times))))))] : null,
+    h("div", { class: "mt" }, lineChart({ title: t("ht_volume"), points: vol, step: 3600, fmt: fmtBytes,
+      series: [{ label: t("ht_sent"), get: (p) => p.tx }, { label: t("ht_received"), get: (p) => p.rx }] })),
+  ];
+}
+
+// one list of the operating system's and the applications' weaknesses,
+// filtered by severity, "exploited" and ecosystem
+function vulnTable(a, params) {
+  const v = a.vulns, av = a.app_vulns;
+  const list = [];
+  const sevOf = (s) => s in { critical: 1, high: 1, medium: 1, low: 1 } ? s : "";
+  if (v) {
+    const seen = new Set();
+    for (const x of [...(v.exploited || []), ...(v.top || [])]) {
+      if (seen.has(x.cve + x.package)) continue;
+      seen.add(x.cve + x.package);
+      list.push({ sev: sevOf(x.severity), id: x.cve, url: "https://www.cve.org/CVERecord?id=" + encodeURIComponent(x.cve), pkg: x.package, eco: v.release || "OS",
+        installed: x.installed, fixed: x.fixed ? x.fixed + (x.pro ? " (" + t("proOnly") + ")" : "") : "", kev: x.kev, path: "" });
+    }
+  }
+  if (av) {
+    for (const x of [...(av.malicious || []), ...(av.top || [])]) list.push({ sev: sevOf(x.severity), id: (x.cves || [])[0] || x.id,
+      url: "https://osv.dev/vulnerability/" + encodeURIComponent(x.id), pkg: x.package, eco: x.ecosystem, installed: x.installed, fixed: x.fixed || "",
+      kev: x.kev, malicious: x.malicious, path: x.path, summary: x.summary });
+  }
+  if (!list.length) return null;
+  const f = { sev: params.get("sev") || "", eco: params.get("eco") || "", kev: params.get("kev") === "1" };
+  const go = (ch) => { const p = new URLSearchParams(params); p.set("tab", "software"); for (const [k, x] of Object.entries(ch)) { if (x) p.set(k, x); else p.delete(k); } location.hash = "#/hosts/" + a.id + "?" + p; };
+  const ecos = [...new Set(list.map((x) => x.eco))].sort();
+  const rank = { critical: 0, high: 1, medium: 2, low: 3, "": 4 };
+  const shown = list.filter((x) => (!f.sev || x.sev === f.sev) && (!f.eco || x.eco === f.eco) && (!f.kev || x.kev || x.malicious))
+    .sort((x, y) => (y.malicious ? 1 : 0) - (x.malicious ? 1 : 0) || (y.kev ? 1 : 0) - (x.kev ? 1 : 0) || rank[x.sev] - rank[y.sev]);
+  const sevSel = h("select", { onchange: (e) => go({ sev: e.target.value }), "aria-label": t("ht_sevLabel") },
+    h("option", { value: "" }, t("ht_allSev")), SEVS.map((s) => h("option", { value: s, selected: f.sev === s }, t(s))));
+  const ecoSel = h("select", { onchange: (e) => go({ eco: e.target.value }), "aria-label": t("ht_ecosystem") },
+    h("option", { value: "" }, t("ht_allEco")), ecos.map((e) => h("option", { value: e, selected: f.eco === e }, e)));
+  const kevBox = h("label", { class: "check" }, h("input", { type: "checkbox", checked: f.kev, onchange: (e) => go({ kev: e.target.checked ? "1" : "" }) }), t("ht_onlyExploited"));
+  return h("div", { class: "card mt" },
+    h("div", { class: "flex" }, h("h3", null, t("ht_vulnList")), h("span", { class: "muted right" }, shown.length + " / " + list.length)),
+    h("div", { class: "flex filters" }, sevSel, ecoSel, kevBox),
+    shown.length ? h("div", { class: "tablewrap" }, h("table", null,
+      h("thead", null, h("tr", null, ["", t("vulnId"), t("pkg"), t("ht_ecosystem"), t("installed"), t("fixedIn"), t("lockFile")].map((x) => h("th", null, x)))),
+      h("tbody", null, shown.slice(0, 200).map((x) => h("tr", null,
+        h("td", { class: "nowrap" }, h("span", { class: "sev " + (x.sev || "low") }, x.malicious ? t("maliciousPkg") : x.sev ? t(x.sev) : t("unknownSev")),
+          x.kev ? [" ", h("span", { class: "pill warn" }, t("ht_exploited"))] : null),
+        h("td", { class: "mono nowrap" }, h("a", { href: x.url, target: "_blank", rel: "noopener noreferrer", title: x.summary || "" }, x.id)),
+        h("td", { class: "mono nowrap" }, x.pkg),
+        h("td", { class: "nowrap" }, x.eco),
+        h("td", { class: "mono nowrap" }, x.installed),
+        h("td", { class: "mono nowrap" }, x.fixed || "·"),
+        h("td", { class: "mono muted nowrap" }, x.path || "·")))))) : h("div", { class: "empty small" }, t("ht_noMatch")));
+}
+
+async function hostSoftwareTab(a, d, params) {
+  const u = a.updates, v = a.vulns, av = a.app_vulns;
+  const locks = {};
+  for (const x of [...((av && av.top) || []), ...((av && av.malicious) || [])]) locks[x.path] = (locks[x.path] || 0) + 1;
+  const counts = Object.assign({}, (av && av.counts) || {});
+  const unknown = counts.unknown || 0;
+  delete counts.unknown;
+  return [
+    u ? h("div", { class: "card" }, h("h3", null, t("updates")), h("dl", { class: "kv" },
+      h("dt", null, t("updates")), h("dd", null, updatesCell(u)),
+      u.security ? [h("dt", null, t("ht_oldestOpen")), h("dd", { class: u.security_oldest_days >= 7 ? "bad-text" : "" }, t("ht_oldestDays").replace("{n}", u.security_oldest_days || 0))] : null,
+      h("dt", null, t("securityPackages")), h("dd", { class: "mono" }, (u.security_packages || []).join("  ") || "·"),
+      h("dt", null, t("kernel")), h("dd", { class: "mono" }, u.kernel_running + (u.kernel_newest && u.kernel_newest !== u.kernel_running ? "  (" + t("newestInstalled") + " " + u.kernel_newest + ")" : "")),
+      u.reboot_required ? [h("dt", null, t("rebootShort")), h("dd", null, (u.reboot_days || 0) + " " + t("days"))] : null,
+      h("dt", null, t("unattended")), h("dd", null, t(u.unattended_upgrades ? "on" : "off")),
+      h("dt", null, t("listsAge")), h("dd", null, u.lists_age_days >= 0 ? u.lists_age_days + " " + t("daysAgo") : "·"))) : h("div", { class: "card empty" }, t("ht_noReport")),
+    v || av ? h("div", { class: "grid two mt" },
+      v ? h("div", { class: "card" }, h("div", { class: "flex" }, h("h3", null, t("vulns")), h("span", { class: "muted right" }, v.release || "", v.checked ? "  ·  " : "", v.checked ? timeEl(v.checked) : null)),
+        v.error ? h("div", { class: "muted mt" }, v.error) : h("dl", { class: "kv" },
+          h("dt", null, t("fixable")), h("dd", null, SEVS.some((s) => (v.fixable || {})[s]) ? sevCounts(v.fixable) : h("span", { class: "chip" }, h("span", { class: "dot ok" }), t("noVulns"))),
+          h("dt", null, t("unfixed")), h("dd", null, sevCounts(v.unfixed)),
+          h("dt", null, t("exploitedNow")), h("dd", null, (v.exploited || []).length))) : null,
+      av ? h("div", { class: "card" }, h("div", { class: "flex" }, h("h3", null, t("appVulns")), h("span", { class: "muted right" }, av.checked ? timeEl(av.checked) : null)),
+        h("dl", { class: "kv" },
+          h("dt", null, t("vulns")), h("dd", null, SEVS.some((s) => counts[s]) || unknown
+            ? [sevCounts(counts), unknown ? h("span", { class: "muted" }, " " + unknown + " " + t("unknownSev")) : null]
+            : h("span", { class: "chip" }, h("span", { class: "dot ok" }), t("noVulns"))),
+          h("dt", null, t("appMalicious")), h("dd", null, (av.malicious || []).length),
+          h("dt", null, t("ht_lockfiles")), h("dd", null, t("appFiles").replace("{n}", av.manifests).replace("{m}", av.packages) + (av.truncated ? ", " + t("appTruncated") : ""))),
+        (av.missing || []).length ? h("div", { class: "muted mt" }, t("appMissing") + " " + av.missing.join(", ")) : null) : null) : null,
+    vulnTable(a, params),
+    Object.keys(locks).length ? h("div", { class: "card mt" }, h("h3", null, t("ht_lockfiles")), h("div", { class: "tablewrap" }, h("table", null,
+      h("thead", null, h("tr", null, [t("lockFile"), t("vulns")].map((x) => h("th", null, x)))),
+      h("tbody", null, Object.entries(locks).sort((x, y) => y[1] - x[1]).map(([p, n]) => h("tr", null, h("td", { class: "mono" }, p), h("td", null, n))))))) : null,
+    containersCard(a),
+  ];
+}
+
+async function hostAccessTab(a, d, params) {
+  const q = encodeURIComponent(a.id);
+  const [ses, act, atk] = await Promise.all([api("/api/ui/sessions?agent=" + q + "&days=30"), api("/api/ui/agents/" + q + "/activity?days=30"),
+    api("/api/ui/attacks?agent=" + q + "&days=30").catch(() => null)]);
+  const list = ses.sessions;
+  const users = {}, keys = {}, ips = {};
+  for (const x of list) {
+    const hr = new Date(x.start).getHours();
+    (users[x.user] = users[x.user] || { user: x.user, hours: Array(24).fill(0), n: 0 }).hours[hr]++;
+    users[x.user].n++;
+    const k = x.key || x.method || "·";
+    const ke = keys[k] = keys[k] || { key: k, method: x.method, users: new Set(), n: 0, last: x.start };
+    ke.users.add(x.user); ke.n++; if (x.start > ke.last) ke.last = x.start;
+    const ie = ips[x.ip] = ips[x.ip] || { ip: x.ip, users: new Set(), n: 0, first: x.start, last: x.start };
+    ie.users.add(x.user); ie.n++;
+    if (x.start < ie.first) ie.first = x.start;
+    if (x.start > ie.last) ie.last = x.start;
+  }
+  const rows = Object.values(users).sort((x, y) => y.n - x.n).slice(0, 12);
+  const max = Math.max(1, ...rows.flatMap((r) => r.hours));
+  const grid = h("div", { class: "heatgrid", role: "table", "aria-label": t("ht_loginHeat") });
+  grid.append(h("div", { class: "hlabel" }), ...Array.from({ length: 24 }, (_, i) => h("div", { class: "hhead" }, i % 3 === 0 ? String(i) : "")));
+  for (const r of rows) {
+    grid.append(h("div", { class: "hlabel mono", title: r.user }, r.user));
+    r.hours.forEach((n, i) => grid.append(hoverTip(heatCell(heatLevel(n, max)), r.user + "  ·  " + String(i).padStart(2, "0") + ":00  ·  " + num(n) + " " + t("ht_loginsN"))));
+  }
+  const failedTotal = act.failed_per_day.reduce((x, y) => x + y, 0);
+  const failedDays = act.failed_per_day.map((n, i) => ({ day: new Date(Date.parse(act.day_start + "T00:00:00Z") + i * 864e5).toISOString().slice(0, 10), ssh: n, web: 0, ips: act.failed_ips_per_day[i] }));
+  const ipList = Object.values(ips).sort((x, y) => (y.last > x.last ? 1 : -1));
+  // new: first login from it in the last 7 days, none in the 23 before
+  const isNew = (x) => newSince(x.first, 7 * 24);
+  return [
+    h("div", { class: "grid metrics six" },
+      metric(null, "key", t("logins"), list.length, null, t("days30").replace("{n}", 30)),
+      metric(null, "user-x", t("ht_usersN"), Object.keys(users).length, null, Object.keys(keys).length + " " + t("ht_keysN")),
+      metric(null, "world", t("ht_sources"), ipList.length, ipList.some(isNew) ? "bad" : null, ipList.filter(isNew).length + " " + t("ht_newSources")),
+      metric(null, "user-x", t("failedTile"), num(failedTotal), null, t("days30").replace("{n}", 30)),
+      metric(atk ? "#/attacks?host=" + a.id : null, "radar", t("attackers"), atk ? (atk.ready ? num(atk.totals.ips) : "·") : "·", null, atk && atk.ready ? atk.totals.countries + " " + t("ht_countriesN") : t("ht_rollupWait")),
+      metric("#/sessions?agent=" + a.id, "terminal-2", t("sessions"), list.reduce((x, s) => x + s.commands, 0), null, t("ht_commandsN"))),
+    h("div", { class: "grid dash-a" },
+      panel(t("ht_loginHeat"), t("days30").replace("{n}", 30), rows.length ? h("div", { class: "scrollx" }, grid) : h("div", { class: "empty small" }, t("noEvents"))),
+      panel(t("ht_failedDay"), num(failedTotal), dayChart(failedDays))),
+    h("div", { class: "grid two mt" },
+      panel(t("ht_keys"), null, Object.keys(keys).length ? h("div", { class: "tablewrap" }, h("table", null,
+        h("thead", null, h("tr", null, [t("key"), t("user"), "n", t("ht_lastUse")].map((x) => h("th", null, x)))),
+        h("tbody", null, Object.values(keys).sort((x, y) => y.n - x.n).map((k) => h("tr", null,
+          h("td", { class: "mono" }, k.key, k.method === "password" ? [" ", h("span", { class: "pill warn" }, t("password"))] : null),
+          h("td", { class: "mono" }, [...k.users].join(", ")), h("td", null, k.n), h("td", { class: "nowrap" }, timeEl(k.last))))))) : h("div", { class: "empty small" }, t("noEvents"))),
+      panel(t("ht_sources"), null, ipList.length ? h("div", { class: "tablewrap" }, h("table", null,
+        h("thead", null, h("tr", null, [t("ip"), t("user"), "n", t("ht_firstSeen"), t("ht_lastUse")].map((x) => h("th", null, x)))),
+        h("tbody", null, ipList.map((x) => h("tr", null,
+          h("td", { class: "mono nowrap" }, entityLink("ip", x.ip) || x.ip, isNew(x) ? [" ", newPill()] : null),
+          h("td", { class: "mono" }, [...x.users].join(", ")), h("td", null, x.n),
+          h("td", { class: "nowrap" }, timeEl(x.first)), h("td", { class: "nowrap" }, timeEl(x.last))))))) : h("div", { class: "empty small" }, t("noEvents")))),
+    atk && atk.ready && atk.countries.length ? h("div", { class: "grid dash-a mt" },
+      h("div", { class: "card panel" }, h("div", { class: "panel-head" }, h("h3", null, t("ht_attackersHost")), h("span", { class: "panel-extra" }, t("days30").replace("{n}", 30))),
+        worldMap(atk.countries, (k) => { location.hash = "#/attacks?" + new URLSearchParams({ host: a.id, country: k }); }), geoAttr(atk.geo)),
+      panel(t("ht_topAttackers"), null, rankList(atk.addresses.slice(0, 8).map((x) => ({ key: x.ip, count: x.ssh + x.web,
+        extra: [x.country ? countryName(x.country) : "", x.org || "", x.class ? t("cls_" + x.class) : ""].filter(Boolean).join("  ·  ") })),
+        { mono: true, tone: "red", href: (i) => pivotHref("ip", i.key) }))) : null,
+    h("div", { class: "flex mt" }, h("h2", null, t("sessions")), h("a", { class: "right", href: "#/sessions?agent=" + a.id }, t("all"))),
+    list.length ? h("div", { class: "tablewrap" }, h("table", null,
+      h("thead", null, h("tr", null, [t("time"), t("user"), t("ip"), t("key"), t("ht_duration"), t("ht_commandsN"), "sudo", t("alerts")].map((x) => h("th", null, x)))),
+      h("tbody", null, list.slice(0, 30).map((x) => h("tr", { class: "click", onclick: () => { location.hash = sessionHref(x); } },
+        h("td", { class: "nowrap" }, h("a", { href: sessionHref(x) }, new Date(x.start).toLocaleString(lang))),
+        h("td", { class: "mono" }, x.user), h("td", { class: "mono" }, x.ip), h("td", { class: "mono" }, x.key || x.method),
+        h("td", { class: "nowrap" }, x.end ? fmtDur(x.start, x.end) : h("span", { class: "chip" }, h("span", { class: "dot ok" }), t("open"))),
+        h("td", null, x.commands), h("td", null, x.sudo), h("td", null, x.alerts ? h("span", { class: "sev high" }, x.alerts) : "0")))))) : h("div", { class: "card empty" }, t("noEvents")),
+  ];
+}
+
+// The host's changelog: what changed on it, newest first, by day.
+const CHANGE_KINDS = ["file", "systemd", "cron", "keys", "users", "ports", "programs", "packages", "kernel", "containers", "agent"];
+function changeKind(r) {
+  const ty = r.event.type, d = r.event.data || {};
+  if (ty.startsWith("file.")) return d.category === "systemd" ? "systemd" : d.category === "cron" ? "cron" : "file";
+  if (ty.startsWith("ssh.key_")) return "keys";
+  if (ty.startsWith("user.")) return "users";
+  if (ty.startsWith("port.")) return "ports";
+  if (ty.startsWith("process.")) return "programs";
+  if (ty === "packages.changed") return "packages";
+  if (ty.startsWith("kernel.")) return "kernel";
+  if (ty.startsWith("container.")) return "containers";
+  return "agent";
+}
+function changeText(r) {
+  const ty = r.event.type, d = r.event.data || {};
+  const key = "ch_" + ty.replace(".", "_");
+  const verb = t(key) === key ? ty : t(key);
+  const mono = (x) => h("span", { class: "mono" }, x);
+  if (ty.startsWith("file.")) return [verb, " ", mono(d.path || ""), d.has_diff ? h("span", { class: "muted" }, "  ·  " + t("ht_diffOnTimeline")) : null];
+  if (ty.startsWith("ssh.key_")) return [verb, " ", mono(d.comment || d.fingerprint || ""), h("span", { class: "muted" }, " " + (d.file || ""))];
+  if (ty.startsWith("port.")) return [verb, " ", mono((d.proto || "") + "/" + (d.port || "") + " " + (d.addr || "")), d.process ? h("span", { class: "muted" }, "  ·  " + d.process) : null];
+  if (ty === "packages.changed") {
+    const part = (k, sign) => (d[k] || []).map((p) => h("div", { class: "mono" }, sign + " " + p[0] + " " + (p.length > 2 ? p[1] + " → " + p[2] : p[1])));
+    return h("details", null, h("summary", null, t("ht_pkgSummary").replace("{a}", d.added_n).replace("{r}", d.removed_n).replace("{c}", d.changed_n)),
+      h("div", { class: "pkgdiff" }, part("added", "+"), part("removed", "−"), part("changed", "~")));
+  }
+  if (ty.startsWith("process.")) return [verb, " ", mono(d.exe || d.comm || ""), d.parent_comm ? h("span", { class: "muted" }, "  ·  " + d.parent_comm) : null];
+  if (ty === "agent.started" || ty === "agent.update") return [verb, " ", mono(d.version || d.to || "")];
+  return [verb, " ", dataLine(d)];
+}
+async function hostChangesTab(a, d, params) {
+  const days = hostDays(params, "7");
+  const kind = CHANGE_KINDS.includes(params.get("kind")) ? params.get("kind") : "";
+  const act = await api("/api/ui/agents/" + encodeURIComponent(a.id) + "/activity?days=" + days);
+  const counts = {};
+  for (const r of act.changes) counts[changeKind(r)] = (counts[changeKind(r)] || 0) + 1;
+  const shown = kind ? act.changes.filter((r) => changeKind(r) === kind) : act.changes;
+  const byDay = [];
+  for (const r of shown) {
+    const day = new Date(r.event.ts || r.time).toLocaleDateString(lang, { weekday: "long", day: "numeric", month: "long" });
+    if (!byDay.length || byDay[byDay.length - 1][0] !== day) byDay.push([day, []]);
+    byDay[byDay.length - 1][1].push(r);
+  }
+  const kindHref = (k) => hostHref(a.id, "changes", { days, ...(k ? { kind: k } : {}) });
+  return [
+    h("div", { class: "flex" }, h("h2", null, t("ht_changesTitle")), h("div", { class: "right" }, daysPick(a.id, "changes", days, params))),
+    h("div", { class: "tabs mt" }, h("a", { class: "tab" + (kind ? "" : " on"), href: kindHref("") }, t("all") + " " + act.changes.length),
+      CHANGE_KINDS.filter((k) => counts[k]).map((k) => h("a", { class: "tab" + (k === kind ? " on" : ""), href: kindHref(k) }, t("ck_" + k) + " " + counts[k]))),
+    act.partial ? scopeNote(t("ht_partial")) : null,
+    act.truncated ? scopeNote(t("ht_truncated")) : null,
+    shown.length ? byDay.map(([day, list]) => [h("h3", { class: "mt" }, day), h("div", { class: "list changes" }, list.map((r) => h("div", { class: "row" },
+      h("span", { class: "chip" }, t("ck_" + changeKind(r))),
+      h("div", null, h("div", { class: "title" }, changeText(r))),
+      h("div", { class: "meta" }, h("a", { href: tlHref(a.id, r.event.ts || r.time, { minutes: 30 }), title: t("timeline") }, hhmmss(r.event.ts || r.time))))))])
+      : h("div", { class: "card empty" }, t("ht_noChanges")),
+  ];
 }
 
 async function eventsView(params) {
@@ -3370,7 +3729,7 @@ async function render() {
     await loadScopeHosts();
     if (parts[0] === "alerts" && parts[1]) await alertDetail(parts[1]);
     else if (parts[0] === "alerts") await alertsView();
-    else if (parts[0] === "hosts" && parts[1]) await hostView(parts[1]);
+    else if (parts[0] === "hosts" && parts[1]) await hostView(parts[1], params);
     else if (parts[0] === "hosts") await hostsView();
     else if (parts[0] === "events") await eventsView(params);
     else if (parts[0] === "timeline") await timelineView(params);
