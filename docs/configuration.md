@@ -191,6 +191,7 @@ it came from the proxy.
 | `forward` | none | send events and alerts to syslog, HTTP or a file, see below |
 | `map_home` | none | `[latitude, longitude]` of the hosts, for the live arcs on the attack map, for example `[50.1, 8.7]`; a rough location is enough |
 | `geoip` | false | show the country and network of attacking addresses: the free DB-IP Lite country and AS databases (CC BY 4.0, about 12 MB) are downloaded once a month and looked up on the server, about 16 MB in memory. Enabling it accepts the [DB-IP Lite licence](https://db-ip.com/db/lite.php); the dashboard and reports link to DB-IP as it asks. For servers without internet access, place `country.csv.gz` and `asn.csv.gz` from DB-IP in `data_dir/geo` |
+| `geoip_city` | true with `geoip` | also fetch the DB-IP Lite city database (CC BY 4.0, about 85 MB a month) for the provinces and places of the attack map. It is turned into `data_dir/geo/city.bin` (about 75 MB) and looked up on disk, so memory does not grow; `false` leaves it out |
 | `perf` | defaults | thresholds of the load rules, see [below](#load-alerts) |
 | `threat_intel` | false | download public block lists (abuse.ch Feodo Tracker and ThreatFox, Spamhaus DROP, Tor exits) twice a day and match outbound connections against them. Only plain downloads, nothing about this installation is sent |
 

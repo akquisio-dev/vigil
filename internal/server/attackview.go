@@ -936,6 +936,9 @@ type liveAttack struct {
 	Kind    string    `json:"kind"` // ssh | web
 	Count   int       `json:"count"`
 	Users   []string  `json:"users,omitempty"`
+	// Lat and Lon place the address with the city data (see geocity.go).
+	Lat *float32 `json:"lat,omitempty"`
+	Lon *float32 `json:"lon,omitempty"`
 }
 
 // GET /api/ui/attacks/live?after=SEQ: attack records newer than SEQ from
@@ -975,6 +978,9 @@ func (s *Server) handleAttacksLive(w http.ResponseWriter, r *http.Request, sess 
 				return
 			}
 			la.Country = s.geo(la.IP).Country
+			if lat, lon, ok := s.place(la.IP); ok {
+				la.Lat, la.Lon = &lat, &lon
+			}
 			out = append(out, la)
 		})
 		out = s.dropOwn(out)

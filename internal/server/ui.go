@@ -160,6 +160,7 @@ func (s *Server) uiHandler() http.Handler {
 	mux.HandleFunc("POST /api/ui/hunt", s.analyst(s.handleHunt))
 	mux.HandleFunc("GET /api/ui/attacks", s.auth(s.handleAttacks))
 	mux.HandleFunc("GET /api/ui/attacks/live", s.auth(s.handleAttacksLive))
+	mux.HandleFunc("GET /api/ui/attacks/map", s.auth(s.handleAttackMap))
 	mux.HandleFunc("GET /api/ui/attacks/report", s.analyst(s.handleAttackReport))
 	mux.HandleFunc("GET /api/ui/sources/stats", s.auth(s.handleSourcesStats))
 	mux.HandleFunc("GET /api/ui/sources", s.adminOnly(s.handleSourcesConfig))
@@ -248,13 +249,16 @@ func (s *Server) uiHandler() http.Handler {
 // the embedded assets.
 func versionedIndex(static fs.FS) ([]byte, string) {
 	h := sha256.New()
-	for _, name := range []string{"app.js", "map.js", "theme.js", "style.css", "favicon.svg", "world.js"} {
+	names := []string{"app.js", "map.js", "attackmap.js", "theme.js", "style.css", "favicon.svg", "world.js"}
+	// the provinces of the attackers map load with the same ?v=
+	regions, _ := fs.Glob(static, "regions/*.json")
+	for _, name := range append(names, regions...) {
 		b, _ := fs.ReadFile(static, name)
 		h.Write(b)
 	}
 	version := hex.EncodeToString(h.Sum(nil))[:12]
 	index, _ := fs.ReadFile(static, "index.html")
-	for _, name := range []string{"app.js", "map.js", "theme.js", "style.css", "favicon.svg"} {
+	for _, name := range []string{"app.js", "map.js", "attackmap.js", "theme.js", "style.css", "favicon.svg"} {
 		index = bytes.ReplaceAll(index, []byte(`"`+name+`"`), []byte(`"`+name+"?v="+version+`"`))
 	}
 	return index, version

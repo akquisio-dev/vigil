@@ -302,11 +302,51 @@ agents a total for several names is shared out evenly, and the page says so.
 These views come from failed SSH logins on port 22: with password login off,
 sshd never sees a password, so vigil shows none.
 
+#### The attack map
+
+The map at the top of the page shows every attacking address of the period,
+not only the busiest ones the table lists:
+
+- drag to move it; Ctrl and the wheel, two fingers, a double click or the
+  buttons zoom (in full screen the wheel alone); `+`, `-`, `F` (fit), the arrow
+  keys and `Esc` work when it has the focus;
+- countries as areas, circles or both, by attempts or by addresses, on one red
+  scale with a legend;
+- filters by kind (SSH, web), class, network (data centre, Tor, other),
+  campaign and target host; the side panel, the replay and the wall follow
+  them;
+- a click on a country zooms to it and opens it in the side panel: share of
+  all attempts, classes (a click filters), provinces, networks, tried user
+  names, targets, campaigns and the busiest addresses, with a link to the
+  table filtered to the country;
+- zoomed in, countries split into their provinces, shaded on their own scale,
+  with names; further in the addresses show as places, close ones on screen
+  as one dot coloured by their worst class. A click on a province or a place
+  opens it in the side panel;
+- the replay below the map shows when the addresses were first seen; play it
+  or drag it, and the map shows the attackers up to that moment, countries
+  flashing as new ones arrive;
+- **Share** copies a link to the same view and selection, **Picture** saves it
+  as PNG;
+- **Full screen** fills the window with a small overview map once zoomed in;
+  **Wall** is full screen for a monitor: a dark map, a clock, the numbers of
+  the period, the five busiest countries and the live list in large type,
+  with a **Tour** that visits the busiest countries in turn.
+
+Provinces and places need the city data: with `geoip` the server also fetches
+the DB-IP Lite city database once a month and turns it into
+`data_dir/geo/city.bin` (about 75 MB on disk). It is looked up on disk for the
+attacking addresses only, so the server's memory does not grow; set
+`"geoip_city": false` to leave it out. The province outlines come with the
+dashboard (Natural Earth, public domain) and load when a country is first
+zoomed into.
+
 With `map_home` set in `server.json` (`[latitude, longitude]` of the hosts),
-the world map is live: every new attack is drawn as an arc from its country to
-the hosts, and the newest ones are listed below the map. Agents report every
-30 seconds, so an attack appears up to that late. Viewers who prefer reduced
-motion get the list and the markers without animation.
+the map is live: every new attack is drawn as an arc from where the address is
+(its country without the city data) to the hosts, the country flashes, and
+the newest ones are listed below the map with the rate per minute. Agents
+report every 30 seconds, so an attack appears up to that late. Viewers who
+prefer reduced motion get the list and the markers without animation.
 
 The report button saves the page as Markdown or opens it for printing as PDF
 (analysts and admins, recorded in the audit log).

@@ -2168,7 +2168,7 @@ function countryName(cc) {
 
 // worldMap colours each country by its attempts (log scale) and puts a dot
 // on countries too small to see.
-function worldMap(countries, onPick, live) {
+function worldMap(countries, onPick) {
   const box = h("div", { class: "worldmap" }, h("div", { class: "empty small" }, "…"));
   loadWorld().then((w) => {
     const svg = document.createElementNS(SVG, "svg");
@@ -2205,7 +2205,6 @@ function worldMap(countries, onPick, live) {
       svg.append(dot);
     }
     box.replaceChildren(svg);
-    if (live) liveLayer(svg, w, box, live.feed, live.status);
   }).catch(() => box.replaceChildren(h("div", { class: "empty small" }, t("worldMap"))));
   return box;
 }
@@ -2445,73 +2444,6 @@ function userCloud(stats) {
     a.style.fontSize = size(s.attempts).toFixed(1) + "px";
     return hoverTip(a, s.user + "  ·  " + num(s.attempts) + " " + t("attemptsN") + ", " + num(s.ips) + " " + t("addresses") + (s.existing ? "  ·  " + t("accountExists") : ""));
   }));
-}
-
-// liveLayer polls new attack records and draws each as an arc from its
-// country to the hosts. Agents send every 30 s, so live means up to that late.
-function liveLayer(svg, w, box, feed, status) {
-  const g = sv("g", { class: "live" });
-  svg.append(g);
-  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const proj = (lat, lon) => [(lon + 180) / 360 * w.w, (84 - lat) / 142 * w.h];
-  let cursor = null, homeXY = null, seen = 0;
-  const rows = [];
-  const addRow = (a) => {
-    const what = a.kind === "ssh" ? "SSH " + (a.users || []).join(", ") : t("webAttack");
-    rows.unshift(h("div", { class: "frow" },
-      h("span", { class: "muted mono" }, new Date(a.time).toLocaleTimeString(lang)),
-      h("span", { class: "fcc", title: countryName(a.country) }, a.country || "?"),
-      h("a", { class: "mono", href: pivotHref("ip", a.ip) }, a.ip),
-      h("span", { class: "muted" }, "→ " + (a.host || "?")),
-      h("span", { class: "fwhat mono" }, what + "  ×" + a.count)));
-    rows.length = Math.min(rows.length, 6);
-    feed.replaceChildren(...rows);
-  };
-  const shoot = (a) => {
-    const from = w.dots[a.country];
-    if (!from) return;
-    const [ox, oy] = from;
-    const ring = sv("circle", { cx: ox, cy: oy, r: 3, class: "pulse" });
-    g.append(ring);
-    if (!reduce) ring.animate([{ r: 3, opacity: 0.9 }, { r: 14, opacity: 0 }], { duration: 1600, easing: "ease-out" }).finished.then(() => ring.remove(), () => ring.remove());
-    else setTimeout(() => ring.remove(), 1600);
-    if (!homeXY) return;
-    const [tx, ty] = homeXY;
-    const dist = Math.hypot(tx - ox, ty - oy);
-    const mx = (ox + tx) / 2, my = (oy + ty) / 2 - Math.min(120, dist * 0.35);
-    const arc = sv("path", { d: "M" + ox.toFixed(1) + "," + oy.toFixed(1) + "Q" + mx.toFixed(1) + "," + my.toFixed(1) + " " + tx.toFixed(1) + "," + ty.toFixed(1), class: "arc " + a.kind });
-    g.append(arc);
-    if (reduce) { setTimeout(() => arc.remove(), 2500); return; }
-    const len = arc.getTotalLength();
-    arc.style.strokeDasharray = len.toFixed(1);
-    arc.animate([{ strokeDashoffset: len, opacity: 1 }, { strokeDashoffset: 0, opacity: 1, offset: 0.6 }, { strokeDashoffset: 0, opacity: 0 }],
-      { duration: 2600, easing: "ease-out" }).finished.then(() => arc.remove(), () => arc.remove());
-    setTimeout(() => {
-      const hit = sv("circle", { cx: tx, cy: ty, r: 2, class: "impact" });
-      g.append(hit);
-      hit.animate([{ r: 2, opacity: 1 }, { r: 10, opacity: 0 }], { duration: 900, easing: "ease-out" }).finished.then(() => hit.remove(), () => hit.remove());
-    }, 1560);
-  };
-  const poll = async () => {
-    if (!box.isConnected) return;
-    if (!document.hidden) {
-      try {
-        const r = await api("/api/ui/attacks/live" + (cursor == null ? "" : "?after=" + cursor));
-        cursor = r.cursor;
-        if (r.home && !homeXY) {
-          homeXY = proj(r.home[0], r.home[1]);
-          g.append(sv("circle", { cx: homeXY[0], cy: homeXY[1], r: 3.5, class: "home" }));
-        }
-        seen += r.attacks.length;
-        status.textContent = t("liveSeen").replace("{n}", num(seen));
-        r.attacks.slice(-6).forEach(addRow);
-        // spread a burst (agents send every 30 s) over the next seconds
-        r.attacks.slice(-24).forEach((a, i) => setTimeout(() => shoot(a), i * 220));
-      } catch { /* the next poll tries again */ }
-    }
-    setTimeout(poll, 5000);
-  };
-  poll();
 }
 
 // columns per hour of the local day (the server counts in UTC)
@@ -2890,9 +2822,6 @@ async function attacksView(params) {
       h("dt", null, t("addressesTitle")), h("dd", { class: "mono" }, c.members.slice(0, 6).map((ip) => h("a", { href: pivotHref("ip", ip) }, ip + " ")), c.members.length > 6 ? "…" : ""))))) : h("div", { class: "card empty small" }, t("none"));
 
   const kinds = ["hosting", "tor", "other"].map((k) => ({ key: k, count: v.net_kinds[k] || 0 }));
-  const liveFeed = h("div", { class: "livefeed" });
-  const liveStatus = h("span", { class: "muted small" });
-  const liveChip = h("span", { class: "livechip", title: t("liveHint") }, h("span", { class: "livedot" }), "LIVE", liveStatus);
   mount(shell("attacks",
     h("h1", null, t("attacks")),
     h("div", { class: "crumbs" }, scopeSel.agent ? t("attacksOnHost").replace("{h}", scopeName()) : t("attacksSub")),
@@ -2900,11 +2829,9 @@ async function attacksView(params) {
     v.ready ? null : h("div", { class: "card note" }, t("building")),
     scopeSel.group ? scopeNote(t("attacksNoGroup")) : v.agent ? scopeNote(t("attacksHostNote")) : null,
     tiles,
-    v.geo.enabled ? h("div", { class: "grid dash-a" },
-      panel(t("worldMap"), h("span", { class: "flex" }, cc ? h("a", { href: href({}) }, countryName(cc) + "  ×") : null, liveChip),
-        worldMap(v.countries, (k) => { location.hash = href({ country: k }); }, { feed: liveFeed, status: liveStatus }), liveFeed, geoAttr(v.geo)),
-      panel(t("byCountry"), null, rankList(v.countries.slice(0, 10).map((c) => ({ key: c.key, count: c.count, extra: c.ips + " " + t("addresses") })),
-        { tone: "red", label: (i) => countryName(i.key), href: (i) => href({ country: i.key }), empty: t("noAttacks") })))
+    v.geo.enabled ? h("div", { class: "card amap-card" },
+      h("div", { class: "panel-head" }, h("h3", null, t("worldMap")), cc ? h("a", { class: "panel-extra", href: href({}) }, countryName(cc) + "  ×") : null),
+      attackMap(v.days, scopeSel.agent, params.get("sel") || cc, params), geoAttr(v.geo))
       : h("div", { class: "card note" }, t("geoOff")),
     h("div", { class: "grid dash-b mt" },
       panel(t("byNetwork"), null, rankList(v.networks.slice(0, 8).map((n) => ({ key: "AS" + n.asn + " " + n.org, count: n.ips,
@@ -3884,5 +3811,6 @@ async function render() {
 }
 
 window.addEventListener("hashchange", render);
-// map.js loads after this file and adds the host map
+// map.js and attackmap.js load after this file and add the host map and
+// the attackers map
 document.addEventListener("DOMContentLoaded", render);

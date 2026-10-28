@@ -71,6 +71,10 @@ type geoState struct {
 	db      atomic.Pointer[geoDB]
 	lastTry atomic.Int64
 	err     atomic.Value // string
+
+	city     atomic.Pointer[cityDB]
+	cityTry  atomic.Int64
+	cityBusy atomic.Bool
 }
 
 func addr4(a netip.Addr) uint32 {
@@ -199,6 +203,7 @@ func (s *Server) refreshGeo() {
 			log.Printf("geoip: %v", err)
 		}
 	}
+	go s.refreshCity(dir, now)
 	if have != nil && have.countryMonth == cur && have.asMonth == cur {
 		return
 	}
@@ -408,6 +413,9 @@ func (s *Server) geoStatus() map[string]any {
 	if db := s.geodb.db.Load(); db != nil {
 		out["country_month"], out["as_month"] = db.countryMonth, db.asMonth
 		out["ranges"] = len(db.c4Start) + len(db.c6Start) + len(db.a4Start) + len(db.a6Start)
+	}
+	if c := s.geodb.city.Load(); c != nil {
+		out["city_month"] = c.month
 	}
 	if e, _ := s.geodb.err.Load().(string); e != "" {
 		out["error"] = e

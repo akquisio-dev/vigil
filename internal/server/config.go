@@ -110,6 +110,10 @@ type Config struct {
 	// 4.0, about 12 MB) once a month to show where attacking addresses come
 	// from. Lookups stay on the server.
 	GeoIP bool `json:"geoip,omitempty"`
+	// GeoIPCity also fetches the DB-IP Lite city database (about 85 MB a
+	// month, kept on disk as data_dir/geo/city.bin) for the provinces and
+	// places of the attackers map. On with GeoIP unless set to false.
+	GeoIPCity *bool `json:"geoip_city,omitempty"`
 	// MapHome is where the hosts stand, as [latitude, longitude], for the
 	// live view of the attack map. Without it the map shows no arcs.
 	MapHome *[2]float64 `json:"map_home,omitempty"`
@@ -149,6 +153,7 @@ type Config struct {
 type NotifierConfig = notify.Config
 
 func (c *Config) cookieSecure() bool { return c.CookieSecure == nil || *c.CookieSecure }
+func (c *Config) geoCity() bool      { return c.GeoIP && (c.GeoIPCity == nil || *c.GeoIPCity) }
 func (c *Config) deadman() time.Duration {
 	return time.Duration(c.DeadmanSeconds) * time.Second
 }
