@@ -34,8 +34,10 @@ if try short; then fail "accepted a short password"; fi
 sudo sh "$inst" try-remove || fail "try-remove after a stopped setup"
 try a-trial-password
 
-# The agent reports program starts from /tmp; repeat until it is up.
-trigger=$(mktemp -d)/vigil-try
+# The agent reports program starts from /tmp; repeat until it is up. The
+# copy keeps the name sleep: on Ubuntu 26 it is the uutils multicall binary,
+# which picks the program by its name.
+trigger=$(mktemp -d)/sleep
 cp /bin/sleep "$trigger"
 i=0
 until sudo grep -q '"rule":"process.tmp_exec"' /var/lib/vigil/state.json; do

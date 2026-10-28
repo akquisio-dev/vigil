@@ -187,7 +187,7 @@ vigil runs on this machine, reachable from here only (127.0.0.1).
 The first scan is the baseline: what is on the machine now counts as
 expected. To see a finding within a minute, run a program from /tmp:
 
-  cp /bin/sleep /tmp/vigil-try && /tmp/vigil-try 5; rm -f /tmp/vigil-try
+  mkdir -p /tmp/vigil-try && cp /bin/sleep /tmp/vigil-try/ && /tmp/vigil-try/sleep 5; rm -rf /tmp/vigil-try
 
 It shows up under Alerts as "Program started from a temporary directory".
 (If /tmp is mounted noexec, use /var/tmp instead.)
