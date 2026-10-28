@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.38.0
 
 - Incidents have a running number, `INC-0042`, shown in the list, on the incident and its alerts, in notifications (`[INC-0042] …`) and reports. Existing incidents are numbered in the order they were opened; numbers are never given twice. `#/incidents/INC-0042` opens one, and a field above the list finds one by number. **Copy number** and **Copy for Claude** (the incident as short Markdown with its alerts, details and notes, analysts) on the incident page; `vigil-server incident list` and `vigil-server incident show INC-0042` print the same on the server. New: `GET /api/ui/incidents/{id}/text`; `{id}` takes the number everywhere. See [operations](docs/operations.md#incidents). No agent update needed.
 
