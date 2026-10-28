@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.37.0
 
 - Attackers: the world map is an attack map. It pans and zooms (Ctrl and the wheel, two fingers, buttons, keys) and shows every attacking address of the period, not only the 300 of the table: countries as areas or circles by attempts or addresses, filters by kind, class, network, campaign and target host, and a side panel per country with its share, classes, provinces, networks, user names, targets, campaigns and busiest addresses. Zoomed in, countries split into their provinces and then into places, the addresses as dots grouped on screen; provinces and places open in the side panel too. A replay shows the addresses in the order they were first seen. Full screen with an overview map, and a wall mode for a monitor: dark, a clock, the numbers of the period, the busiest countries, the live list and a tour of the busiest countries. Live arcs start where the address is. Share links keep the view and the selection; the map saves as PNG. See [operations](docs/operations.md#the-attack-map).
 - With `geoip` the server also fetches the DB-IP Lite city database once a month (`geoip_city`, on by default with `geoip`) and keeps it on disk as `data_dir/geo/city.bin`, looked up only for attacking addresses; memory stays as it was. Province outlines from Natural Earth (public domain) come with the dashboard in `regions/` and load per country when it is zoomed into. New: `GET /api/ui/attacks/map`; `/api/ui/attacks/live` carries `lat` and `lon`. No agent update needed.
