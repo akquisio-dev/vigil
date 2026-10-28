@@ -479,6 +479,21 @@ most likely started the session at the top. Take it over, set the status
 (open, investigating, contained, closed) and write notes; every change is in
 the event chain. **Open incident** on an alert starts one by hand.
 
+Every incident has a running number, shown as `INC-0042`: in the list, on
+its page, on its alerts, in notifications (`[INC-0042] …`) and in reports.
+Numbers are never given twice. Incidents from before v0.38.0 got theirs in
+the order they were opened. `#/incidents/INC-0042` opens one directly, and
+the field above the list takes `INC-0042`, `inc-42` or `42`.
+
+To talk about an incident, in a chat with Claude or in a ticket:
+
+- **Copy number** copies `INC-0042`;
+- **Copy for Claude** (analysts) copies the incident as short Markdown: host,
+  status, owner, every alert in time order with its details, and the notes;
+- on the server, `vigil-server incident list [-all]` lists the incidents and
+  `vigil-server incident show INC-0042` prints the same text. Both only read
+  `state.json`, so they run beside the server.
+
 Notifications are still sent per alert.
 
 ## Suppressions

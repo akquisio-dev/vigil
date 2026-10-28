@@ -247,8 +247,9 @@ func (rd *reportData) markdown() string {
 	if title == "" {
 		title = c.ID
 	}
-	p("# Incident %s: %s\n\n", c.ID, mdEscape(title))
+	p("# Incident %s: %s\n\n", c.Ref, mdEscape(title))
 	p("| | |\n|---|---|\n")
+	p("| Reference | %s (ID %s) |\n", c.Ref, c.ID)
 	p("| Host | %s |\n| Status | %s |\n| Severity | %s |\n| Owner | %s |\n", mdEscape(c.Host), c.Status, c.Severity, mdEscape(c.Owner))
 	p("| Opened | %s |\n", c.Created.UTC().Format(time.RFC3339))
 	if c.Closed != nil {
@@ -322,7 +323,7 @@ func (rd *reportData) markdown() string {
 
 // printable wraps the Markdown in a minimal HTML page for printing to PDF.
 func (rd *reportData) printable() string {
-	return mdPage("Incident "+rd.Incident.ID, rd.markdown(), "")
+	return mdPage("Incident "+rd.Incident.Ref, rd.markdown(), "")
 }
 
 // mdPage renders the Markdown subset the reports use (headings, tables,
@@ -451,7 +452,7 @@ func (s *Server) handleIncidentReport(w http.ResponseWriter, r *http.Request, se
 		http.NotFound(w, r)
 		return
 	}
-	s.audit(sess.User, "admin.report", map[string]any{"incident": rd.Incident.ID, "format": r.URL.Query().Get("format")})
+	s.audit(sess.User, "admin.report", map[string]any{"incident": rd.Incident.ID, "ref": rd.Incident.Ref, "format": r.URL.Query().Get("format")})
 	w.Header().Set("Cache-Control", "no-store")
 	if r.URL.Query().Get("format") == "html" {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -460,6 +461,6 @@ func (s *Server) handleIncidentReport(w http.ResponseWriter, r *http.Request, se
 		return
 	}
 	w.Header().Set("Content-Type", "text/markdown; charset=utf-8")
-	w.Header().Set("Content-Disposition", `attachment; filename="incident-`+rd.Incident.ID+`.md"`)
+	w.Header().Set("Content-Disposition", `attachment; filename="incident-`+rd.Incident.Ref+`.md"`)
 	w.Write([]byte(rd.markdown()))
 }

@@ -158,6 +158,8 @@ type State struct {
 	Searches     []*SavedSearch `json:"searches,omitempty"`
 	Suppressions []*Suppression `json:"suppressions"`
 	Incidents    []*Incident    `json:"incidents"`
+	// NextIncident is the number the next incident gets.
+	NextIncident int            `json:"next_incident,omitempty"`
 	Actions      []*ActionRec   `json:"actions,omitempty"`
 	SelfTests    []*SelfTest    `json:"selftests,omitempty"`
 	Snapshots    []*SnapshotReq `json:"snapshot_requests,omitempty"`
@@ -195,6 +197,7 @@ func LoadState(dir string) (*State, error) {
 	if s.KnownLogins == nil {
 		s.KnownLogins = map[string]time.Time{}
 	}
+	s.numberIncidents()
 	return s, nil
 }
 

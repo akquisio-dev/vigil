@@ -25,6 +25,8 @@ const usage = `usage:
   vigil-server user add    [-config ...] [-role viewer|analyst|admin] NAME
   vigil-server user remove [-config ...] NAME
   vigil-server user list   [-config ...]
+  vigil-server incident list [-config ...] [-all]
+  vigil-server incident show [-config ...] INC-0042
   vigil-server verify      [-config ...]
   vigil-server token       [-config ...]
   vigil-server notify test [-config ...] [-name NOTIFIER]
@@ -56,7 +58,7 @@ func main() {
 		restoreCmd(args)
 		return
 	}
-	if cmd == "user" || cmd == "notify" {
+	if cmd == "user" || cmd == "notify" || cmd == "incident" {
 		if len(args) == 0 {
 			fail()
 		}
@@ -67,6 +69,7 @@ func main() {
 	role := fs.String("role", "admin", "user add: viewer, analyst or admin")
 	verify := fs.Bool("verify", false, "version: compare this binary with the published release")
 	only := fs.String("name", "", "notify test: only this notifier")
+	allInc := fs.Bool("all", false, "incident list: also the closed ones")
 	fs.Parse(args)
 
 	switch cmd {
@@ -117,6 +120,23 @@ func main() {
 		fmt.Fprintf(os.Stderr, "valid once until %s:\n  vigil-agent enroll -server %s -token %s\n", exp.Local().Format(time.DateTime), url, tok)
 	case "user":
 		userCmd(mustConfig(*cfgPath).DataDir, sub, *role, fs.Args())
+	case "incident":
+		// reads state.json only, so it runs beside the server
+		cfg := mustConfig(*cfgPath)
+		var out string
+		var err error
+		switch {
+		case sub == "list" && fs.NArg() == 0:
+			out, err = server.IncidentList(cfg.DataDir, cfg.Language, *allInc)
+		case sub == "show" && fs.NArg() == 1:
+			out, err = server.IncidentText(cfg.DataDir, cfg.PublicURL, cfg.Language, fs.Arg(0))
+		default:
+			fail()
+		}
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Print(out)
 	default:
 		fail()
 	}

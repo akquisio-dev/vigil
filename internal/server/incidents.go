@@ -10,7 +10,9 @@ import (
 // An Incident groups the alerts of one intrusion (or one false alarm) on a
 // host, so they are triaged, owned and closed together.
 type Incident struct {
-	ID       string    `json:"id"`
+	ID string `json:"id"`
+	// No is the running number, shown as INC-0042 (see incidentref.go).
+	No       int       `json:"no"`
 	Agent    string    `json:"agent"`
 	Status   string    `json:"status"` // open | investigating | contained | closed
 	Owner    string    `json:"owner,omitempty"`
@@ -65,9 +67,7 @@ func (s *Server) correlate(fresh []*Alert) {
 			if severityRank[al.Severity] < severityRank["high"] || strings.HasPrefix(al.Rule, "agent.") {
 				continue
 			}
-			inc = &Incident{ID: newID(8), Agent: al.Agent, Status: "open", Severity: al.Severity, Start: al.ID,
-				Created: al.Created, Last: al.Created}
-			s.state.Incidents = append(s.state.Incidents, inc)
+			inc = s.newIncident(al)
 			for _, prev := range s.state.Alerts {
 				if prev != al && prev.Agent == al.Agent && prev.Incident == "" &&
 					!prev.Created.After(al.Created) && al.Created.Sub(prev.Created) <= incidentWindow {
@@ -106,14 +106,8 @@ func (s *Server) attach(inc *Incident, al *Alert) {
 	}
 }
 
-func (s *Server) incident(id string) *Incident {
-	for _, c := range s.state.Incidents {
-		if c.ID == id {
-			return c
-		}
-	}
-	return nil
-}
+// incident finds an incident by its ID or its reference (INC-0042).
+func (s *Server) incident(id string) *Incident { return s.state.findIncident(id) }
 
 func (s *Server) alertByID(id string) *Alert {
 	for _, al := range s.state.Alerts {
@@ -126,6 +120,7 @@ func (s *Server) alertByID(id string) *Alert {
 
 type incidentView struct {
 	*Incident
+	Ref    string `json:"ref"`
 	Title  string `json:"title"`
 	Host   string `json:"host"`
 	Count  int    `json:"count"`
@@ -133,7 +128,7 @@ type incidentView struct {
 }
 
 func (s *Server) viewIncident(c *Incident, lg string) incidentView {
-	v := incidentView{Incident: c, Count: len(c.Alerts)}
+	v := incidentView{Incident: c, Ref: IncidentRef(c.No), Count: len(c.Alerts)}
 	if a := s.state.Agents[c.Agent]; a != nil {
 		v.Host = a.Name
 	}
@@ -267,8 +262,7 @@ func (s *Server) handleIncidentAction(w http.ResponseWriter, r *http.Request, se
 		if deny(al.Agent) {
 			return
 		}
-		c = &Incident{ID: newID(8), Agent: al.Agent, Status: "open", Severity: al.Severity, Start: al.ID, Created: al.Created, Last: al.Created}
-		s.state.Incidents = append(s.state.Incidents, c)
+		c = s.newIncident(al)
 		s.attach(c, al)
 	} else if c = s.incident(id); c == nil {
 		s.mu.Unlock()
@@ -321,6 +315,6 @@ func (s *Server) handleIncidentAction(w http.ResponseWriter, r *http.Request, se
 	}
 	s.saveLocked()
 	s.mu.Unlock()
-	s.audit(sess.User, "incident."+action, map[string]any{"incident": c.ID, "status": req.Status, "alert": req.Alert})
-	writeJSON(w, map[string]string{"id": c.ID})
+	s.audit(sess.User, "incident."+action, map[string]any{"incident": c.ID, "ref": IncidentRef(c.No), "status": req.Status, "alert": req.Alert})
+	writeJSON(w, map[string]string{"id": c.ID, "ref": IncidentRef(c.No)})
 }

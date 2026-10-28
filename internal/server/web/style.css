@@ -587,6 +587,10 @@ textarea.mono { width: 100%; font-size: 12px; }
 .livechip .muted { font-weight: 400; letter-spacing: 0; }
 .livedot { width: 7px; height: 7px; border-radius: 50%; background: var(--red); animation: livepulse 1.6s ease-in-out infinite; }
 @keyframes livepulse { 50% { opacity: 0.25; } }
+/* incident numbers */
+.incref { display: inline-block; margin-right: 8px; padding: 1px 6px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg); color: var(--text-secondary); font-size: 0.78em; font-weight: 600; vertical-align: 0.12em; letter-spacing: 0.02em; white-space: nowrap; }
+.incgo input { width: 130px; padding: 5px 9px; font-size: 12px; }
+
 /* the attackers map */
 .amap-card { padding-bottom: 12px; }
 .amap-wrap { position: relative; display: grid; grid-template-rows: auto 1fr auto auto; border: 1px solid var(--border-light); border-radius: var(--radius); background: var(--bg); overflow: hidden; }

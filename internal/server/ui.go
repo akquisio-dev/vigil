@@ -199,6 +199,7 @@ func (s *Server) uiHandler() http.Handler {
 	mux.HandleFunc("GET /api/ui/incidents", s.auth(s.handleIncidents))
 	mux.HandleFunc("GET /api/ui/incidents/{id}", s.auth(s.handleIncident))
 	mux.HandleFunc("GET /api/ui/incidents/{id}/report", s.onHost("analyst", s.hostByIncident, s.handleIncidentReport))
+	mux.HandleFunc("GET /api/ui/incidents/{id}/text", s.onHost("analyst", s.hostByIncident, s.handleIncidentText))
 	mux.HandleFunc("POST /api/ui/incidents/{id}/{action}", s.auth(s.handleIncidentAction))
 	mux.HandleFunc("GET /api/ui/suppressions", s.auth(s.handleSuppressions))
 	mux.HandleFunc("POST /api/ui/suppressions", s.analyst(s.handleSuppressionCreate))
@@ -369,6 +370,8 @@ type alertView struct {
 	Suppressible bool   `json:"suppressible"`
 	// ProcKey allows every port of the alert's program on its host.
 	ProcKey string `json:"proc_key,omitempty"`
+	// IncidentRef is the reference (INC-0042) of the incident it is in.
+	IncidentRef string `json:"incident_ref,omitempty"`
 }
 
 func (s *Server) viewAlert(al *Alert, lg string) alertView {
@@ -377,6 +380,9 @@ func (s *Server) viewAlert(al *Alert, lg string) alertView {
 	v := alertView{Alert: &cp, Suppressible: Suppressible(al.Rule), ProcKey: alertProcKey(al)}
 	if a := s.state.Agents[al.Agent]; a != nil {
 		v.Host = a.Name
+	}
+	if c := s.incident(al.Incident); al.Incident != "" && c != nil {
+		v.IncidentRef = IncidentRef(c.No)
 	}
 	return v
 }

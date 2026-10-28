@@ -29,7 +29,7 @@ func TestIncidentReport(t *testing.T) {
 		t.Fatal("no report")
 	}
 	md := rd.markdown()
-	for _, want := range []string{"# Incident " + inc.ID, "| Host | web |", "Detection delay (first event to first alert) | 1m 0s",
+	for _, want := range []string{"# Incident INC-0001: ", "| Reference | INC-0001 (ID " + inc.ID + ") |", "| Host | web |", "Detection delay (first event to first alert) | 1m 0s",
 		"Time to acknowledge (first alert to first acknowledgement) | 29m 0s", "privilege-escalation (T1548.003)", "+evil ALL=(ALL) NOPASSWD: ALL",
 		"Key of deploy rotated.", "- ip: 203.0.113.7", "| " + itoa(login.Seq) + " | `", "Chain head when the report was made", "sudoers \\| <script>"} {
 		if !strings.Contains(md, want) {

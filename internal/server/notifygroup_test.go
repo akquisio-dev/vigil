@@ -61,7 +61,8 @@ func TestIncidentAlertsAreGrouped(t *testing.T) {
 	wait(2) // one update for all five
 	up := k.bodies[1]
 	if up["severity"] != "high" || !strings.Contains(up["title"].(string), "5 more alerts") ||
-		!strings.Contains(up["title"].(string), "(2x)") || up["link"] != "https://soc.example/#/incidents/"+first.Incident {
+		!strings.Contains(up["title"].(string), "(2x)") || !strings.HasPrefix(up["title"].(string), "[INC-0001] ") ||
+		up["link"] != "https://soc.example/#/incidents/INC-0001" {
 		t.Fatalf("update: %v", up)
 	}
 

@@ -106,6 +106,8 @@ const T = {
     started: "Start", ended: "End", duration: "Duration", commands: "Commands", sudoShort: "sudo", filesShort: "Files", stillOpen: "open",
     noSessions: "No SSH sessions in this period", sessionOf: "Session of {user}", dropped: "{n} more commands not recorded (limit per hour)",
     reportMD: "Report (Markdown)", reportPrint: "Report to print / PDF",
+    incCopyRef: "Copy number", incCopyText: "Copy for Claude", incCopied: "Copied", incCopyTextHint: "The incident as short text with its alerts and notes, to paste into a chat with Claude or a ticket",
+    incGoto: "INC-0042", incGotoHint: "Open an incident by its number", incNotFound: "No incident {r}",
     activeRules: "rules active", otherSources: "for log sources without vigil events", notConfigured: "not set up", hashLists: "Malware hashes",
     forwarding: "Forwarding", sentShort: "sent", droppedShort: "dropped", queuedShort: "waiting",
     filesDuring: "changed while the session was open", partialScan: "stopped after 20 s, shorten the period",
@@ -278,6 +280,8 @@ const T = {
     started: "Beginn", ended: "Ende", duration: "Dauer", commands: "Befehle", sudoShort: "sudo", filesShort: "Dateien", stillOpen: "offen",
     noSessions: "Keine SSH-Sitzungen in diesem Zeitraum", sessionOf: "Sitzung von {user}", dropped: "{n} weitere Befehle nicht aufgezeichnet (Grenze pro Stunde)",
     reportMD: "Bericht (Markdown)", reportPrint: "Bericht drucken / PDF",
+    incCopyRef: "Nummer kopieren", incCopied: "Kopiert", incCopyText: "Für Claude kopieren", incCopyTextHint: "Der Vorfall als kurzer Text mit Alarmen und Notizen, zum Einfügen in einen Chat mit Claude oder ein Ticket",
+    incGoto: "INC-0042", incGotoHint: "Vorfall über seine Nummer öffnen", incNotFound: "Kein Vorfall {r}",
     activeRules: "Regeln aktiv", otherSources: "für Quellen ohne vigil-Ereignisse", notConfigured: "nicht eingerichtet", hashLists: "Schadsoftware-Hashes",
     forwarding: "Weiterleitung", sentShort: "gesendet", droppedShort: "verworfen", queuedShort: "wartend",
     filesDuring: "geändert, während die Sitzung offen war", partialScan: "nach 20 s abgebrochen, Zeitraum verkürzen",
@@ -840,8 +844,8 @@ async function overview() {
     h("h2", null, t("hosts")), hostTable,
     h("div", { class: "grid dash-b mt" },
       panel(t("incidents"), h("a", { href: "#/incidents" }, inc.incidents.length + " " + t("activeInc").toLowerCase()),
-        h("div", { class: "feed" }, inc.incidents.length ? inc.incidents.slice(0, 5).map((c) => h("a", { class: "feed-row", href: "#/incidents/" + c.id },
-          h("div", { class: "flex nowrap-flex" }, sevChip(c.severity), h("span", { class: "feed-title" }, c.title)),
+        h("div", { class: "feed" }, inc.incidents.length ? inc.incidents.slice(0, 5).map((c) => h("a", { class: "feed-row", href: "#/incidents/" + (c.ref || c.id) },
+          h("div", { class: "flex nowrap-flex" }, sevChip(c.severity), incRef(c), h("span", { class: "feed-title" }, c.title)),
           h("div", { class: "feed-sub" }, [c.host, c.count + " " + t("alertsN"), t(c.status === "open" ? "openInc" : c.status)].join("  ·  ")),
           h("div", { class: "feed-time" }, timeEl(c.last)))) : h("div", { class: "empty small" }, t("noIncidents")))),
       panel(t("alerts"), h("a", { href: "#/alerts" }, t("all")),
@@ -1028,9 +1032,9 @@ async function alertDetail(id) {
         a.proc_key && a.agent && can("admin", a.agent) ? h("button", { class: "btn ghost", title: a.proc_key, onclick: async () => {
           await post("/api/ui/agents/" + a.agent + "/accept-port", { key: a.proc_key }); render();
         } }, t("acceptProcess")) : null,
-        a.incident ? h("a", { class: "btn ghost", href: "#/incidents/" + a.incident }, icon("stack-2"), t("incident"))
+        a.incident ? h("a", { class: "btn ghost", href: "#/incidents/" + (a.incident_ref || a.incident) }, icon("stack-2"), t("incident") + (a.incident_ref ? " " + a.incident_ref : ""))
           : a.agent ? h("button", { class: "btn ghost", onclick: async () => {
-            const r = await post("/api/ui/incidents/new/create", { alert: a.id }); location.hash = "#/incidents/" + r.id;
+            const r = await post("/api/ui/incidents/new/create", { alert: a.id }); location.hash = "#/incidents/" + (r.ref || r.id);
           } }, icon("stack-2"), t("newIncident")) : null)),
     box, await causingEvents(a), a.agent ? await snapshotsCard(a.agent, a.id) : null, await responseCard(a)));
 }
@@ -1735,9 +1739,18 @@ async function canariesView() {
 }
 
 let incTab = "active";
-const incRow = (c) => h("a", { class: "row", href: "#/incidents/" + c.id },
+// the running number of an incident, INC-0042: to say, search and paste
+const incRef = (c) => c.ref ? h("span", { class: "incref mono" }, c.ref) : null;
+async function copyText(text, btn) {
+  try { await navigator.clipboard.writeText(text); } catch { prompt("", text); return; }
+  if (!btn) return;
+  const was = btn.textContent;
+  btn.textContent = t("incCopied");
+  setTimeout(() => { btn.textContent = was; }, 1500);
+}
+const incRow = (c) => h("a", { class: "row", href: "#/incidents/" + (c.ref || c.id) },
   sevChip(c.severity),
-  h("div", null, h("div", { class: "title" }, c.title || c.id),
+  h("div", null, h("div", { class: "title" }, incRef(c), c.title || c.id),
     h("div", { class: "sub" }, [c.host, c.count + " " + t("alertsN"), t("owner") + ": " + (c.owner || t("unowned"))].join("  ·  "))),
   h("div", { class: "meta" }, incChip(c.status), timeEl(c.last)));
 
@@ -1745,14 +1758,27 @@ async function incidentsView() {
   const r = await api("/api/ui/incidents?" + scopeQ({ status: incTab === "all" ? "" : incTab }));
   const tabs = h("div", { class: "tabs" }, [["active", t("activeInc")], ["closed", t("closed")], ["all", t("all")]].map(([k, l]) =>
     h("button", { class: k === incTab ? "on" : null, onclick: () => { incTab = k; render(); } }, l)));
+  const go = h("form", { class: "incgo", onsubmit: (e) => {
+    e.preventDefault();
+    const v = find.value.trim();
+    if (v) location.hash = "#/incidents/" + encodeURIComponent(/^\d+$/.test(v) ? "INC-" + v.padStart(4, "0") : v.toUpperCase());
+  } });
+  const find = h("input", { type: "search", class: "mono", placeholder: t("incGoto"), title: t("incGotoHint"), "aria-label": t("incGotoHint"), maxlength: 20 });
+  go.append(find);
   mount(shell("incidents", h("h1", null, t("incidents")),
     h("div", { class: "crumbs" }, r.incidents.length + " " + (incTab === "all" ? t("incidents") : (incTab === "active" ? t("activeInc") : t("closed")).toLowerCase())
       + (r.mttc_seconds != null ? "  ·  " + t("mttc") + " " + duration(r.mttc_seconds) : "")),
-    tabs, h("div", { class: "list" }, r.incidents.length ? r.incidents.map(incRow) : h("div", { class: "empty" }, t("noIncidents")))));
+    h("div", { class: "flex toolbar" }, tabs, h("span", { class: "right" }, go)), h("div", { class: "list" }, r.incidents.length ? r.incidents.map(incRow) : h("div", { class: "empty" }, t("noIncidents")))));
 }
 
 async function incidentDetail(id) {
-  const d = await api("/api/ui/incidents/" + encodeURIComponent(id));
+  let d;
+  try { d = await api("/api/ui/incidents/" + encodeURIComponent(id)); } catch (x) {
+    if (x.message === "unauthorized") throw x;
+    mount(shell("incidents", h("div", { class: "crumbs" }, h("a", { href: "#/incidents" }, t("incidents"))),
+      h("div", { class: "card empty" }, t("incNotFound").replace("{r}", decodeURIComponent(id)))));
+    return;
+  }
   const c = d.incident;
   const act = (action, body) => async () => { await post("/api/ui/incidents/" + c.id + "/" + action, body || {}); render(); };
   const note = h("textarea", { rows: 3, maxlength: 4000, required: true });
@@ -1772,9 +1798,16 @@ async function incidentDetail(id) {
       : h("div", { class: "tl-item" }, h("span", { class: "tl-time" }, abs(it.ts)),
         h("div", null, h("span", { class: "mono" }, it.e.event.type), " ", h("span", { class: "mono muted" }, summary(it.e.event.data))))));
   mount(shell("incidents",
-    h("div", { class: "crumbs" }, h("a", { href: "#/incidents" }, t("incidents")), " / " + c.id),
-    h("h1", null, c.title || c.id),
+    h("div", { class: "crumbs" }, h("a", { href: "#/incidents" }, t("incidents")), " / " + (c.ref || c.id)),
+    // the topbar shows the h1 as text, the browser tab too
+    h("h1", null, (c.ref ? c.ref + "  ·  " : "") + (c.title || c.id)),
     h("div", { class: "page-actions" }, c.owner !== me.user && can("analyst", c.agent) ? h("button", { class: "btn", onclick: act("assign") }, t("assignMe")) : null,
+      c.ref ? h("button", { class: "btn ghost", onclick: (e) => copyText(c.ref, e.currentTarget) }, t("incCopyRef")) : null,
+      can("analyst", c.agent) ? h("button", { class: "btn ghost", title: t("incCopyTextHint"), onclick: async (e) => {
+        const b = e.currentTarget;
+        const res = await fetch("/api/ui/incidents/" + c.id + "/text?lang=" + lang, { credentials: "same-origin" });
+        if (res.ok) copyText(await res.text(), b);
+      } }, t("incCopyText")) : null,
       can("analyst", c.agent) ? h("a", { class: "btn ghost", href: "/api/ui/incidents/" + c.id + "/report?format=md" }, t("reportMD")) : null,
       can("analyst", c.agent) ? h("a", { class: "btn ghost", href: "/api/ui/incidents/" + c.id + "/report?format=html", target: "_blank", rel: "noopener" }, t("reportPrint")) : null),
     h("div", { class: "grid two" },

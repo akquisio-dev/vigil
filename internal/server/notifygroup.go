@@ -44,7 +44,11 @@ func (s *Server) notifyGrouped(al *Alert) {
 	inc := s.incident(al.Incident)
 	win := s.groupWindow()
 	if inc == nil || win <= 0 {
-		s.notify(s.alertMessage(al), false)
+		m := s.alertMessage(al)
+		if inc != nil {
+			m.Title = "[" + IncidentRef(inc.No) + "] " + m.Title
+		}
+		s.notify(m, false)
 		return
 	}
 	if s.incNotes == nil {
@@ -58,6 +62,7 @@ func (s *Server) notifyGrouped(al *Alert) {
 	if rank := severityRank[al.Severity]; rank > n.sent {
 		n.sent = rank
 		m := s.alertMessage(al)
+		m.Title = "[" + IncidentRef(inc.No) + "] " + m.Title
 		if len(n.pending) > 0 {
 			// what was waiting is older and less severe; say so with it
 			m.Title += s.lang(fmt.Sprintf(" (+%d more in this incident)", len(n.pending)),
@@ -126,12 +131,17 @@ func (s *Server) incidentUpdate(id string, ids []string) (message, bool) {
 	if a := s.state.Agents[als[0].Agent]; a != nil {
 		host = a.Name
 	}
+	ref := id
+	if inc := s.incident(id); inc != nil {
+		ref = IncidentRef(inc.No)
+	}
 	var b strings.Builder
-	b.WriteString(s.lang(fmt.Sprintf("%d more alerts in the incident", len(als)),
-		fmt.Sprintf("%d weitere Alarme im Vorfall", len(als))))
+	b.WriteString("[" + ref + "] ")
 	if len(als) == 1 {
-		b.Reset()
 		b.WriteString(s.lang("1 more alert in the incident", "1 weiterer Alarm im Vorfall"))
+	} else {
+		b.WriteString(s.lang(fmt.Sprintf("%d more alerts in the incident", len(als)),
+			fmt.Sprintf("%d weitere Alarme im Vorfall", len(als))))
 	}
 	b.WriteString(": ")
 	for i, t := range order {
@@ -149,7 +159,7 @@ func (s *Server) incidentUpdate(id string, ids []string) (message, bool) {
 	}
 	link := ""
 	if s.cfg.PublicURL != "" {
-		link = strings.TrimRight(s.cfg.PublicURL, "/") + "/#/incidents/" + id
+		link = strings.TrimRight(s.cfg.PublicURL, "/") + "/#/incidents/" + ref
 	}
 	return message{Severity: sev, Title: clip(b.String(), 1500), Host: host, Link: link}, true
 }

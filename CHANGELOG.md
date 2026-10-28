@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Incidents have a running number, `INC-0042`, shown in the list, on the incident and its alerts, in notifications (`[INC-0042] …`) and reports. Existing incidents are numbered in the order they were opened; numbers are never given twice. `#/incidents/INC-0042` opens one, and a field above the list finds one by number. **Copy number** and **Copy for Claude** (the incident as short Markdown with its alerts, details and notes, analysts) on the incident page; `vigil-server incident list` and `vigil-server incident show INC-0042` print the same on the server. New: `GET /api/ui/incidents/{id}/text`; `{id}` takes the number everywhere. See [operations](docs/operations.md#incidents). No agent update needed.
+
 ## v0.37.0
 
 - Attackers: the world map is an attack map. It pans and zooms (Ctrl and the wheel, two fingers, buttons, keys) and shows every attacking address of the period, not only the 300 of the table: countries as areas or circles by attempts or addresses, filters by kind, class, network, campaign and target host, and a side panel per country with its share, classes, provinces, networks, user names, targets, campaigns and busiest addresses. Zoomed in, countries split into their provinces and then into places, the addresses as dots grouped on screen; provinces and places open in the side panel too. A replay shows the addresses in the order they were first seen. Full screen with an overview map, and a wall mode for a monitor: dark, a clock, the numbers of the period, the busiest countries, the live list and a tour of the busiest countries. Live arcs start where the address is. Share links keep the view and the selection; the map saves as PNG. See [operations](docs/operations.md#the-attack-map).
