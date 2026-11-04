@@ -82,7 +82,7 @@ access control. Host tested only so far (fixture tree and canned `rpm` and `boot
 | `SourcePackages` | `rpm -qa --queryformat '%{SOURCERPM}\t%{EPOCH}:%{VERSION}-%{RELEASE}\n'`, source name cut from the `.src.rpm` file name, newest version per source (installonly kernels), `gpg-pubkey` skipped |
 | `Busy` | always false: an image update is written to a new deployment, `/usr` never changes in place |
 | `PackagedFiles` | empty, and the platform says integrity is unsupported: `runIntegrity` sends one `agent.warning` and stops, instead of calling every program in `/usr/bin` unowned |
-| `Owners`, `SelfOwner` | `rpm -qf --queryformat '%{NAME}\n'`, one call per path (a file owned by two packages prints two lines, an unowned one a message). No install time, no stat overrides |
+| `Owners`, `SelfOwner` | `rpm -qf --queryformat '%{NAME}\n'`, one call per path (a file owned by two packages prints two lines, an unowned one a message). Without an rpm database owners are unknown, not empty. No install time, no stat overrides |
 | `PendingUpdates` | `bootc status --json`: a staged deployment, or a fetched but unstaged `cachedUpdate`, is one pending update named `image <version>`, never counted as security. Not supported without bootc or a booted deployment |
 | `RebootRequired` | a staged deployment exists; packages `["image <version>"]` |
 | `KernelVersions` | running from uname, newest from `/usr/lib/modules/*/vmlinuz` of the booted image |

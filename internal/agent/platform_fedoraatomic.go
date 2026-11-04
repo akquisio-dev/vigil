@@ -165,18 +165,24 @@ func (fedoraAtomicPlatform) IntegrityUnsupported() string {
 // many paths cannot be matched up line by line. Callers pass few paths
 // (new SUID files, one new program). installed stays empty: the image is
 // built at once, so "changed after install" has no reference time here.
-func (fedoraAtomicPlatform) Owners(paths []string) dpkgInfo {
+//
+// Without an rpm database ok stays false, like on Debian without file
+// lists: otherwise every new program would look unpackaged.
+func (p fedoraAtomicPlatform) Owners(paths []string) dpkgInfo {
 	info := dpkgInfo{owner: map[string]string{}, installed: map[string]time.Time{}, override: map[string]bool{}}
+	if _, err := p.PackageDBStamp(); err != nil {
+		return info
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
-	for _, p := range paths {
-		pkg, found := rpmOwner(ctx, p)
+	for _, path := range paths {
+		pkg, found := rpmOwner(ctx, path)
 		if !found {
 			return info // no rpm: ok stays false
 		}
 		info.ok = true
 		if pkg != "" {
-			info.owner[p] = pkg
+			info.owner[path] = pkg
 		}
 	}
 	return info

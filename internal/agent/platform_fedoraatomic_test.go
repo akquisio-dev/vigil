@@ -134,6 +134,10 @@ func TestFedoraAtomicPackages(t *testing.T) {
 	if !info.ok || !reflect.DeepEqual(info.owner, map[string]string{"/usr/bin/sudo": "sudo", "/usr/bin/su": "util-linux"}) {
 		t.Fatalf("owners: %+v", info)
 	}
+	os.Remove(filepath.Join(root, "var/lib/rpm/rpmdb.sqlite"))
+	if p.Owners([]string{"/usr/bin/sudo"}).ok {
+		t.Fatal("rpm without a database must not claim to know owners")
+	}
 	for _, c := range calls {
 		if c[len(c)-1] == "relative" {
 			t.Fatal("a relative path reached rpm")
