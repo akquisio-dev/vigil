@@ -29,6 +29,9 @@ func TestParseRPMVerifyLine(t *testing.T) {
 		{"missing     /usr/bin/w", true, rpmVerifyLine{missing: true, path: "/usr/bin/w"}, []string{"missing"}},
 		{"missing   c /usr/lib/x/defaults.conf", true, rpmVerifyLine{missing: true, attr: 'c', path: "/usr/lib/x/defaults.conf"}, []string{"missing"}},
 		{"S.5....T.    /usr/share/My File.txt", true, rpmVerifyLine{flags: "S.5....T.", path: "/usr/share/My File.txt"}, []string{"size", "digest"}},
+		// Other markers count like a plain file.
+		{".M.......  P /usr/share/x.key", true, rpmVerifyLine{flags: ".M.......", attr: 'P', path: "/usr/share/x.key"}, []string{"mode"}},
+		{"....L....  a /usr/lib/.build-id/ab/cdef", true, rpmVerifyLine{flags: "....L....", attr: 'a', path: "/usr/lib/.build-id/ab/cdef"}, []string{"link"}},
 		// Config files: content is not a finding, mode still is.
 		{"S.5......  c /usr/lib/x/defaults.conf", true, rpmVerifyLine{flags: "S.5......", attr: 'c', path: "/usr/lib/x/defaults.conf"}, nil},
 		{".M.......  c /usr/lib/x/defaults.conf", true, rpmVerifyLine{flags: ".M.......", attr: 'c', path: "/usr/lib/x/defaults.conf"}, []string{"mode"}},

@@ -16,7 +16,7 @@ AppArmor, SELinux, os-release and `/boot/vmlinuz`, then reading each hit.
 |---|---|---|---|---|
 | `packages.go` | `runPackages` | `/var/lib/dpkg/status`, `dpkgver` | installed source packages for `vuln_lookup` | `rpm -qa` (with source RPM), Flatpaks, Podman images |
 | `packages.go` | `osRelease` | `/etc/os-release` | OS id, version, codename | same file, already portable |
-| `integrity.go` | `packageFiles`, `dpkgVersions`, `dpkgDiversions`, `dpkgBusy`, `runIntegrity` | `/var/lib/dpkg/info/*.md5sums`, `*.list`, `diversions`, dpkg lock | checksums of packaged programs, PAM modules, core libraries | `/usr` comes read-only from the signed bootc image: compare with the deployed image (composefs/fs-verity or `ostree fsck`), detect `bootc usr-overlay`; RPM digests only outside `/usr` |
+| `integrity.go` | `packageFiles`, `dpkgVersions`, `dpkgDiversions`, `dpkgBusy`, `runIntegrity` | `/var/lib/dpkg/info/*.md5sums`, `*.list`, `diversions`, dpkg lock | checksums of packaged programs, PAM modules, core libraries | `/usr` comes read-only from the signed bootc image: compare with the deployed image (composefs/fs-verity or `ostree fsck`), detect `bootc usr-overlay`. Done as `rpm -Va` over `/usr` plus the `usr_overlay` posture check, see [Integrity on fedoraatomic](#integrity-on-fedoraatomic) |
 | `suid.go` | `lookupDpkg` | `/var/lib/dpkg/info/*.list` | which package owns a SUID/SGID file | owner from the RPM database; the image is the baseline, new SUID files are only possible in `/etc`, `/var`, `/home` |
 | `behaviour.go` | (rarity) via `lookupDpkg` | dpkg file lists | is a new program packaged? | RPM database / image content |
 | `secrets.go` | `vendoredDir` | `/var/lib/dpkg` path | skip package data in the secret search | skip `/usr` (image) and RPM-owned paths |
@@ -105,7 +105,7 @@ something), with a limit of 30 minutes, at the agent's own priority (the unit se
 exits 1 whenever it reports a difference, so an exit status with output is a result; no output with an error, a
 kill or the time limit is an `agent.warning`, not a clean run.
 
-What counts, per line (`SM5DLUGTP` flag field, optional marker `c d g l r`, path; or `missing`):
+What counts, per line (`SM5DLUGTP` flag field, optional one-letter marker such as `c d g l r`, path; or `missing`). Only `c` and `g` change what counts:
 
 | Line | Counts | Why |
 |---|---|---|

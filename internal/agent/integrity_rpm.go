@@ -60,7 +60,7 @@ var rpmFlagNames = [9]struct {
 // "missing   d /usr/share/doc/x".
 type rpmVerifyLine struct {
 	flags   string // the flag field, "" when missing
-	attr    byte   // file attribute marker (c d g l r), 0 when none
+	attr    byte   // file attribute marker (c d g l r ...), 0 when none
 	path    string
 	missing bool
 }
@@ -95,7 +95,11 @@ func parseRPMVerifyLine(line string) (rpmVerifyLine, bool) {
 		return l, false
 	}
 	rest = strings.TrimLeft(rest, " ")
-	if len(rest) > 2 && rest[1] == ' ' && strings.IndexByte("cdglr", rest[0]) >= 0 {
+	// Any single character before the path is the marker (c d g l r, and
+	// others newer rpm versions add, such as P for %pubkey or a for
+	// %artifact); paths always start with "/". Only c and g change what
+	// counts, any other marker counts like a plain file.
+	if len(rest) > 2 && rest[0] != '/' && rest[1] == ' ' {
 		l.attr = rest[0]
 		rest = strings.TrimLeft(rest[2:], " ")
 	}
