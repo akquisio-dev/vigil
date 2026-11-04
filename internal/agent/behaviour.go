@@ -321,7 +321,7 @@ func (a *Agent) rareExec(e *ExecInfo) {
 		if newExe {
 			// A program a package installed (an update, a new tool from
 			// apt) is expected; only unpackaged ones are reported.
-			info := lookupDpkg([]string{e.Exe})
+			info := a.plat().Owners([]string{e.Exe})
 			if info.ok && info.owner[e.Exe] != "" {
 				return
 			}

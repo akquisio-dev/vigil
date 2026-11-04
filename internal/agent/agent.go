@@ -61,6 +61,7 @@ type Agent struct {
 	rare          *RareState
 	fallback      *fallbackWatch
 	containers    *containerIndex // nil with docker off
+	platform      Platform        // see plat()
 	scanMu        sync.Mutex      // one program scan at a time
 	scans         scanCache
 }
@@ -87,6 +88,7 @@ func New(cfg *Config) (*Agent, error) {
 		flushNow:    make(chan struct{}, 1),
 		cursor:      st.JournalCursor,
 		fallback:    newFallbackWatch(cfg),
+		platform:    platformFor(cfg),
 		containers:  newContainerIndex(cfg),
 	}, nil
 }

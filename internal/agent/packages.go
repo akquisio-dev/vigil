@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/akquisio-dev/vigil/internal/dpkgver"
 	"github.com/akquisio-dev/vigil/internal/proto"
 )
 
@@ -111,7 +110,8 @@ func osRelease() (id, version, codename string) {
 }
 
 func (a *Agent) runPackages(ctx context.Context) {
-	if _, err := os.Stat(dpkgPath("status")); err != nil {
+	plat := a.plat()
+	if _, err := plat.PackageDBStamp(); err != nil {
 		return
 	}
 	t := time.NewTimer(4 * time.Minute)
@@ -126,18 +126,18 @@ func (a *Agent) runPackages(ctx context.Context) {
 		case <-t.C:
 		}
 		t.Reset(30 * time.Minute)
-		fi, err := os.Stat(dpkgPath("status"))
+		mtime, err := plat.PackageDBStamp()
 		if err != nil {
 			continue
 		}
-		if fi.ModTime().Equal(lastMtime) && time.Since(lastSent) < 24*time.Hour {
+		if mtime.Equal(lastMtime) && time.Since(lastSent) < 24*time.Hour {
 			continue
 		}
-		if dpkgBusy() {
+		if plat.Busy() {
 			continue
 		}
-		lastMtime = fi.ModTime()
-		pkgs := sourcePackages(dpkgPath("status"), func(a, b string) bool { return dpkgver.Compare(a, b) > 0 })
+		lastMtime = mtime
+		pkgs := plat.SourcePackages()
 		list := make([][2]string, len(pkgs))
 		h := sha256.New()
 		for i, p := range pkgs {

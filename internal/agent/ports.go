@@ -202,7 +202,7 @@ func (a *Agent) scanPorts() {
 		}
 	}
 	if on(a.cfg.Docker) {
-		for _, p := range dockerPorts() {
+		for _, p := range a.plat().PublishedPorts() {
 			current[p.Key()] = p
 		}
 	}

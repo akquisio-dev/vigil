@@ -61,8 +61,8 @@ func (a *Agent) postureReport() map[string]any {
 	add(accountChecks("/etc/shadow", "/etc/passwd")...)
 	add(sysctlChecks("/proc/sys")...)
 	add(permissionChecks()...)
-	add(firewallCheck()...)
-	add(macCheck()...)
+	add(a.plat().FirewallCheck()...)
+	add(a.plat().MACCheck()...)
 	if checks == nil {
 		checks = []postureCheck{}
 	}

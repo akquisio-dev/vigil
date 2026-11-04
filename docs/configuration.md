@@ -60,6 +60,7 @@ the defaults below.
 | `self_update` | false | let admins update this agent from the dashboard to a newer signed release, see [Operations](operations.md#agents-from-the-dashboard) |
 | `selftest` | true | accept self tests from the server, see [Operations](operations.md#self-test) |
 | `max_queue` | 5000 | events kept while the server is unreachable |
+| `platform` | detected | distribution layer for packages, updates, firewall and containers; detected from `/etc/os-release`, `debian` (Debian, Ubuntu and anything unknown) is the only one so far, see [Platforms](platform.md) |
 | `fallback` | none | a notifier the agent uses itself when it cannot reach the server, see [Watching the server from outside](#watching-the-server-from-outside) |
 | `fallback_minutes` | 15 | how long the server must be unreachable before `fallback` is told (at least 5) |
 

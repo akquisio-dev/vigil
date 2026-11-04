@@ -47,12 +47,27 @@ SSH sessions, file watching, the protocol and the whole server apart from
 Fedora as they are. To be confirmed by running the test suite and the self
 test on Fedora Atomic.
 
+## Platform layer
+
+`internal/agent/platform.go` defines `Platform`, grouped by what it answers:
+
+| Part | Methods | Rows above |
+|---|---|---|
+| `Packages` | `PackageDBStamp`, `SourcePackages`, `Busy`, `PackagedFiles`, `NoPackageDB`, `Owners`, `SelfOwner` | packages, integrity, SUID owner, rarity, self update |
+| `Updates` | `PendingUpdates`, `RebootRequired`, `KernelVersions`, `AutoUpdates`, `ListsAgeDays` | updates |
+| `Posture` | `FirewallCheck`, `MACCheck`, `PublishedPorts` | firewall, MAC, Docker NAT |
+| `Containers` | `ContainerSocket`, `ContainerAdmins` | container inventory, docker group |
+
+- `platform_debian.go` is Debian and Ubuntu. It wraps the functions vigil already had, in place, so the diff stays
+  small; `platform_golden_test.go` pins their results on a fixture tree (`sysRoot`), written before the layer
+  existed.
+- Selection: `platform` in `agent.json` if set (an unknown name is a config error), else the first `ID` or
+  `ID_LIKE` value of `/etc/os-release` that names a known platform, else `debian`, which is what vigil did before.
+- Left generic on purpose: the interface skip list (`skipIface`) and the secret-search skip lists. The Fedora
+  entries (`podman*`, image paths) are added to those lists directly.
+
 ## Plan
 
-1. A `platform` package with one interface for the rows above; the current
-   code moves unchanged into `platform/debian`. Selected from
-   `/etc/os-release`, overridable in `agent.json`.
-2. Golden tests: the same inputs give the same events before and after the
-   move.
-3. `platform/fedoraatomic` row by row, each with a probe that must raise the
-   matching alert on a Nyra VM.
+1. Done: golden tests, then the `Platform` interface with `debian` behind it, selected as above.
+2. Server side (`vuln.go`, `rules.go`) stays as it is until a second platform sends different facts.
+3. `fedoraatomic` row by row, each with a probe that must raise the matching alert on a Nyra VM.

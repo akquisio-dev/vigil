@@ -325,8 +325,9 @@ func loadIntegrityState(dir string) *IntegrityState {
 }
 
 func (a *Agent) runIntegrity(ctx context.Context) {
-	if _, err := os.Stat(dpkgPath("status")); err != nil {
-		a.emit(proto.NewEvent("agent.warning", map[string]any{"collector": "integrity", "error": "no dpkg database; package integrity is checked on Debian and Ubuntu only"}))
+	plat := a.plat()
+	if _, err := plat.PackageDBStamp(); err != nil {
+		a.emit(proto.NewEvent("agent.warning", map[string]any{"collector": "integrity", "error": plat.NoPackageDB()}))
 		return
 	}
 	is := loadIntegrityState(a.cfg.StateDir)
@@ -346,12 +347,12 @@ func (a *Agent) runIntegrity(ctx context.Context) {
 			return
 		case <-t.C:
 		}
-		if dpkgBusy() {
+		if plat.Busy() {
 			t.Reset(integrityConfirm)
 			continue
 		}
 		start := time.Now()
-		pkgs := packageFiles()
+		pkgs := plat.PackagedFiles()
 		var found []integrityFinding
 		if len(pending) > 0 {
 			// Confirmation: hash the pending files again, nothing else.

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Agent: a platform layer for everything that depends on the distribution (package database, updates, firewall and AppArmor checks, container socket). `debian` is the only platform so far and is chosen for Debian, Ubuntu and anything unknown, so behaviour is unchanged; golden tests pin it. New optional `platform` setting. See [Platforms](docs/platform.md). No server change.
 - Trial install: the hint to trigger a first finding copies `/bin/sleep` under its own name. On Ubuntu 26 `sleep` is the uutils multicall binary, which picks the program by its name and refused the old copy named `vigil-try`.
 
 ## v0.38.0

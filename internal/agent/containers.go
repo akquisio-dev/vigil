@@ -60,7 +60,7 @@ func newContainerIndex(cfg *Config) *containerIndex {
 	if !on(cfg.Docker) {
 		return nil
 	}
-	return &containerIndex{byID: map[string]*containerInfo{}, client: newDockerClient(dockerSocket)}
+	return &containerIndex{byID: map[string]*containerInfo{}, client: newDockerClient(platformFor(cfg).ContainerSocket())}
 }
 
 func newDockerClient(sock string) *http.Client {
@@ -290,7 +290,7 @@ func (a *Agent) runContainers(ctx context.Context) {
 			return
 		case <-t.C:
 		}
-		if _, err := os.Stat(dockerSocket); err != nil {
+		if _, err := os.Stat(a.plat().ContainerSocket()); err != nil {
 			t.Reset(5 * time.Minute) // Docker may be installed later
 			continue
 		}
@@ -301,7 +301,7 @@ func (a *Agent) runContainers(ctx context.Context) {
 		var snap map[string]any
 		var sum string
 		if err == nil {
-			snap, sum = containerSnapshot(ci.byID, dockerGroup("/etc/group"))
+			snap, sum = containerSnapshot(ci.byID, a.plat().ContainerAdmins("/etc/group"))
 		}
 		ci.mu.Unlock()
 		if err != nil || (sum == lastHash && time.Since(lastSent) < 24*time.Hour) {

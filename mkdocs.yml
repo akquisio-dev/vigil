@@ -15,6 +15,7 @@ nav:
   - Canaries: canaries.md
   - Operations: operations.md
   - Architecture: architecture.md
+  - Platforms: platform.md
   - Threat model: threat-model.md
 
 theme:

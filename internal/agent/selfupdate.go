@@ -65,7 +65,7 @@ func (a *Agent) selfUpdate(req *proto.UpdateRequest) {
 		return
 	}
 	if exe, err := os.Executable(); err == nil {
-		if pkg := dpkgOwner(exe); pkg != "" {
+		if pkg := a.plat().SelfOwner(exe); pkg != "" {
 			report("refused", "installed from the Debian package "+pkg+"; update it with apt")
 			return
 		}
@@ -185,7 +185,7 @@ func ApplyUpdate(cfg *Config, unit string) (err error) {
 	if exe, err = filepath.EvalSymlinks(exe); err != nil {
 		return err
 	}
-	if pkg := dpkgOwner(exe); pkg != "" {
+	if pkg := platformFor(cfg).SelfOwner(exe); pkg != "" {
 		return fmt.Errorf("%s belongs to the Debian package %s; update it with apt", exe, pkg)
 	}
 	if err := copyFile(exe, exe+".prev"); err != nil {

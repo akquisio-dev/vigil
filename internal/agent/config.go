@@ -15,6 +15,10 @@ import (
 // Config is the local agent configuration (/etc/vigil/agent.json). Everything
 // that limits what the server may ask of the agent lives here and only here.
 type Config struct {
+	// Platform names the distribution layer ("debian"). Empty: detected
+	// from /etc/os-release, Debian when unknown. See docs/platform.md.
+	Platform string `json:"platform,omitempty"`
+
 	Server   string `json:"server"`
 	StateDir string `json:"state_dir"`
 
@@ -147,6 +151,11 @@ func LoadConfig(path string) (*Config, error) {
 	var c Config
 	if err := json.Unmarshal(raw, &c); err != nil {
 		return nil, fmt.Errorf("%s: %w", path, err)
+	}
+	if c.Platform != "" {
+		if _, err := choosePlatform(c.Platform, "", ""); err != nil {
+			return nil, fmt.Errorf("%s: %w", path, err)
+		}
 	}
 	if c.StateDir == "" {
 		c.StateDir = "/var/lib/vigil-agent"

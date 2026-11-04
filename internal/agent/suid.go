@@ -370,7 +370,7 @@ func (a *Agent) diffSuid(ss *SuidState, roots []string, found map[string]*SuidFi
 	sort.Strings(fresh)
 	var dpkg dpkgInfo
 	if len(fresh) > 0 {
-		dpkg = lookupDpkg(fresh)
+		dpkg = a.plat().Owners(fresh)
 	}
 	for _, p := range fresh {
 		f, old := found[p], ss.Files[p]

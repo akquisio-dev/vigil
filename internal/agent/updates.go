@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"context"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -128,20 +127,15 @@ func atoiOK(s string) (int, bool) {
 }
 
 func (a *Agent) checkUpdates(ctx context.Context) {
-	apt, err := exec.LookPath("apt")
-	if err != nil {
-		return // not a Debian-like system
+	plat := a.plat()
+	pending, supported, err := plat.PendingUpdates(ctx)
+	if !supported {
+		return
 	}
-	cctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
-	defer cancel()
-	cmd := exec.CommandContext(cctx, apt, "list", "--upgradable")
-	cmd.Env = []string{"LANG=C", "PATH=/usr/sbin:/usr/bin:/sbin:/bin"}
-	out, err := cmd.Output()
 	if err != nil {
 		a.emit(proto.NewEvent("agent.warning", map[string]any{"collector": "updates", "error": err.Error()}))
 		return
 	}
-	pending := parseAptUpgradable(out)
 	now := time.Now().UTC()
 	a.mu.Lock()
 	us := &a.state.Updates
@@ -169,8 +163,7 @@ func (a *Agent) checkUpdates(ctx context.Context) {
 			delete(us.FirstSeen, k)
 		}
 	}
-	_, rebootErr := os.Stat(sysPath("var/run/reboot-required"))
-	reboot := rebootErr == nil
+	reboot, rebootPkgs := plat.RebootRequired()
 	if reboot && us.RebootSince.IsZero() {
 		us.RebootSince = now
 	} else if !reboot {
@@ -179,17 +172,8 @@ func (a *Agent) checkUpdates(ctx context.Context) {
 	rebootSince := us.RebootSince
 	a.mu.Unlock()
 
-	var rebootPkgs []string
-	if b, err := os.ReadFile(sysPath("var/run/reboot-required.pkgs")); err == nil {
-		rebootPkgs = strings.Fields(string(b))
-	}
-	running, newest := kernelVersions()
-	listsAge := -1
-	if fi, err := os.Stat(sysPath("var/lib/apt/periodic/update-success-stamp")); err == nil {
-		listsAge = int(now.Sub(fi.ModTime()).Hours() / 24)
-	} else if fi, err := os.Stat(sysPath("var/lib/apt/lists")); err == nil {
-		listsAge = int(now.Sub(fi.ModTime()).Hours() / 24)
-	}
+	running, newest := plat.KernelVersions()
+	listsAge := plat.ListsAgeDays(now)
 	sort.Strings(security)
 	if len(security) > 50 {
 		security = security[:50]
@@ -198,7 +182,7 @@ func (a *Agent) checkUpdates(ctx context.Context) {
 		"pending": len(pending), "security": len(security), "security_packages": security,
 		"security_oldest_days": int(now.Sub(oldest).Hours() / 24),
 		"reboot_required":      reboot, "reboot_packages": rebootPkgs, "kernel_running": running, "kernel_newest": newest,
-		"unattended_upgrades": unattendedEnabled(), "lists_age_days": listsAge,
+		"unattended_upgrades": plat.AutoUpdates(), "lists_age_days": listsAge,
 	}
 	if reboot {
 		d["reboot_days"] = int(now.Sub(rebootSince).Hours() / 24)
