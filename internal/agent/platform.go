@@ -92,10 +92,24 @@ var detect = map[string]detection{
 	"fedora": {"fedoraatomic", ostreeBooted},
 }
 
-// integrityUnsupported is implemented by platforms without file checksums
-// in their package database; runIntegrity then warns once and stops.
+// integrityUnsupported is implemented by platforms that may be unable to
+// check file integrity; a non-empty reason makes runIntegrity warn once and
+// stop.
 type integrityUnsupported interface {
 	IntegrityUnsupported() string
+}
+
+// packageVerifier is implemented by platforms whose package manager verifies
+// installed files itself (rpm -Va); runIntegrity then runs runRPMIntegrity
+// instead of comparing PackagedFiles.
+type packageVerifier interface {
+	VerifyPackages(ctx context.Context) ([]byte, error)
+}
+
+// platformPosture is implemented by platforms with posture checks of their
+// own, beyond firewall and access control.
+type platformPosture interface {
+	PlatformChecks() []postureCheck
 }
 
 // choosePlatform picks the platform: the configured one if set (it must

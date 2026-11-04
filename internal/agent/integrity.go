@@ -331,7 +331,13 @@ func (a *Agent) runIntegrity(ctx context.Context) {
 		return
 	}
 	if u, ok := plat.(integrityUnsupported); ok {
-		a.emit(proto.NewEvent("agent.warning", map[string]any{"collector": "integrity", "error": u.IntegrityUnsupported()}))
+		if why := u.IntegrityUnsupported(); why != "" {
+			a.emit(proto.NewEvent("agent.warning", map[string]any{"collector": "integrity", "error": why}))
+			return
+		}
+	}
+	if v, ok := plat.(packageVerifier); ok {
+		a.runRPMIntegrity(ctx, v)
 		return
 	}
 	is := loadIntegrityState(a.cfg.StateDir)

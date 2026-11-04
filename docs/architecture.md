@@ -202,9 +202,9 @@ can use. Fields in brackets are only present when known.
 | `file.suid` | `path`, `mode`, `bits`, `uid`, `gid`, `where` (`tmp`, `home`, `system`), `dangerous_caps`, (`caps`, `package`, `pkgdb`, `changed_after_install`, `baseline`, `old_mode`, `old_caps`) |
 | `file.suid_removed` | `path` |
 | `suid.scan` | `files`, `roots`, `seconds` |
-| `integrity.mismatch` | `path`, `package`, `version`, `reason`, `sha256`, `size`, `critical`, (`expected_md5`, `md5`, `old_sha256`) |
+| `integrity.mismatch` | `path`, `package`, `version`, `reason`, `sha256`, `size`, `critical`, (`expected_md5`, `md5`, `old_sha256`; with rpm: `flags`) |
 | `integrity.unowned` | `path`, (`sha256`, `size`, `mode`) |
-| `integrity.scan` | `files`, `suspect`, `unowned`, `first`, `seconds` |
+| `integrity.scan` | `files`, `suspect`, `unowned`, `first`, `seconds`, (with rpm: `verified_by`, `usr_overlay`; `files` and `unowned` are 0 there) |
 | `integrity.many` | `count` |
 | `posture.report` | `checks` (`check`, `key`, `ok`, `value`, `want`), `certs` (`path`, `subject`, `names`, `issuer`, `not_after`, `days`, `self_signed`, `error`), `backups` (`name`, `path`, `newest`, `modified`, `age_hours`, `max_age_hours`, `size`, `ok`, `problem`) |
 | `secret.exposed` | `path`, `kind`, `line`, `fingerprint` (first 6 bytes of SHA-256 of the secret), `uid`, `mode`, (`baseline`) |

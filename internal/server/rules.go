@@ -102,6 +102,7 @@ var rules = map[string]ruleDef{
 	"posture.permissions":        {"high", "", "Unsafe permissions on {key}: {value}", "Unsichere Rechte auf {key}: {value}"},
 	"posture.firewall":           {"medium", "", "No firewall filters incoming traffic", "Keine Firewall filtert eingehenden Verkehr"},
 	"posture.mac":                {"low", "", "No AppArmor or SELinux confines services ({value})", "Kein AppArmor oder SELinux schränkt Dienste ein ({value})"},
+	"posture.usr_overlay":        {"high", "T1554", "/usr is writable through an overlay ({value}); the signed image no longer vouches for it", "/usr ist über ein Overlay beschreibbar ({value}); das signierte Image bürgt nicht mehr dafür"},
 	"tls.expired":                {"high", "", "Certificate {subject} expired {ago} days ago ({path})", "Zertifikat {subject} ist seit {ago} Tagen abgelaufen ({path})"},
 	"tls.expiring":               {"medium", "", "Certificate {subject} expires in {days} days ({path})", "Zertifikat {subject} läuft in {days} Tagen ab ({path})"},
 	"perf.cpu_high":              {"medium", "T1496", "CPU of {host} at {cpu} % for {minutes} minutes (busiest: {program})", "CPU von {host} seit {minutes} Minuten bei {cpu} % (am meisten: {program})"},

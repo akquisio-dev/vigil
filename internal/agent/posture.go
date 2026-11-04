@@ -63,6 +63,9 @@ func (a *Agent) postureReport() map[string]any {
 	add(permissionChecks()...)
 	add(a.plat().FirewallCheck()...)
 	add(a.plat().MACCheck()...)
+	if pp, ok := a.plat().(platformPosture); ok {
+		add(pp.PlatformChecks()...)
+	}
 	if checks == nil {
 		checks = []postureCheck{}
 	}

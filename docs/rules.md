@@ -2,7 +2,7 @@
 
 # Detection rules
 
-vigil ships 112 rules. Every alert carries the rule id, so an alert can be looked up here.
+vigil ships 113 rules. Every alert carries the rule id, so an alert can be looked up here.
 
 Severity decides who is woken up: each notifier has a `min_severity`, `high` by default.
 
@@ -54,6 +54,7 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 | [`port.docker`](#port-docker) | high |  |
 | [`posture.permissions`](#posture-permissions) | high |  |
 | [`posture.ssh_root_login`](#posture-ssh_root_login) | high | [T1110](https://attack.mitre.org/techniques/T1110/) |
+| [`posture.usr_overlay`](#posture-usr_overlay) | high | [T1554](https://attack.mitre.org/techniques/T1554/) |
 | [`process.deleted_exe`](#process-deleted_exe) | high | [T1070.004](https://attack.mitre.org/techniques/T1070/004/) |
 | [`process.download_exec`](#process-download_exec) | high | [T1105](https://attack.mitre.org/techniques/T1105/) |
 | [`process.memfd_exec`](#process-memfd_exec) | high | [T1620](https://attack.mitre.org/techniques/T1620/) |
@@ -1032,6 +1033,18 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 **Known false positives:** None; root with a password is never needed when keys are set up.
 
 **What to do:** Set `PermitRootLogin prohibit-password` (or `no`) in `/etc/ssh/sshd_config.d/` and reload sshd. Check first that your key works for root.
+
+### `posture.usr_overlay` {#posture-usr_overlay}
+
+**Severity:** high · **ATT&CK:** [T1554](https://attack.mitre.org/techniques/T1554/)
+
+**Alert:** `/usr is writable through an overlay ({value}); the signed image no longer vouches for it`
+
+**Fires when:** On an image based system (platform `fedoraatomic`, bootc), `bootc status` shows a `usrOverlay`: `bootc usr-overlay` put a writable overlay over `/usr`. Programs and libraries there can now be changed without a new image, and the package integrity check is the only thing left that notices.
+
+**Known false positives:** An admin debugging the host or installing a package by hand with `bootc usr-overlay`. The overlay is gone after a reboot unless it was made persistent.
+
+**What to do:** Ask who ran `bootc usr-overlay` and why. Reboot to drop a transient overlay; build changes into the image instead. Check the `integrity.` alerts of the host for files changed meanwhile.
 
 ### `secret.exposed` {#secret-exposed}
 

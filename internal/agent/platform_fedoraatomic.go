@@ -26,9 +26,15 @@ type fedoraAtomicPlatform struct{}
 func (fedoraAtomicPlatform) Name() string { return "fedoraatomic" }
 
 // rpmRun runs rpm with fixed arguments and returns its standard output. It
-// returns exec.ErrNotFound when rpm is missing. Tests replace it.
+// returns exec.ErrNotFound when rpm is missing. Tests replace it. A verify
+// run (-Va) reads every file of the image and gets a longer limit; it runs
+// at the agent's own priority, which the unit sets to Nice=10 and idle I/O.
 var rpmRun = func(ctx context.Context, args ...string) ([]byte, error) {
-	return runFixed(ctx, "rpm", args...)
+	limit := 2 * time.Minute
+	if len(args) > 0 && args[0] == "-Va" {
+		limit = rpmVerifyLimit
+	}
+	return runFixedFor(ctx, limit, "rpm", args...)
 }
 
 // bootcStatus returns `bootc status --json`; exec.ErrNotFound when bootc is
@@ -37,14 +43,19 @@ var bootcStatus = func(ctx context.Context) ([]byte, error) {
 	return runFixed(ctx, "bootc", "status", "--json")
 }
 
-// runFixed runs a program found in the system PATH with LANG=C. A non-zero
-// exit status is returned as an error together with what was printed.
+// runFixed runs a program found in the system PATH with LANG=C, for at most
+// two minutes. A non-zero exit status is returned as an error together with
+// what was printed.
 func runFixed(ctx context.Context, name string, args ...string) ([]byte, error) {
+	return runFixedFor(ctx, 2*time.Minute, name, args...)
+}
+
+func runFixedFor(ctx context.Context, limit time.Duration, name string, args ...string) ([]byte, error) {
 	bin, err := exec.LookPath(name)
 	if err != nil {
 		return nil, exec.ErrNotFound
 	}
-	cctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	cctx, cancel := context.WithTimeout(ctx, limit)
 	defer cancel()
 	cmd := exec.CommandContext(cctx, bin, args...)
 	cmd.Env = []string{"LANG=C", "PATH=/usr/sbin:/usr/bin:/sbin:/bin"}
@@ -150,14 +161,21 @@ func rpmSourceName(file string) string {
 // half finished transaction for the inventory to trip over.
 func (fedoraAtomicPlatform) Busy() bool { return false }
 
-// PackagedFiles is empty: on an image system the integrity of /usr is the
-// comparison with the deployed image (ostree fsck, composefs/fs-verity),
-// planned as a later step. IntegrityUnsupported makes runIntegrity skip
-// with a warning instead of calling every program unowned.
+// PackagedFiles is empty: integrity on an image system is `rpm -Va`
+// (VerifyPackages, integrity_rpm.go), which knows the expected digests
+// itself, so no checksum list is needed.
 func (fedoraAtomicPlatform) PackagedFiles() map[string]pkgEntry { return map[string]pkgEntry{} }
 
+// IntegrityUnsupported is empty when rpm can be run. Without rpm the image
+// cannot be verified, and runIntegrity warns once and stops instead of
+// calling every program unowned.
 func (fedoraAtomicPlatform) IntegrityUnsupported() string {
-	return "package checksums are not checked on image based systems; /usr comes from the signed image (image comparison planned)"
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	if _, err := rpmRun(ctx, "--version"); errors.Is(err, exec.ErrNotFound) {
+		return "rpm is missing, the files of the image cannot be verified"
+	}
+	return ""
 }
 
 // Owners asks rpm for each path on its own: a file owned by two packages
@@ -230,6 +248,9 @@ type bootcHost struct {
 		Staged   *bootcEntry `json:"staged"`
 		Booted   *bootcEntry `json:"booted"`
 		Rollback *bootcEntry `json:"rollback"`
+		// UsrOverlay is null unless `bootc usr-overlay` made /usr writable.
+		// Kept as any: a json.RawMessage would hold the bytes "null".
+		UsrOverlay any `json:"usrOverlay"`
 	} `json:"status"`
 }
 

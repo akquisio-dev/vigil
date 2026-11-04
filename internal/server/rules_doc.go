@@ -372,6 +372,11 @@ var ruleDocs = map[string]ruleDoc{
 		"Distributions without either by default.",
 		"Enable AppArmor (Debian, Ubuntu) or SELinux in enforcing mode (Red Hat family).",
 	},
+	"posture.usr_overlay": {
+		"On an image based system (platform `fedoraatomic`, bootc), `bootc status` shows a `usrOverlay`: `bootc usr-overlay` put a writable overlay over `/usr`. Programs and libraries there can now be changed without a new image, and the package integrity check is the only thing left that notices.",
+		"An admin debugging the host or installing a package by hand with `bootc usr-overlay`. The overlay is gone after a reboot unless it was made persistent.",
+		"Ask who ran `bootc usr-overlay` and why. Reboot to drop a transient overlay; build changes into the image instead. Check the `integrity.` alerts of the host for files changed meanwhile.",
+	},
 	"tls.expired": {
 		"A certificate that nginx, Apache or Let's Encrypt uses (or one listed in `tls_certs`) has expired.",
 		"Old certificates still on disk but no longer served. Remove them from the configuration.",
