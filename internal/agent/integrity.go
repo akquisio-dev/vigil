@@ -330,6 +330,10 @@ func (a *Agent) runIntegrity(ctx context.Context) {
 		a.emit(proto.NewEvent("agent.warning", map[string]any{"collector": "integrity", "error": plat.NoPackageDB()}))
 		return
 	}
+	if u, ok := plat.(integrityUnsupported); ok {
+		a.emit(proto.NewEvent("agent.warning", map[string]any{"collector": "integrity", "error": u.IntegrityUnsupported()}))
+		return
+	}
 	is := loadIntegrityState(a.cfg.StateDir)
 	save := func() {
 		if raw, err := json.Marshal(is); err == nil {

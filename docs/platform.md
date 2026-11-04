@@ -61,13 +61,59 @@ test on Fedora Atomic.
 - `platform_debian.go` is Debian and Ubuntu. It wraps the functions vigil already had, in place, so the diff stays
   small; `platform_golden_test.go` pins their results on a fixture tree (`sysRoot`), written before the layer
   existed.
+- `platform_fedoraatomic.go` is image based Fedora (Fedora Atomic, bootc, Nyra), see below.
 - Selection: `platform` in `agent.json` if set (an unknown name is a config error), else the first `ID` or
   `ID_LIKE` value of `/etc/os-release` that names a known platform, else `debian`, which is what vigil did before.
+  `fedora` names `fedoraatomic` only when `/run/ostree-booted` exists; a classic Fedora with dnf has no platform
+  of its own yet and falls back to `debian` (no package inventory, no update facts, as before).
 - Left generic on purpose: the interface skip list (`skipIface`) and the secret-search skip lists. The Fedora
   entries (`podman*`, image paths) are added to those lists directly.
+
+## The fedoraatomic platform
+
+For Fedora bootc and Atomic systems such as Nyra (Fedora bootc 44): `/usr` comes read-only from a signed
+image, the rpm database describes that image, bootc stages updates, Podman replaces Docker and SELinux is the
+access control. Host tested only so far (fixture tree and canned `rpm` and `bootc` output in
+`platform_fedoraatomic_test.go`); every row still needs its probe on a Nyra VM.
+
+| Method | What it does |
+|---|---|
+| `PackageDBStamp` | mtime of `/usr/lib/sysimage/rpm/rpmdb.sqlite`, else `/var/lib/rpm`. Constant between reboots, since the database only changes with a new deployment |
+| `SourcePackages` | `rpm -qa --queryformat '%{SOURCERPM}\t%{EPOCH}:%{VERSION}-%{RELEASE}\n'`, source name cut from the `.src.rpm` file name, newest version per source (installonly kernels), `gpg-pubkey` skipped |
+| `Busy` | always false: an image update is written to a new deployment, `/usr` never changes in place |
+| `PackagedFiles` | empty, and the platform says integrity is unsupported: `runIntegrity` sends one `agent.warning` and stops, instead of calling every program in `/usr/bin` unowned |
+| `Owners`, `SelfOwner` | `rpm -qf --queryformat '%{NAME}\n'`, one call per path (a file owned by two packages prints two lines, an unowned one a message). No install time, no stat overrides |
+| `PendingUpdates` | `bootc status --json`: a staged deployment, or a fetched but unstaged `cachedUpdate`, is one pending update named `image <version>`, never counted as security. Not supported without bootc or a booted deployment |
+| `RebootRequired` | a staged deployment exists; packages `["image <version>"]` |
+| `KernelVersions` | running from uname, newest from `/usr/lib/modules/*/vmlinuz` of the booted image |
+| `AutoUpdates` | `bootc-fetch-apply-updates.timer` linked in `timers.target.wants` under `/etc` or `/usr/lib`, and not masked |
+| `ListsAgeDays` | -1: there are no package lists |
+| `FirewallCheck` | `firewallCheck` (firewalld writes nftables rules) |
+| `MACCheck` | SELinux only, from `/sys/fs/selinux/enforce`: enforcing, permissive, or disabled when missing. Same values as `macCheck` |
+| `PublishedPorts` | none yet |
+| `ContainerSocket` | `/run/podman/podman.sock` (rootful Podman, Docker-compatible API, needs `podman.socket`) |
+| `ContainerAdmins` | none: the rootful socket belongs to root, no group grants it |
+
+Open:
+
+- Integrity of `/usr` through the image: `ostree fsck` or composefs/fs-verity, `bootc usr-overlay` detection; RPM
+  digests for packaged files outside `/usr`.
+- Rootful Podman publications through netavark's nftables table (they can bypass the input filter like Docker's
+  DNAT). Rootless ones go through pasta and are listening sockets the socket scan sees.
+- Rootless Podman sockets under `/run/user/<uid>/podman/`.
+- Vulnerability matching: the server only knows Ubuntu and Debian data. `releaseKey` gives no release for
+  `fedora`, so a Fedora host's RPM list is kept for display and the host shows "unsupported" instead of being
+  matched against Debian or Ubuntu data (pinned by `TestVulnFedoraIsNotMatched`). Fedora advisories and an RPM
+  version comparison are to be added; the agent picks the newest version per source with dpkg's comparison,
+  which differs from rpm's only for `^`.
+- Self update refusal still says "Debian package ...; update it with apt" when rpm owns the agent. On Nyra the
+  agent ships with the image anyway.
+- `.rpmnew`/`.rpmsave` in the sidecar list, `podman*` interfaces in `skipIface`, image paths in the secret search
+  skip list, rule wording per platform.
 
 ## Plan
 
 1. Done: golden tests, then the `Platform` interface with `debian` behind it, selected as above.
 2. Server side (`vuln.go`, `rules.go`) stays as it is until a second platform sends different facts.
-3. `fedoraatomic` row by row, each with a probe that must raise the matching alert on a Nyra VM.
+3. `fedoraatomic` row by row, each with a probe that must raise the matching alert on a Nyra VM. Done on the
+   host (fixtures and canned command output), the probes on a VM are open.

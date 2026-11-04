@@ -11,12 +11,15 @@ import (
 )
 
 func TestChoosePlatform(t *testing.T) {
+	old := sysRoot
+	sysRoot = t.TempDir() // no /run/ostree-booted
+	t.Cleanup(func() { sysRoot = old })
 	for _, c := range []struct{ conf, id, like, want string }{
 		{"", "ubuntu", "debian", "debian"},
 		{"", "debian", "", "debian"},
 		{"", "linuxmint", "ubuntu debian", "debian"},
 		{"", "", "", "debian"},       // no os-release: as before platforms existed
-		{"", "fedora", "", "debian"}, // unknown until its platform exists
+		{"", "fedora", "", "debian"}, // classic Fedora: no platform of its own yet
 		{"debian", "fedora", "", "debian"},
 	} {
 		p, err := choosePlatform(c.conf, c.id, c.like)

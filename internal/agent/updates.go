@@ -68,18 +68,24 @@ func unattendedEnabled() bool {
 	return on
 }
 
-func kernelVersions() (running, newest string) {
+// unameRelease is the running kernel's release, "" when unknown.
+func unameRelease() string {
 	var u syscall.Utsname
-	if syscall.Uname(&u) == nil {
-		b := make([]byte, 0, len(u.Release))
-		for _, c := range u.Release {
-			if c == 0 {
-				break
-			}
-			b = append(b, byte(c))
-		}
-		running = string(b)
+	if syscall.Uname(&u) != nil {
+		return ""
 	}
+	b := make([]byte, 0, len(u.Release))
+	for _, c := range u.Release {
+		if c == 0 {
+			break
+		}
+		b = append(b, byte(c))
+	}
+	return string(b)
+}
+
+func kernelVersions() (running, newest string) {
+	running = unameRelease()
 	files, _ := filepath.Glob(sysPath("boot/vmlinuz-*"))
 	var vs []string
 	for _, f := range files {

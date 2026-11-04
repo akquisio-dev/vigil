@@ -32,7 +32,7 @@ the defaults below.
 | `processes` | true | watch program starts and report suspicious ones |
 | `outbound` | true | report new outbound TCP destinations with their process |
 | `suid` | true | find SUID/SGID programs and files with capabilities (all local filesystems every 6 hours, temp directories every 5 minutes) |
-| `integrity` | true | compare programs, PAM modules and core libraries with their Debian package checksums (every 6 hours; Debian and Ubuntu only) |
+| `integrity` | true | compare programs, PAM modules and core libraries with their Debian package checksums (every 6 hours; Debian and Ubuntu only, skipped with a warning on `fedoraatomic`) |
 | `bpf` | true | report eBPF programs that can hook the kernel or the network path |
 | `kernel` | true | watch kernel modules (new, out of tree, hidden from `/proc/modules`) and kernel taint flags |
 | `updates` | true | report pending (security) updates and pending reboots, Debian and Ubuntu |
@@ -60,7 +60,7 @@ the defaults below.
 | `self_update` | false | let admins update this agent from the dashboard to a newer signed release, see [Operations](operations.md#agents-from-the-dashboard) |
 | `selftest` | true | accept self tests from the server, see [Operations](operations.md#self-test) |
 | `max_queue` | 5000 | events kept while the server is unreachable |
-| `platform` | detected | distribution layer for packages, updates, firewall and containers; detected from `/etc/os-release`, `debian` (Debian, Ubuntu and anything unknown) is the only one so far, see [Platforms](platform.md) |
+| `platform` | detected | distribution layer for packages, updates, firewall and containers: `debian` (Debian, Ubuntu and anything unknown) or `fedoraatomic` (image based Fedora: Fedora Atomic, bootc, Nyra). Detected from `/etc/os-release`; Fedora counts as `fedoraatomic` only when `/run/ostree-booted` exists. See [Platforms](platform.md) |
 | `fallback` | none | a notifier the agent uses itself when it cannot reach the server, see [Watching the server from outside](#watching-the-server-from-outside) |
 | `fallback_minutes` | 15 | how long the server must be unreachable before `fallback` is told (at least 5) |
 

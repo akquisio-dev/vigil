@@ -73,10 +73,30 @@ type Containers interface {
 
 // platforms by name; detect maps os-release ID and ID_LIKE values to them.
 var platforms = map[string]func() Platform{
-	"debian": func() Platform { return debianPlatform{} },
+	"debian":       func() Platform { return debianPlatform{} },
+	"fedoraatomic": func() Platform { return fedoraAtomicPlatform{} },
 }
 
-var detect = map[string]string{"debian": "debian", "ubuntu": "debian"}
+// detection maps an os-release value to a platform, if when (nil: always)
+// holds.
+type detection struct {
+	name string
+	when func() bool
+}
+
+// Fedora maps to fedoraatomic only when image based (ostree or bootc). A
+// classic Fedora with dnf has no platform of its own yet and falls back to
+// debian like any unknown system: no package inventory, no update facts.
+var detect = map[string]detection{
+	"debian": {"debian", nil}, "ubuntu": {"debian", nil},
+	"fedora": {"fedoraatomic", ostreeBooted},
+}
+
+// integrityUnsupported is implemented by platforms without file checksums
+// in their package database; runIntegrity then warns once and stops.
+type integrityUnsupported interface {
+	IntegrityUnsupported() string
+}
 
 // choosePlatform picks the platform: the configured one if set (it must
 // exist), else the first os-release ID or ID_LIKE entry we know, else
@@ -90,8 +110,8 @@ func choosePlatform(configured, id, idLike string) (Platform, error) {
 		return mk(), nil
 	}
 	for _, cand := range append([]string{id}, strings.Fields(idLike)...) {
-		if name, ok := detect[cand]; ok {
-			return platforms[name](), nil
+		if d, ok := detect[cand]; ok && (d.when == nil || d.when()) {
+			return platforms[d.name](), nil
 		}
 	}
 	return platforms["debian"](), nil

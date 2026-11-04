@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Agent: a second platform, `fedoraatomic`, for image based Fedora (Fedora Atomic, bootc, Nyra). Chosen when `/etc/os-release` names Fedora (in `ID` or `ID_LIKE`) and `/run/ostree-booted` exists, or with `"platform": "fedoraatomic"`; a classic Fedora stays on `debian` as before. Packages from rpm (source packages, owners of SUID files and new programs), updates from `bootc status` (a staged or fetched image is one pending update, a staged one needs a reboot), automatic updates from `bootc-fetch-apply-updates.timer`, the kernel of the booted image, SELinux, and Podman's socket for containers. Package integrity is skipped there with a warning until the image comparison exists. Not yet tested on a Fedora system. See [Platforms](docs/platform.md#the-fedoraatomic-platform). No server change: a Fedora host's packages are shown as unsupported for the weakness check, never matched against Debian or Ubuntu data.
 - Agent: a platform layer for everything that depends on the distribution (package database, updates, firewall and AppArmor checks, container socket). `debian` is the only platform so far and is chosen for Debian, Ubuntu and anything unknown, so behaviour is unchanged; golden tests pin it. New optional `platform` setting. See [Platforms](docs/platform.md). No server change.
 - Trial install: the hint to trigger a first finding copies `/bin/sleep` under its own name. On Ubuntu 26 `sleep` is the uutils multicall binary, which picks the program by its name and refused the old copy named `vigil-try`.
 

@@ -178,3 +178,25 @@ func TestVulnIndexKeepsOnlyInstalledPackages(t *testing.T) {
 		t.Fatalf("after new package: %v %+v", vi.byPkg["vim"], a.Vulns)
 	}
 }
+
+// A Fedora host sends RPM source packages. They must never be matched
+// against Ubuntu or Debian data, even when names overlap and the host
+// claims a known codename.
+func TestVulnFedoraIsNotMatched(t *testing.T) {
+	s := &Server{cfg: &Config{VulnLookup: true, DataDir: t.TempDir()}, state: &State{Agents: map[string]*AgentRec{}, KnownLogins: map[string]time.Time{}}}
+	vi, _ := parseOVAL(strings.NewReader(ovalSample), "ubuntu:noble")
+	vi.build()
+	s.vdb.idx = map[string]*vulnIndex{vi.Release: vi}
+	a := &AgentRec{ID: "f1", Name: "nyra"}
+	s.state.Agents["f1"] = a
+	for _, codename := range []string{"", "noble"} {
+		fresh := s.packagesReceived(a, map[string]any{"os_id": "fedora", "os_version": "44", "os_codename": codename,
+			"packages": []any{[]any{"openssh", "9.9p1-7.fc44"}, []any{"vim", "2:9.1.1000-1.fc44"}}})
+		if len(fresh) != 0 || a.Vulns == nil || !strings.HasPrefix(a.Vulns.Error, "unsupported") || a.Vulns.Ecosystem != "" {
+			t.Fatalf("%q: %+v %+v", codename, fresh, a.Vulns)
+		}
+	}
+	if p := s.pkgs["f1"]; p == nil || len(p.List) != 2 || p.Eco != "" {
+		t.Fatalf("inventory still kept for display: %+v", p)
+	}
+}
