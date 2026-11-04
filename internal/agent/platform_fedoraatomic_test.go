@@ -308,3 +308,30 @@ func TestFedoraAtomicSkipsIntegrity(t *testing.T) {
 		t.Fatal("debian checks integrity")
 	}
 }
+
+// TestFedoraAtomicRealBootcStatus feeds `bootc status --json` as captured in
+// a Nyra test VM (Fedora 44, bootc, nothing staged).
+func TestFedoraAtomicRealBootcStatus(t *testing.T) {
+	fedoraAtomicFixture(t)
+	real, err := os.ReadFile("testdata/bootc-status-nyra.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	h, err := parseBootcStatus(real)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := h.Status.Booted
+	if b == nil || b.Image == nil || b.Image.Version != "1" || !strings.HasPrefix(b.Image.Digest, "sha256:") ||
+		b.Image.Image.Image != "10.0.2.2:5055/nyra-server-test:latest" {
+		t.Fatalf("booted: %+v", b)
+	}
+	bootcStatus = func(context.Context) ([]byte, error) { return real, nil }
+	p := fedoraAtomicPlatform{}
+	if l, supported, err := p.PendingUpdates(context.Background()); !supported || err != nil || len(l) != 0 {
+		t.Fatalf("real idle host: %v %v %v", l, supported, err)
+	}
+	if r, _ := p.RebootRequired(); r {
+		t.Fatal("real idle host needs no reboot")
+	}
+}
