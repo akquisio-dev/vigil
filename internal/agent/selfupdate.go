@@ -127,7 +127,7 @@ func dpkgOwner(path string) string {
 		path = p
 	}
 	for _, pkg := range []string{"vigil-agent"} {
-		f, err := os.Open("/var/lib/dpkg/info/" + pkg + ".list")
+		f, err := os.Open(dpkgPath("info/" + pkg + ".list"))
 		if err != nil {
 			continue
 		}

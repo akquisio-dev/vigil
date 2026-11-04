@@ -239,7 +239,7 @@ type dpkgInfo struct {
 // paths asked for, so memory stays small.
 func lookupDpkg(paths []string) dpkgInfo {
 	info := dpkgInfo{owner: map[string]string{}, installed: map[string]time.Time{}, override: map[string]bool{}}
-	lists, _ := filepath.Glob("/var/lib/dpkg/info/*.list")
+	lists, _ := filepath.Glob(dpkgPath("info/*.list"))
 	if len(lists) == 0 {
 		return info
 	}
@@ -272,7 +272,7 @@ func lookupDpkg(paths []string) dpkgInfo {
 		}
 		f.Close()
 	}
-	if b, err := os.ReadFile("/var/lib/dpkg/statoverride"); err == nil {
+	if b, err := os.ReadFile(dpkgPath("statoverride")); err == nil {
 		for _, line := range strings.Split(string(b), "\n") {
 			if f := strings.Fields(line); len(f) == 4 {
 				info.override[f[3]] = true

@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -20,6 +21,13 @@ import (
 // it when it changes and once a day; it never contacts a third party.
 
 type srcPkg struct{ Name, Version string }
+
+// sysRoot is where package and update state is read from: "/" on a real
+// system, a fixture directory in tests (golden tests of the platform layer).
+var sysRoot = "/"
+
+func sysPath(rel string) string  { return filepath.Join(sysRoot, rel) }
+func dpkgPath(rel string) string { return sysPath(filepath.Join("var/lib/dpkg", rel)) }
 
 // sourcePackages reads installed packages from a dpkg status file and maps
 // them to source packages ("Source: openssl (3.0.13-0ubuntu3)" or the
@@ -103,7 +111,7 @@ func osRelease() (id, version, codename string) {
 }
 
 func (a *Agent) runPackages(ctx context.Context) {
-	if _, err := os.Stat("/var/lib/dpkg/status"); err != nil {
+	if _, err := os.Stat(dpkgPath("status")); err != nil {
 		return
 	}
 	t := time.NewTimer(4 * time.Minute)
@@ -118,7 +126,7 @@ func (a *Agent) runPackages(ctx context.Context) {
 		case <-t.C:
 		}
 		t.Reset(30 * time.Minute)
-		fi, err := os.Stat("/var/lib/dpkg/status")
+		fi, err := os.Stat(dpkgPath("status"))
 		if err != nil {
 			continue
 		}
@@ -129,7 +137,7 @@ func (a *Agent) runPackages(ctx context.Context) {
 			continue
 		}
 		lastMtime = fi.ModTime()
-		pkgs := sourcePackages("/var/lib/dpkg/status", func(a, b string) bool { return dpkgver.Compare(a, b) > 0 })
+		pkgs := sourcePackages(dpkgPath("status"), func(a, b string) bool { return dpkgver.Compare(a, b) > 0 })
 		list := make([][2]string, len(pkgs))
 		h := sha256.New()
 		for i, p := range pkgs {

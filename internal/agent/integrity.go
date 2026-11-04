@@ -102,7 +102,7 @@ type pkgEntry struct{ pkg, ver, md5 string }
 // version, from /var/lib/dpkg/status.
 func dpkgVersions() map[string]string {
 	out := map[string]string{}
-	f, err := os.Open("/var/lib/dpkg/status")
+	f, err := os.Open(dpkgPath("status"))
 	if err != nil {
 		return out
 	}
@@ -139,7 +139,7 @@ func dpkgVersions() map[string]string {
 // of interest.
 func dpkgDiversions() map[string]string {
 	out := map[string]string{}
-	b, err := os.ReadFile("/var/lib/dpkg/diversions")
+	b, err := os.ReadFile(dpkgPath("diversions"))
 	if err != nil {
 		return out
 	}
@@ -164,7 +164,7 @@ func packageFiles() map[string]pkgEntry {
 	vers := dpkgVersions()
 	div := dpkgDiversions()
 	out := map[string]pkgEntry{}
-	sums, _ := filepath.Glob("/var/lib/dpkg/info/*.md5sums")
+	sums, _ := filepath.Glob(dpkgPath("info/*.md5sums"))
 	for _, sf := range sums {
 		pkg := strings.TrimSuffix(filepath.Base(sf), ".md5sums")
 		short, _, _ := strings.Cut(pkg, ":")
@@ -197,10 +197,10 @@ func packageFiles() map[string]pkgEntry {
 // dpkgBusy reports whether dpkg is installing right now, or was
 // interrupted: files are then legitimately out of step with md5sums.
 func dpkgBusy() bool {
-	if ents, err := os.ReadDir("/var/lib/dpkg/updates"); err == nil && len(ents) > 0 {
+	if ents, err := os.ReadDir(dpkgPath("updates")); err == nil && len(ents) > 0 {
 		return true
 	}
-	for _, lock := range []string{"/var/lib/dpkg/lock-frontend", "/var/lib/dpkg/lock"} {
+	for _, lock := range []string{dpkgPath("lock-frontend"), dpkgPath("lock")} {
 		f, err := os.OpenFile(lock, os.O_RDWR, 0)
 		if err != nil {
 			continue
@@ -325,7 +325,7 @@ func loadIntegrityState(dir string) *IntegrityState {
 }
 
 func (a *Agent) runIntegrity(ctx context.Context) {
-	if _, err := os.Stat("/var/lib/dpkg/status"); err != nil {
+	if _, err := os.Stat(dpkgPath("status")); err != nil {
 		a.emit(proto.NewEvent("agent.warning", map[string]any{"collector": "integrity", "error": "no dpkg database; package integrity is checked on Debian and Ubuntu only"}))
 		return
 	}

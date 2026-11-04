@@ -51,7 +51,7 @@ func parseAptUpgradable(out []byte) []aptPending {
 }
 
 func unattendedEnabled() bool {
-	files, _ := filepath.Glob("/etc/apt/apt.conf.d/*")
+	files, _ := filepath.Glob(sysPath("etc/apt/apt.conf.d/*"))
 	on := false
 	for _, f := range files {
 		b, err := os.ReadFile(f)
@@ -81,7 +81,7 @@ func kernelVersions() (running, newest string) {
 		}
 		running = string(b)
 	}
-	files, _ := filepath.Glob("/boot/vmlinuz-*")
+	files, _ := filepath.Glob(sysPath("boot/vmlinuz-*"))
 	var vs []string
 	for _, f := range files {
 		vs = append(vs, strings.TrimPrefix(filepath.Base(f), "vmlinuz-"))
@@ -169,7 +169,7 @@ func (a *Agent) checkUpdates(ctx context.Context) {
 			delete(us.FirstSeen, k)
 		}
 	}
-	_, rebootErr := os.Stat("/var/run/reboot-required")
+	_, rebootErr := os.Stat(sysPath("var/run/reboot-required"))
 	reboot := rebootErr == nil
 	if reboot && us.RebootSince.IsZero() {
 		us.RebootSince = now
@@ -180,14 +180,14 @@ func (a *Agent) checkUpdates(ctx context.Context) {
 	a.mu.Unlock()
 
 	var rebootPkgs []string
-	if b, err := os.ReadFile("/var/run/reboot-required.pkgs"); err == nil {
+	if b, err := os.ReadFile(sysPath("var/run/reboot-required.pkgs")); err == nil {
 		rebootPkgs = strings.Fields(string(b))
 	}
 	running, newest := kernelVersions()
 	listsAge := -1
-	if fi, err := os.Stat("/var/lib/apt/periodic/update-success-stamp"); err == nil {
+	if fi, err := os.Stat(sysPath("var/lib/apt/periodic/update-success-stamp")); err == nil {
 		listsAge = int(now.Sub(fi.ModTime()).Hours() / 24)
-	} else if fi, err := os.Stat("/var/lib/apt/lists"); err == nil {
+	} else if fi, err := os.Stat(sysPath("var/lib/apt/lists")); err == nil {
 		listsAge = int(now.Sub(fi.ModTime()).Hours() / 24)
 	}
 	sort.Strings(security)
