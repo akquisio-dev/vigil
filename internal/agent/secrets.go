@@ -222,12 +222,18 @@ type secretFile struct {
 // walkSecrets visits world-readable regular files below roots, entering only
 // directories every user can enter, and stays on each root's filesystem.
 func walkSecrets(ctx context.Context, roots []string, allMounts map[string]bool, skip map[string]bool) ([]secretFile, int, error) {
+	return walkSecretsSkip(ctx, roots, allMounts, skip, nil)
+}
+
+// walkSecretsSkip is walkSecrets that also leaves out the trees in
+// skipTrees (the platform's, see fileWalkLayout), roots included.
+func walkSecretsSkip(ctx context.Context, roots []string, allMounts map[string]bool, skip map[string]bool, skipTrees []string) ([]secretFile, int, error) {
 	var out []secretFile
 	files := 0
 	buf := make([]byte, secretMaxFile)
 	var st syscall.Stat_t
 	for _, root := range roots {
-		if !worldReachable(root) {
+		if !worldReachable(root) || underAny(root, skipTrees) {
 			continue
 		}
 		stack := []string{root}
@@ -251,7 +257,7 @@ func walkSecrets(ctx context.Context, roots []string, allMounts map[string]bool,
 					}
 					switch {
 					case d.IsDir():
-						if st.Mode&0o001 != 0 && !allMounts[p] && !vendoredDir(p, d.Name()) && !underAny(p, secretSkipPaths) {
+						if st.Mode&0o001 != 0 && !allMounts[p] && !vendoredDir(p, d.Name()) && !underAny(p, secretSkipPaths) && !underAny(p, skipTrees) {
 							if d.Name() == ".git" {
 								// only the config, where remote URLs with tokens live
 								if cfg := p + "/config"; worldReadableFile(cfg, &st) {
@@ -373,13 +379,17 @@ func (a *Agent) runSecrets(ctx context.Context) {
 			skip[c.Path] = true
 		}
 		a.mu.Unlock()
-		_, all := suidRoots()
+		_, all := a.suidRoots()
 		roots := a.secretRoots()
 		for _, r := range roots {
 			delete(all, r)
 		}
+		var trees []string
+		if l, ok := a.plat().(fileWalkLayout); ok {
+			trees = l.WalkSkip()
+		}
 		start := time.Now()
-		found, files, err := walkSecrets(ctx, roots, all, skip)
+		found, files, err := walkSecretsSkip(ctx, roots, all, skip, trees)
 		if ctx.Err() != nil {
 			return
 		}

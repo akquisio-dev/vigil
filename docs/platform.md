@@ -67,7 +67,8 @@ test on Fedora Atomic.
   `fedora` names `fedoraatomic` only when `/run/ostree-booted` exists; a classic Fedora with dnf has no platform
   of its own yet and falls back to `debian` (no package inventory, no update facts, as before).
 - Left generic on purpose: the interface skip list (`skipIface`) and the secret-search skip lists. The Fedora
-  entries (`podman*`, image paths) are added to those lists directly.
+  entries (`podman*`, image paths) are added to those lists directly. Trees that only exist on one platform and
+  would make every file walk see things twice are the platform's (`fileWalkLayout`, below).
 
 ## The fedoraatomic platform
 
@@ -94,6 +95,20 @@ access control. Host tested only so far (fixture tree and canned `rpm` and `boot
 | `PublishedPorts` | none yet |
 | `ContainerSocket` | `/run/podman/podman.sock` (rootful Podman, Docker-compatible API, needs `podman.socket`) |
 | `ContainerAdmins` | none: the rootful socket belongs to root, no group grants it |
+| `WalkSkip`, `RootFSTypes` | file walks (`fileWalkLayout`), see below |
+
+### File walks on fedoraatomic
+
+`/sysroot` is the physical root: the ostree repository and every deployment, each a hard linked checkout of an
+image's `/usr`; `/ostree` links to it. The SUID scan walked it as a mount point of its own and reported every
+setuid and capability program a second time, as `/sysroot/ostree/deploy/default/deploy/<checksum>.0/usr/bin/chage`
+and so on, "no package owns it" (Nyra VM, 2026-11-05). On this platform both trees are skipped as roots and below
+roots by the SUID and capability scan (full and quick walk) and the secret search; `/usr` is walked through `/`.
+With composefs, Fedora bootc's default, `/` is an `overlay` mount, which the scan does not take as a root
+elsewhere; here it does, and stops at the other mount points as usual. Entries an older agent recorded under the
+skipped trees are dropped from `suid.json` without a `file.suid_removed`. The other walks never reach them: the
+application inventory walks `/opt`, `/srv`, `/var/www`, `/home` and `/root` without leaving their file system, the
+temp directory scan walks `/tmp`, `/var/tmp`, `/dev/shm`, posture walks `/etc`. On Debian nothing changes.
 
 ### Integrity on fedoraatomic
 

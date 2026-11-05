@@ -401,3 +401,14 @@ func (fedoraAtomicPlatform) ContainerSocket() string { return "/run/podman/podma
 // ContainerAdmins is empty: the rootful Podman socket belongs to root, there
 // is no group like docker that grants it.
 func (fedoraAtomicPlatform) ContainerAdmins(string) []string { return nil }
+
+// WalkSkip: /sysroot holds the ostree repository and every deployment, each a
+// hard linked checkout of an image's /usr; /ostree links to it. Walking them
+// would see every SUID program and secret of /usr again, of the booted and
+// the rollback image, under a path no package owns. /usr is walked through
+// "/" as usual.
+func (fedoraAtomicPlatform) WalkSkip() []string { return []string{"/sysroot", "/ostree"} }
+
+// RootFSTypes: with composefs (Fedora bootc's default) "/" is an overlay
+// mount of the image; without accepting it /usr would not be walked at all.
+func (fedoraAtomicPlatform) RootFSTypes() []string { return []string{"overlay"} }

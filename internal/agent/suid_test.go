@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"os"
 	"path/filepath"
+	"reflect"
 	"syscall"
 	"testing"
 )
@@ -94,5 +95,89 @@ func TestMountinfoUnescape(t *testing.T) {
 	}
 	if !underAny("/var/lib/docker/x", suidSkip) || underAny("/var/lib/dockerx", suidSkip) || !underAny("/etc", []string{"/"}) {
 		t.Fatal("underAny")
+	}
+}
+
+// nyraMounts is the shape of /proc/self/mountinfo on a Fedora bootc system
+// with composefs: "/" is an overlay of the image, /sysroot the physical root
+// with the ostree repository and deployments, /etc and /var bind mounts out
+// of it.
+var nyraMounts = []mount{{"/", "overlay"}, {"/sysroot", "xfs"}, {"/etc", "xfs"}, {"/var", "xfs"}, {"/boot", "xfs"},
+	{"/proc", "proc"}, {"/sys", "sysfs"}, {"/dev", "devtmpfs"}, {"/dev/shm", "tmpfs"}, {"/run", "tmpfs"}, {"/tmp", "tmpfs"},
+	{"/var/lib/containers/storage/overlay", "xfs"}}
+
+func TestWalkRootsFedoraAtomic(t *testing.T) {
+	fedoraAtomicFixture(t)
+	a := &Agent{cfg: &Config{MaxQueue: 100}, platform: fedoraAtomicPlatform{}}
+	skip, rootTypes := a.walkLayout()
+	roots, all := walkRoots(nyraMounts, skip, rootTypes)
+	want := []string{"/", "/boot", "/dev/shm", "/etc", "/run", "/tmp", "/var"}
+	if !reflect.DeepEqual(roots, want) {
+		t.Fatalf("roots %v, want %v", roots, want)
+	}
+	if !all["/sysroot"] {
+		t.Fatal("/sysroot must stay a mount point the walk does not cross into")
+	}
+	// Debian: no overlay root, no /sysroot skip (none exists there anyway).
+	d := &Agent{cfg: &Config{MaxQueue: 100}, platform: debianPlatform{}}
+	skip, rootTypes = d.walkLayout()
+	roots, _ = walkRoots(nyraMounts, skip, rootTypes)
+	if !reflect.DeepEqual(roots, []string{"/boot", "/dev/shm", "/etc", "/run", "/sysroot", "/tmp", "/var"}) || !reflect.DeepEqual(skip, suidSkip) {
+		t.Fatalf("debian roots %v skip %v", roots, skip)
+	}
+}
+
+// The SUID walk sees /usr/bin through "/" and nothing of the deployments
+// under /sysroot (hard links of the same /usr) or the /ostree link.
+func TestWalkSuidSkipsOstree(t *testing.T) {
+	fedoraAtomicFixture(t)
+	root := t.TempDir()
+	dep := root + "/sysroot/ostree/deploy/default/deploy/6703c47ddb789b5ea6c4cf0e425ed171b4a673b0c53888ee927a462be6ed63db.0/usr/bin"
+	for _, d := range []string{root + "/usr/bin", dep} {
+		if err := os.MkdirAll(d, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, p := range []string{root + "/usr/bin/chage", dep + "/chage", root + "/usr/bin/plain"} {
+		os.WriteFile(p, []byte("x"), 0o755)
+	}
+	os.Chmod(root+"/usr/bin/chage", os.ModeSetuid|0o755)
+	if err := os.Chmod(dep+"/chage", os.ModeSetuid|0o755); err != nil {
+		t.Fatal(err)
+	}
+	os.Symlink("sysroot/ostree", root+"/ostree")
+	a := &Agent{cfg: &Config{MaxQueue: 100}, platform: fedoraAtomicPlatform{}}
+	skip, _ := a.walkLayout()
+	// The fixture root stands for "/": skip entries are made relative to it.
+	var rel []string
+	for _, s := range skip {
+		rel = append(rel, root+s)
+	}
+	found, err := walkSuidSkip(context.Background(), []string{root}, map[string]bool{}, rel)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(found) != 1 || found[root+"/usr/bin/chage"] == nil {
+		t.Fatalf("found %v", found)
+	}
+	// Without the platform's list the deployment's copy shows up.
+	found, _ = walkSuidSkip(context.Background(), []string{root}, map[string]bool{}, suidSkip)
+	if len(found) != 2 || found[dep+"/chage"] == nil {
+		t.Fatalf("control walk: %v", found)
+	}
+}
+
+// Entries an older agent recorded under /sysroot are dropped without a
+// file.suid_removed each.
+func TestPruneSkippedSuid(t *testing.T) {
+	ss := &SuidState{Baselined: true, Files: map[string]*SuidFile{
+		"/usr/bin/chage": {Mode: 0o4755},
+		"/sysroot/ostree/deploy/default/deploy/abc.0/usr/bin/chage": {Mode: 0o4755},
+	}}
+	if !pruneSkipped(ss, append(append([]string{}, suidSkip...), fedoraAtomicPlatform{}.WalkSkip()...)) || len(ss.Files) != 1 || ss.Files["/usr/bin/chage"] == nil {
+		t.Fatalf("prune: %v", ss.Files)
+	}
+	if pruneSkipped(ss, suidSkip) {
+		t.Fatal("nothing left to prune")
 	}
 }

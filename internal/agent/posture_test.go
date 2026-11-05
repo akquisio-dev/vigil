@@ -243,3 +243,18 @@ Version: 1.0
 		t.Fatalf("got %v", parts)
 	}
 }
+
+// The platform's trees (/sysroot on fedoraatomic) are left out of the
+// secret search, as a root and below one.
+func TestWalkSecretsSkipTrees(t *testing.T) {
+	dir := t.TempDir()
+	if !worldReachable(dir) {
+		t.Skip("temp directory not reachable for other users")
+	}
+	write(t, dir+"/etc/app.env", "DB_PASSWORD=hunter22hunter\n", 0o644)
+	write(t, dir+"/sysroot/ostree/deploy/default/deploy/abc.0/etc/app.env", "DB_PASSWORD=hunter22hunter\n", 0o644)
+	found, _, err := walkSecretsSkip(context.Background(), []string{dir, dir + "/sysroot"}, map[string]bool{}, nil, []string{dir + "/sysroot"})
+	if err != nil || len(found) != 1 || found[0].path != dir+"/etc/app.env" {
+		t.Fatalf("found %+v %v", found, err)
+	}
+}

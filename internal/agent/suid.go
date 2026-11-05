@@ -49,6 +49,31 @@ var suidTmpDirs = []string{"/tmp", "/var/tmp", "/dev/shm", "/run/shm"}
 // files are the images' business and change with every pull.
 var suidSkip = []string{"/proc", "/sys", "/var/lib/docker", "/var/lib/containerd", "/var/lib/containers", "/snap", "/var/snap", "/var/lib/lxd", "/var/lib/lxc"}
 
+// fileWalkLayout is implemented by platforms whose file system layout the
+// generic file walks (SUID and capabilities, secrets) need to know about.
+type fileWalkLayout interface {
+	// WalkSkip are trees no walk enters, besides suidSkip.
+	WalkSkip() []string
+	// RootFSTypes are file system types accepted for the mount on "/"
+	// besides suidFSTypes.
+	RootFSTypes() []string
+}
+
+// walkLayout is the platform's skip list (suidSkip plus its own trees) and
+// the extra file system types for "/".
+func (a *Agent) walkLayout() (skip []string, rootTypes map[string]bool) {
+	l, ok := a.plat().(fileWalkLayout)
+	if !ok {
+		return suidSkip, nil
+	}
+	skip = append(append([]string{}, suidSkip...), l.WalkSkip()...)
+	rootTypes = map[string]bool{}
+	for _, t := range l.RootFSTypes() {
+		rootTypes[t] = true
+	}
+	return skip, rootTypes
+}
+
 var suidFSTypes = map[string]bool{"ext2": true, "ext3": true, "ext4": true, "xfs": true, "btrfs": true, "zfs": true, "f2fs": true, "jfs": true, "reiserfs": true, "tmpfs": true}
 
 // capNames for the bits that matter; others are shown as cap_N.
@@ -145,6 +170,11 @@ func underAny(p string, roots []string) bool {
 // paths of pending directories are kept, so memory stays flat on hosts
 // with millions of files and on directories with huge entry counts.
 func walkSuid(ctx context.Context, roots []string, allMounts map[string]bool) (map[string]*SuidFile, error) {
+	return walkSuidSkip(ctx, roots, allMounts, suidSkip)
+}
+
+// walkSuidSkip is walkSuid with the platform's skip list.
+func walkSuidSkip(ctx context.Context, roots []string, allMounts map[string]bool, skip []string) (map[string]*SuidFile, error) {
 	found := map[string]*SuidFile{}
 	entries := 0
 	capBuf := make([]byte, 64)
@@ -172,7 +202,7 @@ func walkSuid(ctx context.Context, roots []string, allMounts map[string]bool) (m
 					}
 					switch {
 					case d.IsDir():
-						if !allMounts[p] && !underAny(p, suidSkip) {
+						if !allMounts[p] && !underAny(p, skip) {
 							stack = append(stack, p)
 						}
 						continue
@@ -210,11 +240,23 @@ func walkSuid(ctx context.Context, roots []string, allMounts map[string]bool) (m
 // suidRoots lists the mount points of local filesystems, plus a lookup of
 // all mount points so a walk never crosses into another one.
 func suidRoots() ([]string, map[string]bool) {
+	return walkRoots(mounts(), suidSkip, nil)
+}
+
+// suidRoots with the platform's layout.
+func (a *Agent) suidRoots() ([]string, map[string]bool) {
+	skip, rootTypes := a.walkLayout()
+	return walkRoots(mounts(), skip, rootTypes)
+}
+
+// walkRoots picks the mount points to walk from the mount table: local file
+// systems (suidFSTypes, and rootTypes for "/") outside skip, and not /dev.
+func walkRoots(ms []mount, skip []string, rootTypes map[string]bool) ([]string, map[string]bool) {
 	all := map[string]bool{}
 	var roots []string
-	for _, m := range mounts() {
+	for _, m := range ms {
 		all[m.point] = true
-		if !suidFSTypes[m.fstype] || underAny(m.point, suidSkip) {
+		if !(suidFSTypes[m.fstype] || m.point == "/" && rootTypes[m.fstype]) || underAny(m.point, skip) {
 			continue
 		}
 		if (m.point == "/dev" || strings.HasPrefix(m.point, "/dev/")) && m.point != "/dev/shm" {
@@ -406,12 +448,30 @@ func (a *Agent) diffSuid(ss *SuidState, roots []string, found map[string]*SuidFi
 	return changed
 }
 
+// pruneSkipped forgets inventory entries below trees the walks skip, so an
+// entry from before the platform skipped them (/sysroot on fedoraatomic)
+// is dropped silently instead of reported as removed.
+func pruneSkipped(ss *SuidState, skip []string) bool {
+	changed := false
+	for p := range ss.Files {
+		if underAny(p, skip) {
+			delete(ss.Files, p)
+			changed = true
+		}
+	}
+	return changed
+}
+
 func (a *Agent) runSuid(ctx context.Context) {
 	ss := loadSuidState(a.cfg.StateDir)
 	save := func() {
 		if raw, err := json.Marshal(ss); err == nil {
 			writeFileAtomic(suidStatePath(a.cfg.StateDir), raw, 0o600)
 		}
+	}
+	skip, _ := a.walkLayout()
+	if pruneSkipped(ss, skip) {
+		save()
 	}
 	full := time.NewTimer(3 * time.Minute)
 	quick := time.NewTicker(suidQuickEvery)
@@ -422,9 +482,9 @@ func (a *Agent) runSuid(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-full.C:
-			roots, all := suidRoots()
+			roots, all := a.suidRoots()
 			start := time.Now()
-			found, err := walkSuid(ctx, roots, all)
+			found, err := walkSuidSkip(ctx, roots, all, skip)
 			if ctx.Err() != nil {
 				return
 			}
@@ -448,11 +508,11 @@ func (a *Agent) runSuid(ctx context.Context) {
 					roots = append(roots, d)
 				}
 			}
-			_, all := suidRoots()
+			_, all := a.suidRoots()
 			for _, r := range roots {
 				delete(all, r) // a tmpfs on /tmp is still walked
 			}
-			found, err := walkSuid(ctx, roots, all)
+			found, err := walkSuidSkip(ctx, roots, all, skip)
 			if err == nil && a.diffSuid(ss, roots, found) {
 				save()
 			}
