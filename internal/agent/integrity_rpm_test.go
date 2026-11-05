@@ -260,3 +260,50 @@ func TestFedoraAtomicUsrOverlay(t *testing.T) {
 		t.Fatal("debian has no platform checks")
 	}
 }
+
+// TestRPMDirectoryModeOnCleanImage: the lines a clean Nyra image prints
+// (directories with ostree's mode) are no findings; a directory that became
+// group or world writable still is, and so is a mode change on a file.
+func TestRPMDirectoryModeOnCleanImage(t *testing.T) {
+	root := t.TempDir()
+	old := sysRoot
+	sysRoot = root
+	t.Cleanup(func() { sysRoot = old })
+	mk := func(rel string, mode os.FileMode, dir bool) {
+		p := filepath.Join(root, rel)
+		if dir {
+			if err := os.MkdirAll(p, 0o755); err != nil {
+				t.Fatal(err)
+			}
+		} else {
+			os.MkdirAll(filepath.Dir(p), 0o755)
+			if err := os.WriteFile(p, []byte("x"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if err := os.Chmod(p, mode); err != nil {
+			t.Fatal(err)
+		}
+	}
+	mk("usr/bin", 0o755, true)
+	mk("usr/lib64/bpf", 0o755, true)
+	mk("usr/share/open", 0o777, true)
+	mk("usr/bin/tool", 0o755, false)
+	out := []byte(".M.......    /usr/bin\n.M.......    /usr/lib64/bpf\n.M.......    /usr/share/open\n.M.......    /usr/bin/tool\nmissing     /afs\n")
+	sus := rpmSuspects(out)
+	if _, ok := sus["/usr/bin"]; ok {
+		t.Error("/usr/bin with ostree's mode must not be a finding")
+	}
+	if _, ok := sus["/usr/lib64/bpf"]; ok {
+		t.Error("/usr/lib64/bpf must not be a finding")
+	}
+	if _, ok := sus["/usr/share/open"]; !ok {
+		t.Error("a world writable directory is a finding")
+	}
+	if _, ok := sus["/usr/bin/tool"]; !ok {
+		t.Error("a mode change on a file is a finding")
+	}
+	if _, ok := sus["/afs"]; ok {
+		t.Error("paths outside /usr are ignored")
+	}
+}

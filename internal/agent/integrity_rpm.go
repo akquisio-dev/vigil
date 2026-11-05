@@ -147,6 +147,23 @@ func rpmReasons(l rpmVerifyLine) []string {
 	return out
 }
 
+// harmlessDirMode: on a clean Nyra image rpm -Va reports a mode change (M)
+// for many directories under /usr (/usr/bin, /usr/lib, /usr/lib64/...),
+// because ostree stores directories with its own permission bits. A mode
+// change alone on a directory is ignored unless the directory is now
+// writable by group or others, which would let other users plant files.
+// Seen in a Nyra VM, 2026-11-05.
+func harmlessDirMode(path string, reasons []string) bool {
+	if len(reasons) != 1 || reasons[0] != "mode" {
+		return false
+	}
+	fi, err := os.Lstat(sysPath(path))
+	if err != nil || !fi.IsDir() {
+		return false
+	}
+	return fi.Mode().Perm()&0o022 == 0
+}
+
 // rpmSuspect is a file rpm -Va reports with at least one counting flag.
 type rpmSuspect struct {
 	path    string
@@ -158,7 +175,7 @@ func rpmSuspects(out []byte) map[string]rpmSuspect {
 	m := map[string]rpmSuspect{}
 	for _, l := range parseRPMVerify(out) {
 		r := rpmReasons(l)
-		if len(r) == 0 {
+		if len(r) == 0 || harmlessDirMode(l.path, r) {
 			continue
 		}
 		f := l.flags

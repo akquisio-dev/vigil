@@ -115,6 +115,7 @@ What counts, per line (`SM5DLUGTP` flag field, optional one-letter marker such a
 | marker `g` (ghost) | never | not shipped in the package |
 | `S`, `5` | yes, except for config files (`c`) | content of a read-only `/usr` file changed. Config file content is ignored everywhere, as rpm intends |
 | `M`, `U`, `G`, `P`, `L`, `D` | yes, config files too | mode, owner, group, capabilities, link target or device of a file the image ships |
+| `M` alone on a directory | only if group or world writable now | a clean Nyra image reports `.M` for many directories (`/usr/bin`, `/usr/lib`, `/usr/lib64/...`, `/usr/share/empty`): ostree stores directories with its own permission bits (seen on a Nyra VM, 2026-11-05) |
 | `missing` | yes | a file the image ships is gone |
 
 A finding becomes `integrity.mismatch` (critical names like `sshd`, `ps`, PAM modules and libc via
@@ -127,9 +128,12 @@ and SHA-256, it is reported again when these change, and forgotten when the file
 
 Open:
 
-- On a Nyra VM: the real output of `rpm -Va --nomtime` on the image, how long it takes under the agent's CPU quota
-  and memory limit (rpm runs inside the agent's cgroup), whether rpm opens the rpm database inside the unit's
-  sandbox, and the shape of a non-null `usrOverlay`.
+- Measured on a Nyra VM (Fedora 44, 544 packages) in a transient unit with the agent's limits (`MemoryMax=96M`,
+  `MemoryHigh=64M`, `CPUQuota=15%`, idle I/O, `ProtectSystem=full`): rpm opened its database and finished in 92 s
+  with 13.8 s CPU, memory peak 64.5M (held at `MemoryHigh`), no OOM kill. Besides directory modes the clean image
+  printed `missing /afs`, `missing /var/lib/selinux/tmp`, `.M` on `/boot`, `/opt`, `/root` and a changed
+  `/etc/selinux/semanage.conf` (`c`), all outside `/usr`. Still open: the run inside the real vigil-agent unit and
+  the shape of a non-null `usrOverlay`.
 - New programs in `/usr/bin` that no rpm owns (`integrity.unowned`): needs `rpm -qal` and a baseline that is reset
   when the booted image changes, because images add files outside rpm (`COPY` in the Containerfile).
 - The image itself: `ostree fsck` or composefs/fs-verity, which also cover files no rpm owns.
