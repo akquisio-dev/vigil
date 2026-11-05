@@ -193,7 +193,7 @@ can use. Fields in brackets are only present when known.
 | `port.snapshot` | `ports` (list) |
 | `canary.opened` | `canary_id`, `path`, `pid`, (`exe`, `comm`, `cmdline`, `uid`, `loginuid`, `sessionid`) |
 | `canary.placed`, `canary.removed`, `canary.tampered`, `canary.error` | `canary_id`, `path`, (`type`, `hash`, `problem`, `error`) |
-| `log.spoofed` | `identifier`, `comm`, `uid`, `message` |
+| `log.spoofed` | `identifier`, `comm`, `exe`, `uid`, `message` |
 | `process.exec` | `pid`, `ppid`, `uid`, `exe`, `comm`, `cmdline`, `cwd`, `parent_exe`, `parent_comm`, `signals` (list: `tmp_exe`, `deleted_exe`, `shell_socket`, `service_shell`, `cmd_reverse_shell`, `cmd_download_exec`, `cmd_decode_exec`, `cmd_miner`, `memfd_exe`, `ld_preload`), (`ld_preload`) |
 | `process.rate_limited` | `dropped` |
 | `net.connection` | `remote_ip`, `remote_port`, `local_port`, `process`, `exe`, `uid`, `private` |

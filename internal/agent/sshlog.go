@@ -26,14 +26,23 @@ var (
 	reSudo       = regexp.MustCompile(`^\s*(\S+) : .*?(?:TTY=(\S+) ; )?PWD=(\S+) ; USER=(\S+) ; COMMAND=(.*)$`)
 )
 
-var trustedComm = map[string]bool{"sshd": true, "sshd-session": true, "sudo": true}
+var trustedComm = map[string]bool{"sshd": true, "sshd-session": true, "sshd-auth": true, "sudo": true}
 
 // trustedExe are the programs that write under these identifiers without
 // being root: sudo logs with the uid of the user who ran it, and sshd's
-// unprivileged process for a session with that user's. _EXE is read by
-// journald from /proc; a copy of the program elsewhere does not match.
+// unprivileged process for a session with that user's (sshd-session since
+// OpenSSH 9.8, sshd-auth for the pre-authentication sandbox since 10.0).
+// _EXE is read by journald from /proc; a copy of the program elsewhere does
+// not match. Debian and Ubuntu keep them in /usr/lib/openssh, Fedora in
+// /usr/libexec/openssh.
 var trustedExe = map[string]bool{"/usr/bin/sudo": true, "/usr/sbin/sshd": true,
-	"/usr/lib/openssh/sshd-session": true, "/usr/libexec/openssh/sshd-session": true}
+	"/usr/lib/openssh/sshd-session": true, "/usr/libexec/openssh/sshd-session": true,
+	"/usr/lib/openssh/sshd-auth": true, "/usr/libexec/openssh/sshd-auth": true}
+
+// sshdNames are the names sshd's session process has (_COMM) and logs under
+// (SYSLOG_IDENTIFIER): sshd up to OpenSSH 9.7, sshd-session after; Fedora 44
+// (OpenSSH 10) logs as either.
+var sshdNames = map[string]bool{"sshd": true, "sshd-session": true}
 
 func clip(s string) string {
 	if len(s) > 300 {
@@ -129,7 +138,7 @@ func (a *Agent) followJournal(ctx context.Context, bin string) error {
 		exe, _ := entry["_EXE"].(string)
 		if use, spoofed := journalEntry(uid, comm, exe, ident, msg); !use {
 			if spoofed {
-				a.emit(proto.NewEvent("log.spoofed", map[string]any{"identifier": ident, "comm": clip(comm), "uid": uid, "message": clip(msg)}))
+				a.emit(proto.NewEvent("log.spoofed", map[string]any{"identifier": ident, "comm": clip(comm), "exe": clip(exe), "uid": uid, "message": clip(msg)}))
 			}
 			continue
 		}
@@ -290,14 +299,16 @@ func atoi(s string) int {
 //
 // The session process often exits before journald reads its _EXE: the
 // last lines of a logout come without one. Without _EXE, a user's process
-// named sshd is taken as sshd's only for the two lines a session ends
-// with; a user writing those lines himself learns nothing and fakes no
-// login.
+// named sshd or sshd-session, writing as sshd or sshd-session, is taken as
+// sshd's only for the two lines a session ends with; a user writing those
+// lines himself learns nothing and fakes no login. Seen on Ubuntu 24.04
+// (sshd) and on a Nyra VM, Fedora 44 with OpenSSH 10 (sshd-session, uid
+// 1000).
 func journalEntry(uid, comm, exe, ident, msg string) (use, spoofed bool) {
 	if uid != "0" && trustedExe[exe] {
 		return false, false
 	}
-	if uid != "0" && exe == "" && comm == "sshd" && ident == "sshd" && sessionEnd(msg) {
+	if uid != "0" && exe == "" && sshdNames[comm] && sshdNames[ident] && sessionEnd(msg) {
 		return false, false
 	}
 	if spoofedLog(uid, comm) {

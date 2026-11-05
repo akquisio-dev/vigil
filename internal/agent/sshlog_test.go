@@ -48,6 +48,24 @@ func TestJournalEntry(t *testing.T) {
 		// but nothing else without _EXE, and never a login line
 		{"1001", "sshd", "", "sshd", "Accepted publickey for root from 192.0.2.1 port 22 ssh2", false, true},
 		{"1001", "logger", "", "sshd", "Disconnected from user ubuntu 192.0.2.1 port 1", false, true},
+		// Fedora 44, OpenSSH 10: sshd-session as the user, logging as
+		// sshd-session or sshd, with and without _EXE; sshd-auth as the
+		// sshd account before authentication.
+		{"1000", "sshd-session", "/usr/libexec/openssh/sshd-session", "sshd-session", "Received disconnect from 10.0.2.2 port 51234:11: disconnected by user", false, false},
+		{"1000", "sshd-session", "/usr/libexec/openssh/sshd-session", "sshd", "anything", false, false},
+		{"1000", "sshd-session", "", "sshd-session", "Received disconnect from 10.0.2.2 port 51234:11: disconnected by user", false, false},
+		{"1000", "sshd-session", "", "sshd-session", "Disconnected from user joey 10.0.2.2 port 51234", false, false},
+		{"1000", "sshd-session", "", "sshd", "Disconnected from user joey 10.0.2.2 port 51234", false, false},
+		{"74", "sshd-auth", "/usr/libexec/openssh/sshd-auth", "sshd-auth", "", false, false},
+		{"0", "sshd-session", "/usr/libexec/openssh/sshd-session", "sshd-session", "Accepted publickey for joey from 10.0.2.2 port 51234 ssh2", true, false},
+		// still no login line without _EXE, and no copy elsewhere or other writer
+		{"1000", "sshd-session", "", "sshd-session", "Accepted publickey for root from 192.0.2.1 port 22 ssh2", false, true},
+		{"1000", "sshd-session", "/tmp/sshd-session", "sshd-session", "Disconnected from user joey 10.0.2.2 port 51234", false, true},
+		{"1000", "logger", "", "sshd-session", "Disconnected from user joey 10.0.2.2 port 51234", false, true},
+		{"1000", "sshd-auth", "", "sshd", "Disconnected from user joey 10.0.2.2 port 51234", false, true},
+		// the self test: root, written by the agent under sshd. Reported on
+		// purpose; the server books it as the test's journal step.
+		{"0", "vigil-agent", "/usr/bin/vigil-agent", "sshd", "vigil-selftest-abc (vigil self test, not a real login)", false, true},
 	} {
 		use, spoofed := journalEntry(c.uid, c.comm, c.exe, c.ident, c.msg)
 		if use != c.use || spoofed != c.spoofed {
