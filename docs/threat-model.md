@@ -175,7 +175,11 @@ to the newest release, which they would also get by hand, and nothing else.
   signals, and only if the agent was running at that moment.
 - eBPF programs that the kernel loads itself at boot (`hid_tail_call`, the
   bpf_preload iterators) are ignored when loaded in the first two minutes
-  after boot.
+  after boot. So is systemd's BPF LSM program for `RestrictFileSystems=`
+  (`lsm` `restrict_filesy`) when root loaded it in that window; that program
+  (same tag) stays quiet when systemd loads it again later. A rootkit that
+  loads an `lsm` program under this name as root within two minutes of boot
+  is not reported.
 - Program starts are read from `/proc` after the kernel reports them. A
   program that exits within a millisecond or two can be gone before the agent
   looks, and is then not reported.

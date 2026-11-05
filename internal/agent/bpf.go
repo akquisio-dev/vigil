@@ -45,6 +45,19 @@ var bpfKernelPreload = map[string]bool{"hid_tail_call": true, "dump_bpf_map": tr
 
 const bpfBootWindow = 120e9 // ns since boot
 
+// bpfSystemd are hooking programs systemd itself loads, by name (cut to 15
+// characters by the kernel) and type. PID 1 loads its BPF LSM program for
+// RestrictFileSystems= ("restrict_filesystems") when it starts, if the
+// kernel has the BPF LSM; seen on a Nyra VM (Fedora 44): lsm restrict_filesy,
+// uid 0, present when the agent started. systemd's other programs
+// (sd_fw_egress, sd_fw_ingress, sd_devices, the IPAddressDeny= and
+// RestrictNetworkInterfaces= ones) are cgroup types, which are not reported
+// at all. Like bpfKernelPreload they count as systemd's only when loaded by
+// root in the boot window; such a program is then remembered silently, so
+// systemd loading the same program again (soft reboot, daemon-reexec)
+// stays quiet, and one with that name but another tag does not.
+var bpfSystemd = map[string]string{"restrict_filesy": "lsm"}
+
 type bpfProg struct {
 	ID       uint32
 	Type     string
@@ -158,6 +171,9 @@ func (a *Agent) diffBPF(bs *BPFState, progs []bpfProg) bool {
 		}
 		bs.Known[p.key()] = true
 		changed = true
+		if bpfSystemd[p.Name] == p.Type && p.UID == 0 && p.LoadTime < bpfBootWindow {
+			continue
+		}
 		d := map[string]any{"id": p.ID, "type": p.Type, "name": p.Name, "tag": p.Tag, "uid": p.UID}
 		if !bs.Baselined {
 			d["baseline"] = true
