@@ -40,6 +40,15 @@ import (
 // Like on Debian, a finding is only reported when a second run ten minutes
 // later still shows it, and it is reported once: until its flags or its
 // SHA-256 change, or it verifies clean and comes back later.
+//
+// The reference is the image as built, not the rpm database: image builds
+// remove packaged files (grub units, tmpfiles snippets) and change others
+// (bytecode compiled again, provision.conf, kernel install.conf). So the
+// first run on a newly booted image records what rpm reports as that image's
+// baseline (path, flags, SHA-256) and reports nothing; later runs report only
+// what is new or changed against it. A change made before that first run is
+// in the baseline; the image itself is signature checked by bootc, and a
+// writable /usr is the usr_overlay posture check.
 
 // rpmVerifyArgs: --noscripts keeps rpm from running the packages'
 // %verifyscript as root, --nodeps from printing dependency problems,
@@ -188,13 +197,27 @@ func rpmSuspects(out []byte) map[string]rpmSuspect {
 }
 
 // RPMReported is a finding already reported, kept so it is not reported on
-// every run.
+// every run. The baseline uses the same record.
 type RPMReported struct {
 	Flags  string `json:"flags"`
 	SHA256 string `json:"sha256,omitempty"`
 }
 
+// rpmIntegrityStateVersion 2 added the per-image baseline. A version 1 file
+// (no version field) keeps its reported findings and gets a baseline on the
+// next scan that knows the booted image.
+const rpmIntegrityStateVersion = 2
+
+// rpmBaselineMax caps the baseline. A clean Nyra image has about a hundred
+// suspects; past the cap the rest is reported like any finding.
+const rpmBaselineMax = 20000
+
 type RPMIntegrityState struct {
+	Version int `json:"version,omitempty"`
+	// Image is the booted image (digest, or ostree checksum) Baseline was
+	// taken for. Empty: no baseline yet.
+	Image    string                  `json:"image,omitempty"`
+	Baseline map[string]*RPMReported `json:"baseline,omitempty"`
 	Reported map[string]*RPMReported `json:"reported"`
 }
 
@@ -208,6 +231,7 @@ func loadRPMIntegrityState(dir string) *RPMIntegrityState {
 	if is.Reported == nil {
 		is.Reported = map[string]*RPMReported{}
 	}
+	is.Version = rpmIntegrityStateVersion
 	return is
 }
 
@@ -217,21 +241,15 @@ func (is *RPMIntegrityState) save(dir string) {
 	}
 }
 
-// rpmFindings turns suspects into findings, leaving out those reported
-// before with the same flags and content. Reported files that verify clean
-// again are forgotten, so they count anew if they change later.
-func rpmFindings(is *RPMIntegrityState, sus map[string]rpmSuspect) []integrityFinding {
-	for p := range is.Reported {
-		if _, ok := sus[p]; !ok {
-			delete(is.Reported, p)
-		}
-	}
+// rpmCandidates turns suspects into findings with the file's size and
+// SHA-256 now, sorted by path. Nothing is filtered yet.
+func rpmCandidates(sus map[string]rpmSuspect) []integrityFinding {
 	paths := make([]string, 0, len(sus))
 	for p := range sus {
 		paths = append(paths, p)
 	}
 	sort.Strings(paths)
-	var out []integrityFinding
+	out := make([]integrityFinding, 0, len(paths))
 	for _, p := range paths {
 		s := sus[p]
 		d := map[string]any{"path": p, "flags": s.flags, "critical": integrityIsCritical(p),
@@ -249,12 +267,64 @@ func rpmFindings(is *RPMIntegrityState, sus map[string]rpmSuspect) []integrityFi
 		if s.flags == "missing" {
 			d["reason"] = "missing, the rpm database lists it"
 		}
-		if r := is.Reported[p]; r != nil && r.Flags == s.flags && r.SHA256 == sha {
-			continue
-		}
 		out = append(out, integrityFinding{path: p, data: d, rec: &IntegrityFile{SHA256: sha}})
 	}
 	return out
+}
+
+func sameRPMRecord(r *RPMReported, f integrityFinding) bool {
+	return r != nil && r.Flags == f.data["flags"].(string) && r.SHA256 == f.rec.SHA256
+}
+
+// rpmFindings turns suspects into findings, leaving out those in the image's
+// baseline and those reported before, both with the same flags and content.
+// Reported files that verify clean again are forgotten, so they count anew
+// if they change later. A baselined file that changes (other flags, other
+// SHA-256) is a finding.
+func rpmFindings(is *RPMIntegrityState, sus map[string]rpmSuspect, baseline map[string]*RPMReported) []integrityFinding {
+	for p := range is.Reported {
+		if _, ok := sus[p]; !ok {
+			delete(is.Reported, p)
+		}
+	}
+	var out []integrityFinding
+	for _, f := range rpmCandidates(sus) {
+		if sameRPMRecord(baseline[f.path], f) || sameRPMRecord(is.Reported[f.path], f) {
+			continue
+		}
+		out = append(out, f)
+	}
+	return out
+}
+
+// takeRPMBaseline records the suspects of a newly booted image as its
+// reference: images are built by modifying and removing packaged files
+// (bytecode compiled again, units removed, config written), and on an image
+// system the reference is the image as built, not the rpm database.
+// Findings reported for an earlier image are forgotten.
+func (a *Agent) takeRPMBaseline(is *RPMIntegrityState, image string, sus map[string]rpmSuspect, start time.Time) {
+	is.Image = image
+	is.Baseline = map[string]*RPMReported{}
+	is.Reported = map[string]*RPMReported{}
+	missing, over := 0, 0
+	for _, f := range rpmCandidates(sus) {
+		if len(is.Baseline) >= rpmBaselineMax {
+			over++
+			continue
+		}
+		flags := f.data["flags"].(string)
+		if flags == "missing" {
+			missing++
+		}
+		is.Baseline[f.path] = &RPMReported{Flags: flags, SHA256: f.rec.SHA256}
+	}
+	is.save(a.cfg.StateDir)
+	d := map[string]any{"image": image, "suspects": len(is.Baseline), "missing": missing, "changed": len(is.Baseline) - missing,
+		"seconds": int(time.Since(start).Seconds()), "verified_by": "rpm"}
+	if over > 0 {
+		d["over_cap"] = over
+	}
+	a.emit(proto.NewEvent("integrity.baseline", d))
 }
 
 // rpmVerify runs the platform's verification and tells a usable result from
@@ -289,6 +359,13 @@ func rpmVerify(ctx context.Context, v packageVerifier) ([]byte, error) {
 // shows is reported (at most integrityMaxAlert, then integrity.many) and
 // remembered. It returns the pending findings for the next run; ok is false
 // when rpm could not be run (warned) or ctx ended.
+//
+// The first run after a new image was booted (bootc's image digest, or the
+// ostree checksum, differs from the one in the state) takes the baseline for
+// that image instead and reports nothing but integrity.baseline. Not while
+// /usr has a writable overlay: what was changed through it would become the
+// reference. Without bootc the image is unknown, an existing baseline is
+// kept and none is taken.
 func (a *Agent) rpmIntegrityStep(ctx context.Context, v packageVerifier, is *RPMIntegrityState, pending map[string]integrityFinding) (map[string]integrityFinding, bool) {
 	start := time.Now()
 	out, err := rpmVerify(ctx, v)
@@ -300,9 +377,18 @@ func (a *Agent) rpmIntegrityStep(ctx context.Context, v packageVerifier, is *RPM
 		return nil, false
 	}
 	sus := rpmSuspects(out)
+	image, overlay, known := bootedImage(ctx)
+	baseline := is.Baseline
+	if image != "" && image != is.Image {
+		if overlay == "" {
+			a.takeRPMBaseline(is, image, sus, start)
+			return nil, true
+		}
+		baseline = nil // the stored one belongs to another image
+	}
 	if len(pending) > 0 {
 		var again []integrityFinding
-		for _, f := range rpmFindings(is, sus) {
+		for _, f := range rpmFindings(is, sus, baseline) {
 			if _, ok := pending[f.path]; ok {
 				again = append(again, f)
 			}
@@ -319,12 +405,15 @@ func (a *Agent) rpmIntegrityStep(ctx context.Context, v packageVerifier, is *RPM
 		is.save(a.cfg.StateDir)
 		return nil, true
 	}
-	found := rpmFindings(is, sus)
+	found := rpmFindings(is, sus, baseline)
 	is.save(a.cfg.StateDir)
 	scan := map[string]any{"files": 0, "suspect": len(found), "unowned": 0, "first": false,
 		"seconds": int(time.Since(start).Seconds()), "verified_by": "rpm"}
-	if ov, known := usrOverlayState(ctx); known {
-		scan["usr_overlay"] = ov != ""
+	if known {
+		scan["usr_overlay"] = overlay != ""
+	}
+	if baseline != nil {
+		scan["baseline"] = len(baseline)
 	}
 	a.emit(proto.NewEvent("integrity.scan", scan))
 	next := map[string]integrityFinding{}
@@ -332,6 +421,37 @@ func (a *Agent) rpmIntegrityStep(ctx context.Context, v packageVerifier, is *RPM
 		next[f.path] = f
 	}
 	return next, true
+}
+
+// bootedImage reads `bootc status --json` once: the booted image's digest
+// (or "ostree:<checksum>" when bootc knows no image digest), the usrOverlay
+// description, and whether bootc answered at all.
+func bootedImage(ctx context.Context) (image, overlay string, known bool) {
+	out, err := bootcStatus(ctx)
+	if err != nil {
+		return "", "", false
+	}
+	h, err := parseBootcStatus(out)
+	if err != nil {
+		return "", "", false
+	}
+	return bootedImageID(h), describeOverlay(h.Status.UsrOverlay), true
+}
+
+// bootedImageID names the booted deployment: the image digest, else the
+// ostree commit, else "".
+func bootedImageID(h *bootcHost) string {
+	b := h.Status.Booted
+	if b == nil {
+		return ""
+	}
+	if b.Image != nil && b.Image.Digest != "" {
+		return b.Image.Digest
+	}
+	if b.Ostree != nil && b.Ostree.Checksum != "" {
+		return "ostree:" + b.Ostree.Checksum
+	}
+	return ""
 }
 
 // attachRPMOwner fills package and version for an event; rpm -Va does not

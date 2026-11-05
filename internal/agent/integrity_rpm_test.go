@@ -307,3 +307,187 @@ func TestRPMDirectoryModeOnCleanImage(t *testing.T) {
 		t.Error("paths outside /usr are ignored")
 	}
 }
+
+// nyraCleanVerify is what `rpm -Va --nomtime --nodeps --noscripts` printed
+// under /usr on a clean Nyra image (Fedora 44 bootc, 2026-11-05), shortened:
+// files the image build removes or changes, bytecode compiled again, ghost
+// files.
+const nyraCleanVerify = `missing     /usr/lib/systemd/system/sysinit.target.wants/systemd-firstboot.service
+missing     /usr/lib/tmpfiles.d/home.conf
+missing     /usr/lib/systemd/system/grub-boot-indeterminate.service
+missing     /usr/lib/systemd/system/grub2-systemd-integration.service
+missing     /usr/lib/systemd/system/reboot.target.wants
+missing     /usr/lib/systemd/system/reboot.target.wants/grub2-systemd-integration.service
+missing     /usr/lib/systemd/system/system-update.target.wants/grub-boot-indeterminate.service
+missing     /usr/lib/systemd/system/systemd-logind.service.d
+missing     /usr/lib/systemd/system/systemd-logind.service.d/10-grub2-logind-service.conf
+missing     /usr/lib/systemd/user/grub-boot-success.service
+missing     /usr/lib/systemd/user/grub-boot-success.timer
+S.5......    /usr/lib/tmpfiles.d/provision.conf
+S.5......    /usr/lib/kernel/install.conf
+S.5......    /usr/lib64/python3.14/__pycache__/abc.cpython-314.pyc
+..5......    /usr/lib64/python3.14/__pycache__/os.cpython-314.opt-1.pyc
+.M.......  g /usr/lib/sysimage/rpm-ostree-base-db
+.M.......  g /var/log/lastlog
+`
+
+func nyraBootc(t *testing.T, digest *string) {
+	t.Helper()
+	real, err := os.ReadFile("testdata/bootc-status-nyra.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	const was = "sha256:8f624888672f84727dd35824982e88ae6a584215589ddfb8fa0d72f378b663f9"
+	if !strings.Contains(string(real), was) {
+		t.Fatal("testdata changed")
+	}
+	bootcStatus = func(context.Context) ([]byte, error) {
+		return []byte(strings.Replace(string(real), was, *digest, 1)), nil
+	}
+}
+
+// TestRPMImageBaseline: the first scan of a booted image takes its rpm -Va
+// output as the reference and reports nothing; later scans report what is
+// new or changed against it; a new image starts a new baseline.
+func TestRPMImageBaseline(t *testing.T) {
+	root := fedoraAtomicFixture(t)
+	write := func(rel, body string) {
+		p := filepath.Join(root, rel)
+		os.MkdirAll(filepath.Dir(p), 0o755)
+		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("usr/lib/tmpfiles.d/provision.conf", "image build\n")
+	write("usr/lib/kernel/install.conf", "layout=ostree\n")
+	write("usr/lib64/python3.14/__pycache__/abc.cpython-314.pyc", "bytecode 1")
+	write("usr/lib64/python3.14/__pycache__/os.cpython-314.opt-1.pyc", "bytecode 2")
+	write("usr/bin/ps", "procps")
+	var calls []string
+	verify := nyraCleanVerify
+	rpmFake(t, &verify, &calls)
+	digest := "sha256:aaaa"
+	nyraBootc(t, &digest)
+	p := fedoraAtomicPlatform{}
+	a := &Agent{cfg: &Config{MaxQueue: 1000, StateDir: t.TempDir()}, platform: p}
+	ctx := context.Background()
+	step := func(pending map[string]integrityFinding) map[string]integrityFinding {
+		t.Helper()
+		a.queue = nil
+		next, ok := a.rpmIntegrityStep(ctx, p, loadRPMIntegrityState(a.cfg.StateDir), pending)
+		if !ok {
+			t.Fatalf("step failed: %+v", a.queue)
+		}
+		return next
+	}
+
+	// First scan of the image: only integrity.baseline, nothing pending.
+	if pending := step(nil); len(pending) != 0 {
+		t.Fatalf("baseline scan pending: %v", pending)
+	}
+	if len(a.queue) != 1 || a.queue[0].Type != "integrity.baseline" {
+		t.Fatalf("baseline events: %+v", a.queue)
+	}
+	d := a.queue[0].Data
+	if d["image"] != digest || d["suspects"] != 15 || d["missing"] != 11 || d["changed"] != 4 {
+		t.Fatalf("baseline counts: %+v", d)
+	}
+	is := loadRPMIntegrityState(a.cfg.StateDir)
+	if is.Version != rpmIntegrityStateVersion || is.Image != digest || len(is.Baseline) != 15 ||
+		is.Baseline["/usr/lib/kernel/install.conf"].SHA256 == "" || is.Baseline["/usr/lib/tmpfiles.d/home.conf"].Flags != "missing" {
+		t.Fatalf("state: %+v", is)
+	}
+
+	// The same output again: a clean scan.
+	if pending := step(nil); len(pending) != 0 || len(a.queue) != 1 || a.queue[0].Type != "integrity.scan" ||
+		a.queue[0].Data["suspect"] != 0 || a.queue[0].Data["baseline"] != 15 || a.queue[0].Data["usr_overlay"] != false {
+		t.Fatalf("clean image again: %v %+v", pending, a.queue)
+	}
+
+	// A file the baseline does not know: pending, then reported.
+	verify = nyraCleanVerify + "S.5......    /usr/bin/ps\n"
+	write("usr/bin/ps", "evil")
+	pending := step(nil)
+	if len(pending) != 1 || pending["/usr/bin/ps"].path == "" {
+		t.Fatalf("new finding: %v", pending)
+	}
+	step(pending)
+	if len(a.queue) != 1 || a.queue[0].Type != "integrity.mismatch" || a.queue[0].Data["path"] != "/usr/bin/ps" {
+		t.Fatalf("confirm: %+v", a.queue)
+	}
+
+	// A baselined file with other content, and one with other flags.
+	write("usr/lib64/python3.14/__pycache__/abc.cpython-314.pyc", "bytecode 1, changed")
+	verify = strings.Replace(nyraCleanVerify, "..5......    /usr/lib64/python3.14/__pycache__/os", "SM5......    /usr/lib64/python3.14/__pycache__/os", 1) +
+		"S.5......    /usr/bin/ps\n"
+	pending = step(nil)
+	if len(pending) != 2 || pending["/usr/lib64/python3.14/__pycache__/abc.cpython-314.pyc"].path == "" ||
+		pending["/usr/lib64/python3.14/__pycache__/os.cpython-314.opt-1.pyc"].path == "" {
+		t.Fatalf("changed baseline files: %v", pending)
+	}
+
+	// An update (or rollback) boots another image: a new baseline, nothing
+	// reported, findings of the old image forgotten.
+	digest = "sha256:bbbb"
+	if pending := step(nil); len(pending) != 0 || len(a.queue) != 1 || a.queue[0].Type != "integrity.baseline" || a.queue[0].Data["suspects"] != 16 {
+		t.Fatalf("new image: %v %+v", pending, a.queue)
+	}
+	if is := loadRPMIntegrityState(a.cfg.StateDir); is.Image != digest || len(is.Reported) != 0 || is.Baseline["/usr/bin/ps"] == nil {
+		t.Fatalf("new image state: %+v", is)
+	}
+
+	// With a writable /usr overlay no baseline is taken: what was changed
+	// through it would become the reference. The old image's baseline does
+	// not apply either.
+	digest = "sha256:cccc"
+	over, _ := os.ReadFile("testdata/bootc-status-nyra.json")
+	over = []byte(strings.Replace(strings.Replace(string(over), "sha256:8f624888672f84727dd35824982e88ae6a584215589ddfb8fa0d72f378b663f9", digest, 1),
+		`"usrOverlay":null`, `"usrOverlay":{"accessMode":"readWrite","persistence":"transient"}`, 1))
+	bootcStatus = func(context.Context) ([]byte, error) { return over, nil }
+	verify = nyraCleanVerify
+	if pending := step(nil); len(pending) != 15 || a.queue[0].Type != "integrity.scan" || a.queue[0].Data["usr_overlay"] != true {
+		t.Fatalf("overlay: %d %+v", len(pending), a.queue)
+	}
+	if is := loadRPMIntegrityState(a.cfg.StateDir); is.Image != "sha256:bbbb" {
+		t.Fatalf("baseline taken under an overlay: %+v", is.Image)
+	}
+}
+
+// A version 1 state file (no version, no baseline) keeps its reported
+// findings and gets a baseline on the next scan that knows the image.
+func TestRPMStateV1Migrates(t *testing.T) {
+	fedoraAtomicFixture(t)
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "integrity-rpm.json"), []byte(`{"reported":{"/usr/bin/ps":{"flags":"S.5......","sha256":"ab"}}}`), 0o600)
+	is := loadRPMIntegrityState(dir)
+	if is.Version != rpmIntegrityStateVersion || is.Image != "" || is.Baseline != nil || is.Reported["/usr/bin/ps"].SHA256 != "ab" {
+		t.Fatalf("v1: %+v", is)
+	}
+	var calls []string
+	verify := nyraCleanVerify
+	rpmFake(t, &verify, &calls)
+	digest := "sha256:aaaa"
+	nyraBootc(t, &digest)
+	p := fedoraAtomicPlatform{}
+	a := &Agent{cfg: &Config{MaxQueue: 100, StateDir: dir}, platform: p}
+	if pending, _ := a.rpmIntegrityStep(context.Background(), p, is, nil); len(pending) != 0 || a.queue[0].Type != "integrity.baseline" {
+		t.Fatalf("first scan after the update: %v %+v", pending, a.queue)
+	}
+}
+
+// Without an image digest bootc's ostree commit names the deployment.
+func TestBootedImageID(t *testing.T) {
+	real, _ := os.ReadFile("testdata/bootc-status-nyra.json")
+	h, err := parseBootcStatus(real)
+	if err != nil || bootedImageID(h) != "sha256:8f624888672f84727dd35824982e88ae6a584215589ddfb8fa0d72f378b663f9" {
+		t.Fatalf("digest: %v %q", err, bootedImageID(h))
+	}
+	h.Status.Booted.Image = nil
+	if got := bootedImageID(h); got != "ostree:6703c47ddb789b5ea6c4cf0e425ed171b4a673b0c53888ee927a462be6ed63db" {
+		t.Fatalf("ostree: %q", got)
+	}
+	h.Status.Booted = nil
+	if bootedImageID(h) != "" {
+		t.Fatal("no booted deployment")
+	}
+}

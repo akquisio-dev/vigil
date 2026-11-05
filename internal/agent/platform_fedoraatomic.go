@@ -257,6 +257,9 @@ type bootcHost struct {
 type bootcEntry struct {
 	Image       *bootcImage `json:"image"`
 	CachedImage *bootcImage `json:"cachedUpdate"`
+	Ostree      *struct {
+		Checksum string `json:"checksum"`
+	} `json:"ostree"`
 }
 
 type bootcImage struct {

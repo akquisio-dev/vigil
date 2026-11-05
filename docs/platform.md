@@ -118,6 +118,33 @@ What counts, per line (`SM5DLUGTP` flag field, optional one-letter marker such a
 | `M` alone on a directory | only if group or world writable now | a clean Nyra image reports `.M` for many directories (`/usr/bin`, `/usr/lib`, `/usr/lib64/...`, `/usr/share/empty`): ostree stores directories with its own permission bits (seen on a Nyra VM, 2026-11-05) |
 | `missing` | yes | a file the image ships is gone |
 
+The reference is the image as built, not the rpm database. Image builds remove and change packaged files on
+purpose: a clean Nyra image (2026-11-05) still showed 99 suspects after the rules above, 11 `missing` files the
+bootc base image removes (grub units, `systemd-firstboot.service` in `sysinit.target.wants`, `tmpfiles.d/home.conf`,
+the `systemd-logind.service.d` grub snippet), `S.5` on `/usr/lib/tmpfiles.d/provision.conf` and
+`/usr/lib/kernel/install.conf`, and about 85 `S.5`/`..5` on `/usr/lib64/python3.14/__pycache__/*.pyc` (bytecode
+compiled again by the build). So the agent keeps a baseline per booted image:
+
+- The image is `status.booted.image.imageDigest` from `bootc status --json`, else `ostree:` and
+  `status.booted.ostree.checksum`. Without bootc the image is unknown: an existing baseline is kept, none is taken,
+  and every suspect counts as above.
+- The first run on an image it has no baseline for records every suspect (path, flags, SHA-256 of the file now)
+  as that image's baseline, reports none of them and sends one `integrity.baseline` (info, no alert) with `image`,
+  `suspects`, `missing`, `changed` and `seconds`. Findings reported for an earlier image are forgotten.
+- Later runs drop a suspect only when the baseline has the same path with the same flags and SHA-256. A new
+  suspect, or a baselined file whose flags or content changed, is a finding as before (confirmed by a second run,
+  capped, reported once). `integrity.scan` carries `baseline`, the number of baselined files.
+- A new image (update, rollback) starts a new baseline. While `usrOverlay` is set no baseline is taken (what was
+  changed through the overlay would become the reference) and the old image's baseline does not apply: every
+  suspect counts, next to the `usr_overlay` alert.
+- Limit: a change made to `/usr` before the first run on a new image is part of its baseline. The image itself is
+  signature checked by bootc when it is pulled (Nyra's ADR), `/usr` is read-only, and a writable `/usr` raises
+  `posture.usr_overlay`, so such a change needs tampering below the file system before the agent's first run,
+  five minutes after start.
+- Kept in `integrity-rpm.json`, version 2 (`version`, `image`, `baseline`, `reported`); a file without a version
+  keeps its reported findings and gets a baseline on the next run that knows the image. At most 20000 baselined
+  files; past that the rest counts as findings.
+
 A finding becomes `integrity.mismatch` (critical names like `sshd`, `ps`, PAM modules and libc via
 `integrityIsCritical` give `integrity.binary_replaced`, the rest `integrity.modified`) with `flags`, a reason such
 as "differs from the rpm database (size, digest)", the SHA-256 and size of the file now, and package and version
