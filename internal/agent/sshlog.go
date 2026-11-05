@@ -303,12 +303,12 @@ func atoi(s string) int {
 // sshd's only for the two lines a session ends with; a user writing those
 // lines himself learns nothing and fakes no login. Seen on Ubuntu 24.04
 // (sshd) and on a Nyra VM, Fedora 44 with OpenSSH 10 (sshd-session, uid
-// 1000).
+// 1000). There _COMM is often missing too, for the same reason.
 func journalEntry(uid, comm, exe, ident, msg string) (use, spoofed bool) {
 	if uid != "0" && trustedExe[exe] {
 		return false, false
 	}
-	if uid != "0" && exe == "" && sshdNames[comm] && sshdNames[ident] && sessionEnd(msg) {
+	if uid != "0" && exe == "" && (comm == "" || sshdNames[comm]) && sshdNames[ident] && sessionEnd(msg) {
 		return false, false
 	}
 	if spoofedLog(uid, comm) {

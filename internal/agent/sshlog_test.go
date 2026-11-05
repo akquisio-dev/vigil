@@ -56,6 +56,9 @@ func TestJournalEntry(t *testing.T) {
 		{"1000", "sshd-session", "", "sshd-session", "Received disconnect from 10.0.2.2 port 51234:11: disconnected by user", false, false},
 		{"1000", "sshd-session", "", "sshd-session", "Disconnected from user joey 10.0.2.2 port 51234", false, false},
 		{"1000", "sshd-session", "", "sshd", "Disconnected from user joey 10.0.2.2 port 51234", false, false},
+		// _COMM gone as well: still only the two closing lines
+		{"1000", "", "", "sshd-session", "Received disconnect from 10.0.2.2 port 51234:11: disconnected by user", false, false},
+		{"1000", "", "", "sshd-session", "Accepted publickey for root from 192.0.2.1 port 22 ssh2", false, true},
 		{"74", "sshd-auth", "/usr/libexec/openssh/sshd-auth", "sshd-auth", "", false, false},
 		{"0", "sshd-session", "/usr/libexec/openssh/sshd-session", "sshd-session", "Accepted publickey for joey from 10.0.2.2 port 51234 ssh2", true, false},
 		// still no login line without _EXE, and no copy elsewhere or other writer

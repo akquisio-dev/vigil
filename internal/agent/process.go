@@ -64,13 +64,21 @@ var cmdSignals = []struct {
 	{"miner", regexp.MustCompile(`(?i)\bstratum\+(tcp|ssl|tls)://|--donate-level|\b(xmrig|xmr-stak|minerd|cpuminer|kdevtmpfsi|kinsing|nanominer|t-rex|lolminer|phoenixminer)\b|--cpu-max-threads-hint|--randomx`)},
 }
 
+// ownBootc tells the agent's own `bootc status --json` (platform
+// fedoraatomic). bootc re-executes a copy of itself from /tmp/.tmpXXXXXX in a
+// private mount namespace; seen on Fedora 44 with every status call. Only a
+// direct child of this agent with exactly that command line is spared.
+func (e *ExecInfo) ownBootc() bool {
+	return e.PPID == os.Getpid() && e.Cmdline == "bootc status --json"
+}
+
 // signals lists why a program start is worth reporting. An empty result
 // means the start is not reported, which keeps busy hosts quiet.
 func (e *ExecInfo) signals() []string {
 	var out []string
 	base := filepath.Base(e.Exe)
 	for _, d := range tmpDirs {
-		if strings.HasPrefix(e.Exe, d) {
+		if strings.HasPrefix(e.Exe, d) && !e.ownBootc() {
 			out = append(out, "tmp_exe")
 			break
 		}

@@ -300,6 +300,10 @@ func TestExecSignals(t *testing.T) {
 		{ExecInfo{Exe: "/usr/bin/bash", Comm: "bash", Cmdline: "bash -c npm run build", ParentComm: "node"}, ""},
 		{ExecInfo{Exe: "/usr/bin/git", Comm: "git", Cmdline: "git pull", ParentComm: "sshd"}, ""},
 		{ExecInfo{Exe: "/tmp/x", Comm: "x", Cmdline: "/tmp/x"}, "tmp_exe"},
+		// bootc's copy of itself, started by this agent, is spared; from anyone else it is not
+		{ExecInfo{Exe: "/tmp/.tmpPxTAHd", Comm: "bootc", Cmdline: "bootc status --json", PPID: os.Getpid()}, ""},
+		{ExecInfo{Exe: "/tmp/.tmpPxTAHd", Comm: "bootc", Cmdline: "bootc status --json", PPID: 1}, "tmp_exe"},
+		{ExecInfo{Exe: "/tmp/.tmpPxTAHd", Comm: "x", Cmdline: "bootc status --json; id", PPID: os.Getpid()}, "tmp_exe"},
 		{ExecInfo{Exe: "/usr/bin/kworker", Deleted: true}, "deleted_exe"},
 		{ExecInfo{Exe: "/usr/bin/bash", Comm: "bash", StdioSocket: true}, "shell_socket"},
 		{ExecInfo{Exe: "/usr/bin/dash", Comm: "sh", Cmdline: "sh -c id", ParentComm: "nginx"}, "service_shell"},
