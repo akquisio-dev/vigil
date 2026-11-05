@@ -110,6 +110,17 @@ skipped trees are dropped from `suid.json` without a `file.suid_removed`. The ot
 application inventory walks `/opt`, `/srv`, `/var/www`, `/home` and `/root` without leaving their file system, the
 temp directory scan walks `/tmp`, `/var/tmp`, `/dev/shm`, posture walks `/etc`. On Debian nothing changes.
 
+### Open findings from the clean image
+
+A clean Nyra VM (2026-11-05) raised `process.tmp_exec` three times: `/tmp/.tmpWqNpWy`, `/tmp/.tmpPtoRum`,
+`/tmp/.tmp9vOwQ6`, uid 0. `.tmp` and six letters is the naming of Rust's `tempfile` crate, and the path is a file
+that was executed, not a directory. Not explained yet and not allowed: the alert stays. Program starts now carry
+`cgroup`, `unit` and `mnt_ns_private` (see [architecture](architecture.md)), next to `exe_sha256`, `cmdline`,
+`parent_exe` and `parent_comm`, so the next run shows which unit runs it and whether it is a copy of a program
+of the image (compare `exe_sha256` with `/usr/bin` and `/usr/libexec`). In a unit with `PrivateTmp=` the file
+lies in `/tmp/systemd-private-*-<unit>-*/tmp` on the host while `/proc` shows `/tmp/...`; `mnt_ns_private`
+together with a `unit` marks that case.
+
 ### Integrity on fedoraatomic
 
 `integrity_rpm.go`. `rpm -Va --nomtime --nodeps --noscripts` verifies every file of every installed package

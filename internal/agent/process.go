@@ -1,8 +1,10 @@
 package agent
 
 import (
+	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -167,6 +169,7 @@ func (a *Agent) reportExec(e *ExecInfo) {
 	if e.Preload != "" {
 		d["ld_preload"] = clipCmd(e.Preload)
 	}
+	tagCgroup(d, e)
 	// The program is opened right away, hashed and scanned in the
 	// background; the report follows with the hash.
 	scan := a.scanProcess(e.PID, e.Exe, "exec")
@@ -187,4 +190,59 @@ func (a *Agent) reportExec(e *ExecInfo) {
 			break
 		}
 	}
+}
+
+// tagCgroup adds where a reported program runs: its cgroup and systemd unit
+// from /proc/<pid>/cgroup, read while it still runs, and mnt_ns_private when
+// its mount namespace is not the host's. A unit with PrivateTmp= runs in a
+// namespace of its own whose /tmp is /tmp/systemd-private-*-<unit>-*/tmp on
+// the host, yet /proc shows its programs as /tmp/...: mnt_ns_private with a
+// unit tells that case from a program in the host's /tmp.
+func tagCgroup(d map[string]any, e *ExecInfo) {
+	if b, err := os.ReadFile("/proc/" + strconv.Itoa(e.PID) + "/cgroup"); err == nil {
+		if cg := cgroupPath(string(b)); cg != "" {
+			d["cgroup"] = cg
+			if u := cgroupUnit(cg); u != "" {
+				d["unit"] = u
+			}
+		}
+	}
+	if e.MntNS != "" && hostMntNS != "" && e.MntNS != hostMntNS {
+		d["mnt_ns_private"] = true
+	}
+}
+
+// cgroupPath is the cgroup v2 path ("0::/system.slice/x.service"), else the
+// path of the first v1 hierarchy that has one.
+func cgroupPath(content string) string {
+	first := ""
+	for _, l := range strings.Split(content, "\n") {
+		parts := strings.SplitN(l, ":", 3)
+		if len(parts) != 3 || parts[2] == "" {
+			continue
+		}
+		if parts[0] == "0" && parts[1] == "" {
+			return parts[2]
+		}
+		if first == "" && parts[2] != "/" {
+			first = parts[2]
+		}
+	}
+	return first
+}
+
+// cgroupUnit is the innermost systemd unit in a cgroup path:
+// "/system.slice/bootc-fetch-apply-updates.service" -> its service,
+// "/user.slice/user-1000.slice/session-3.scope" -> "session-3.scope". A
+// sub-cgroup a unit made itself (Delegate=) belongs to that unit.
+func cgroupUnit(path string) string {
+	parts := strings.Split(path, "/")
+	for i := len(parts) - 1; i >= 0; i-- {
+		for _, suf := range []string{".service", ".scope", ".socket", ".mount", ".swap"} {
+			if strings.HasSuffix(parts[i], suf) && len(parts[i]) > len(suf) {
+				return parts[i]
+			}
+		}
+	}
+	return ""
 }

@@ -435,3 +435,42 @@ func TestUpdatesParsing(t *testing.T) {
 		t.Fatal("kernel versions compare numerically")
 	}
 }
+
+func TestCgroupUnit(t *testing.T) {
+	for _, c := range []struct{ content, path, unit string }{
+		{"0::/system.slice/bootc-fetch-apply-updates.service\n", "/system.slice/bootc-fetch-apply-updates.service", "bootc-fetch-apply-updates.service"},
+		{"0::/user.slice/user-1000.slice/session-3.scope\n", "/user.slice/user-1000.slice/session-3.scope", "session-3.scope"},
+		{"0::/system.slice/podman.service/payload\n", "/system.slice/podman.service/payload", "podman.service"},
+		{"0::/init.scope\n", "/init.scope", "init.scope"},
+		{"0::/\n", "/", ""},
+		// cgroup v1: the first hierarchy with a path
+		{"12:pids:/\n4:memory:/system.slice/cron.service\n1:name=systemd:/system.slice/cron.service\n", "/system.slice/cron.service", "cron.service"},
+		{"", "", ""},
+	} {
+		if p := cgroupPath(c.content); p != c.path || cgroupUnit(p) != c.unit {
+			t.Errorf("%q: %q %q", c.content, p, cgroupUnit(p))
+		}
+	}
+}
+
+// A reported start carries its cgroup and unit (here the test's own
+// process), and mnt_ns_private only outside the host's mount namespace.
+func TestTagCgroup(t *testing.T) {
+	ns, _ := os.Readlink("/proc/self/ns/mnt")
+	if _, err := os.Stat("/proc/self/cgroup"); err != nil {
+		t.Skip("no /proc")
+	}
+	d := map[string]any{}
+	tagCgroup(d, &ExecInfo{PID: os.Getpid(), MntNS: ns})
+	if d["cgroup"] == nil || d["cgroup"] == "" {
+		t.Fatalf("no cgroup: %v", d)
+	}
+	if hostMntNS != "" && ns == hostMntNS && d["mnt_ns_private"] != nil {
+		t.Fatalf("host namespace marked private: %v", d)
+	}
+	d = map[string]any{}
+	tagCgroup(d, &ExecInfo{PID: os.Getpid(), MntNS: "mnt:[1]"})
+	if hostMntNS != "" && hostMntNS != "mnt:[1]" && d["mnt_ns_private"] != true {
+		t.Fatalf("private namespace not marked: %v", d)
+	}
+}
