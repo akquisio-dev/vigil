@@ -174,7 +174,7 @@ func (a *Agent) diffBPF(bs *BPFState, progs []bpfProg) bool {
 		if bpfSystemd[p.Name] == p.Type && p.UID == 0 && p.LoadTime < bpfBootWindow {
 			continue
 		}
-		d := map[string]any{"id": p.ID, "type": p.Type, "name": p.Name, "tag": p.Tag, "uid": p.UID}
+		d := map[string]any{"id": p.ID, "type": p.Type, "name": p.Name, "tag": p.Tag, "uid": p.UID, "loaded_after_boot": p.LoadTime / 1e9}
 		if !bs.Baselined {
 			d["baseline"] = true
 		}

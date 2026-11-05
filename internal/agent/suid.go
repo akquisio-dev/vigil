@@ -470,7 +470,7 @@ func (a *Agent) runSuid(ctx context.Context) {
 		}
 	}
 	skip, _ := a.walkLayout()
-	if pruneSkipped(ss, skip) {
+	if l, ok := a.plat().(fileWalkLayout); ok && pruneSkipped(ss, l.WalkSkip()) {
 		save()
 	}
 	full := time.NewTimer(3 * time.Minute)

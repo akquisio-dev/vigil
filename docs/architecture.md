@@ -204,7 +204,8 @@ can use. Fields in brackets are only present when known.
 | `suid.scan` | `files`, `roots`, `seconds` |
 | `integrity.mismatch` | `path`, `package`, `version`, `reason`, `sha256`, `size`, `critical`, (`expected_md5`, `md5`, `old_sha256`; with rpm: `flags`) |
 | `integrity.unowned` | `path`, (`sha256`, `size`, `mode`) |
-| `integrity.scan` | `files`, `suspect`, `unowned`, `first`, `seconds`, (with rpm: `verified_by`, `usr_overlay`; `files` and `unowned` are 0 there) |
+| `integrity.scan` | `files`, `suspect`, `unowned`, `first`, `seconds`, (with rpm: `verified_by`, `usr_overlay`, `baseline`; `files` and `unowned` are 0 there) |
+| `integrity.baseline` | `image`, `suspects`, `missing`, `changed`, `seconds`, `verified_by`, (`over_cap`); with rpm, the first run on a new booted image, no alert |
 | `integrity.many` | `count` |
 | `posture.report` | `checks` (`check`, `key`, `ok`, `value`, `want`), `certs` (`path`, `subject`, `names`, `issuer`, `not_after`, `days`, `self_signed`, `error`), `backups` (`name`, `path`, `newest`, `modified`, `age_hours`, `max_age_hours`, `size`, `ok`, `problem`) |
 | `secret.exposed` | `path`, `kind`, `line`, `fingerprint` (first 6 bytes of SHA-256 of the secret), `uid`, `mode`, (`baseline`) |
@@ -212,7 +213,7 @@ can use. Fields in brackets are only present when known.
 | `system.packages` | `os_id`, `os_version`, `os_codename`, `packages` (pairs of source package and version), `hash` |
 | `container.snapshot` | `containers` (`id`, `name`, `image`, `image_id`, `project`, `privileged`, `pid_host`, `net_host`, `cap_add`, `user`, `mounts` (`source`, `dest`, `rw`), `started`), `docker_group`, `hash` |
 | `system.apps` | `manifests` (pairs of lock file path and package count), `packages` (ecosystem, name, version, index of the first lock file naming it), `hash`, (`truncated`) |
-| `kernel.bpf_loaded` | `id`, `type`, `name`, `tag`, `uid`, (`baseline`) |
+| `kernel.bpf_loaded` | `id`, `type`, `name`, `tag`, `uid`, `loaded_after_boot` (seconds), (`baseline`) |
 | `kernel.baseline` | `modules`, `tainted`, `out_of_tree` (list of `name (flags)`) |
 | `kernel.module_loaded` | `name`, `taint`, `size` |
 | `kernel.module_unloaded`, `kernel.module_hidden` | `name` |

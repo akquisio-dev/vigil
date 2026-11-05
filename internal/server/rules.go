@@ -420,6 +420,13 @@ func (s *Server) evaluate(a *AgentRec, r *Record) []finding {
 		p := map[string]string{"exe": str(d, "exe"), "cmdline": str(d, "cmdline"), "uid": str(d, "uid"),
 			"parent": str(d, "parent_comm"), "parent_exe": str(d, "parent_exe"), "cwd": str(d, "cwd"), "pid": str(d, "pid"),
 			"lib": str(d, "ld_preload")}
+		// Where it ran (newer agents): only when set, so older
+		// agents' alerts read as before.
+		for _, k := range []string{"unit", "cgroup", "mnt_ns_private", "exe_sha256"} {
+			if v := str(d, k); v != "" {
+				p[k] = v
+			}
+		}
 		key := str(d, "exe") + "|" + str(d, "parent_exe")
 		seen := map[string]bool{}
 		for _, sig := range strSlice(d["signals"]) {
@@ -614,7 +621,11 @@ func (s *Server) evaluate(a *AgentRec, r *Record) []finding {
 	case "process.rate_limited":
 		add("process.rate_limited", "", map[string]string{"dropped": str(d, "dropped")})
 	case "log.spoofed":
-		add("log.spoofed", str(d, "comm")+"|"+str(d, "uid"), map[string]string{"identifier": str(d, "identifier"), "comm": str(d, "comm"), "uid": str(d, "uid")})
+		p := map[string]string{"identifier": str(d, "identifier"), "comm": str(d, "comm"), "uid": str(d, "uid")}
+		if exe := str(d, "exe"); exe != "" {
+			p["exe"] = exe
+		}
+		add("log.spoofed", str(d, "comm")+"|"+str(d, "uid"), p)
 	case "agent.dropped":
 		add("agent.dropped", "", map[string]string{"count": str(d, "count")})
 	}

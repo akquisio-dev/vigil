@@ -61,7 +61,7 @@ func TestBPFSystemdLSM(t *testing.T) {
 	}
 	a.diffBPF(bs, later)
 	ev := eventTypes(a)["kernel.bpf_loaded"]
-	if len(ev) != 3 || ev[0]["id"] != uint32(71) || ev[1]["id"] != uint32(72) || ev[2]["id"] != uint32(73) {
+	if len(ev) != 3 || ev[0]["id"] != uint32(71) || ev[1]["id"] != uint32(72) || ev[2]["id"] != uint32(73) || ev[0]["loaded_after_boot"] != uint64(9000) {
 		t.Fatalf("later loads: %v", ev)
 	}
 }

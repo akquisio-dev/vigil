@@ -174,10 +174,10 @@ func TestPruneSkippedSuid(t *testing.T) {
 		"/usr/bin/chage": {Mode: 0o4755},
 		"/sysroot/ostree/deploy/default/deploy/abc.0/usr/bin/chage": {Mode: 0o4755},
 	}}
-	if !pruneSkipped(ss, append(append([]string{}, suidSkip...), fedoraAtomicPlatform{}.WalkSkip()...)) || len(ss.Files) != 1 || ss.Files["/usr/bin/chage"] == nil {
+	if !pruneSkipped(ss, fedoraAtomicPlatform{}.WalkSkip()) || len(ss.Files) != 1 || ss.Files["/usr/bin/chage"] == nil {
 		t.Fatalf("prune: %v", ss.Files)
 	}
-	if pruneSkipped(ss, suidSkip) {
+	if pruneSkipped(ss, fedoraAtomicPlatform{}.WalkSkip()) {
 		t.Fatal("nothing left to prune")
 	}
 }

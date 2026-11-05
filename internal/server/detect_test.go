@@ -52,4 +52,20 @@ func TestKernelAndProcessRules(t *testing.T) {
 	if len(fs) != 1 || fs[0].Rule != "process.preload" || fs[0].Key != "process.preload|a1|/usr/bin/ssh|/dev/shm/x.so" {
 		t.Fatalf("preload: %+v", fs)
 	}
+	// Where a program ran is part of the alert's detail when the agent
+	// sends it; the key stays the same.
+	fs = evalOne(s, "process.exec", map[string]any{"exe": "/tmp/.tmpWqNpWy", "uid": 0.0, "signals": []any{"tmp_exe"},
+		"unit": "bootc-fetch-apply-updates.service", "cgroup": "/system.slice/bootc-fetch-apply-updates.service", "mnt_ns_private": true})
+	if len(fs) != 1 || fs[0].Params["unit"] != "bootc-fetch-apply-updates.service" || fs[0].Params["mnt_ns_private"] != "true" ||
+		fs[0].Key != "process.tmp_exec|a1|/tmp/.tmpWqNpWy|" {
+		t.Fatalf("unit: %+v", fs)
+	}
+	fs = evalOne(s, "process.exec", map[string]any{"exe": "/tmp/x", "uid": 0.0, "signals": []any{"tmp_exe"}})
+	if _, ok := fs[0].Params["unit"]; ok {
+		t.Fatalf("older agent: %+v", fs[0].Params)
+	}
+	fs = evalOne(s, "log.spoofed", map[string]any{"identifier": "sshd", "comm": "logger", "exe": "/usr/bin/logger", "uid": "1000"})
+	if len(fs) != 1 || fs[0].Params["exe"] != "/usr/bin/logger" || fs[0].Key != "log.spoofed|a1|logger|1000" {
+		t.Fatalf("spoofed: %+v", fs)
+	}
 }
