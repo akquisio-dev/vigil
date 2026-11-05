@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/akquisio-dev/vigil/internal/proto"
@@ -72,13 +73,67 @@ func (e *ExecInfo) ownBootc() bool {
 	return e.PPID == os.Getpid() && e.Cmdline == "bootc status --json"
 }
 
+// bootc runs from such a copy for every command, whoever starts it (on Nyra
+// the packages provider and the login status as well). Such a start is
+// spared only when the running file is byte for byte the installed bootc:
+// same name pattern, a bootc command line, and the same SHA-256 as
+// bootcBinary. If the process is gone before it is hashed, it is reported.
+var (
+	bootcBinary  = "/usr/bin/bootc"
+	bootcTmpName = regexp.MustCompile(`^/tmp/\.tmp[A-Za-z0-9]{6}$`)
+	// procExeSHA hashes the running program; replaced in tests.
+	procExeSHA = func(pid int) string {
+		_, sha, err := hashFile("/proc/" + strconv.Itoa(pid) + "/exe")
+		if err != nil {
+			return ""
+		}
+		return sha
+	}
+	bootcSum struct {
+		sync.Mutex
+		size  int64
+		mtime time.Time
+		sha   string
+	}
+)
+
+// installedBootcSHA is the hash of bootcBinary, recomputed when it changes.
+func installedBootcSHA() string {
+	st, err := os.Stat(bootcBinary)
+	if err != nil {
+		return ""
+	}
+	bootcSum.Lock()
+	defer bootcSum.Unlock()
+	if bootcSum.sha != "" && bootcSum.size == st.Size() && bootcSum.mtime.Equal(st.ModTime()) {
+		return bootcSum.sha
+	}
+	_, sha, err := hashFile(bootcBinary)
+	if err != nil {
+		return ""
+	}
+	bootcSum.size, bootcSum.mtime, bootcSum.sha = st.Size(), st.ModTime(), sha
+	return sha
+}
+
+func (e *ExecInfo) bootcCopy() bool {
+	if e.PID <= 0 || !bootcTmpName.MatchString(e.Exe) {
+		return false
+	}
+	if e.Cmdline != "bootc" && !strings.HasPrefix(e.Cmdline, "bootc ") {
+		return false
+	}
+	want := installedBootcSHA()
+	return want != "" && procExeSHA(e.PID) == want
+}
+
 // signals lists why a program start is worth reporting. An empty result
 // means the start is not reported, which keeps busy hosts quiet.
 func (e *ExecInfo) signals() []string {
 	var out []string
 	base := filepath.Base(e.Exe)
 	for _, d := range tmpDirs {
-		if strings.HasPrefix(e.Exe, d) && !e.ownBootc() {
+		if strings.HasPrefix(e.Exe, d) && !e.ownBootc() && !e.bootcCopy() {
 			out = append(out, "tmp_exe")
 			break
 		}

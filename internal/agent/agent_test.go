@@ -291,6 +291,40 @@ func TestSSHKeyCanaryIsValid(t *testing.T) {
 	}
 }
 
+func TestBootcCopyIsSparedOnlyWhenIdentical(t *testing.T) {
+	dir := t.TempDir()
+	bin := filepath.Join(dir, "bootc")
+	if err := os.WriteFile(bin, []byte("the real bootc"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	oldBin, oldSHA := bootcBinary, procExeSHA
+	defer func() { bootcBinary, procExeSHA = oldBin, oldSHA }()
+	bootcBinary = bin
+	_, real, _ := hashFile(bin)
+	running := map[int]string{10: real, 11: "0000", 12: ""}
+	procExeSHA = func(pid int) string { return running[pid] }
+	cases := []struct {
+		e    ExecInfo
+		want string
+	}{
+		{ExecInfo{PID: 10, PPID: 1, Exe: "/tmp/.tmpQgGVAF", Cmdline: "bootc upgrade --check"}, ""},
+		{ExecInfo{PID: 10, PPID: 1, Exe: "/tmp/.tmpQgGVAF", Cmdline: "bootc status --json"}, ""},
+		// another program under bootc's name, or already gone: reported
+		{ExecInfo{PID: 11, PPID: 1, Exe: "/tmp/.tmpQgGVAF", Cmdline: "bootc status --json"}, "tmp_exe"},
+		{ExecInfo{PID: 12, PPID: 1, Exe: "/tmp/.tmpQgGVAF", Cmdline: "bootc status --json"}, "tmp_exe"},
+		// the real bootc, but not as bootc or not under its copy name
+		{ExecInfo{PID: 10, PPID: 1, Exe: "/tmp/.tmpQgGVAF", Cmdline: "sh -c id"}, "tmp_exe"},
+		{ExecInfo{PID: 10, PPID: 1, Exe: "/tmp/payload", Cmdline: "bootc status"}, "tmp_exe"},
+		{ExecInfo{PID: 10, PPID: 1, Exe: "/dev/shm/.tmpQgGVAF", Cmdline: "bootc status"}, "tmp_exe"},
+	}
+	for _, c := range cases {
+		got := strings.Join(c.e.signals(), ",")
+		if c.want == "" && got != "" || c.want != "" && !strings.Contains(got, c.want) {
+			t.Errorf("%d %q %q: got %q, want %q", c.e.PID, c.e.Exe, c.e.Cmdline, got, c.want)
+		}
+	}
+}
+
 func TestExecSignals(t *testing.T) {
 	cases := []struct {
 		e    ExecInfo
