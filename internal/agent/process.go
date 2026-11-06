@@ -132,9 +132,16 @@ func (e *ExecInfo) bootcCopy() bool {
 func (e *ExecInfo) signals() []string {
 	var out []string
 	base := filepath.Base(e.Exe)
+	// bootc deletes its copy right after starting it, so a spared copy is
+	// spared as a deleted program as well.
+	spared := false
 	for _, d := range tmpDirs {
-		if strings.HasPrefix(e.Exe, d) && !e.ownBootc() && !e.bootcCopy() {
-			out = append(out, "tmp_exe")
+		if strings.HasPrefix(e.Exe, d) {
+			if e.ownBootc() || e.bootcCopy() {
+				spared = true
+			} else {
+				out = append(out, "tmp_exe")
+			}
 			break
 		}
 	}
@@ -146,7 +153,7 @@ func (e *ExecInfo) signals() []string {
 		if !(strings.HasPrefix(e.Exe, "/memfd:runc_cloned:") && strings.HasPrefix(e.Comm, "runc")) {
 			out = append(out, "memfd_exe")
 		}
-	case e.Deleted:
+	case e.Deleted && !spared:
 		out = append(out, "deleted_exe")
 	}
 	if e.Preload != "" {

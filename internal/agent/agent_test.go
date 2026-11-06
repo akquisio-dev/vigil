@@ -309,6 +309,9 @@ func TestBootcCopyIsSparedOnlyWhenIdentical(t *testing.T) {
 	}{
 		{ExecInfo{PID: 10, PPID: 1, Exe: "/tmp/.tmpQgGVAF", Cmdline: "bootc upgrade --check"}, ""},
 		{ExecInfo{PID: 10, PPID: 1, Exe: "/tmp/.tmpQgGVAF", Cmdline: "bootc status --json"}, ""},
+		// bootc deletes the copy at once: still spared, nothing reported
+		{ExecInfo{PID: 10, PPID: 1, Exe: "/tmp/.tmpQgGVAF", Deleted: true, Cmdline: "bootc upgrade --check"}, ""},
+		{ExecInfo{PID: 11, PPID: 1, Exe: "/tmp/.tmpQgGVAF", Deleted: true, Cmdline: "bootc upgrade --check"}, "deleted_exe"},
 		// another program under bootc's name, or already gone: reported
 		{ExecInfo{PID: 11, PPID: 1, Exe: "/tmp/.tmpQgGVAF", Cmdline: "bootc status --json"}, "tmp_exe"},
 		{ExecInfo{PID: 12, PPID: 1, Exe: "/tmp/.tmpQgGVAF", Cmdline: "bootc status --json"}, "tmp_exe"},
