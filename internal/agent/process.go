@@ -116,6 +116,23 @@ func installedBootcSHA() string {
 	return sha
 }
 
+// bootcCopyByHash: the only signals are a /tmp start and a deleted
+// program, and the hash taken right at the start is the installed bootc's.
+func (e *ExecInfo) bootcCopyByHash(sig []string, sha string) bool {
+	if sha == "" || !bootcTmpName.MatchString(e.Exe) {
+		return false
+	}
+	if e.Cmdline != "bootc" && !strings.HasPrefix(e.Cmdline, "bootc ") {
+		return false
+	}
+	for _, x := range sig {
+		if x != "tmp_exe" && x != "deleted_exe" {
+			return false
+		}
+	}
+	return sha == installedBootcSHA()
+}
+
 func (e *ExecInfo) bootcCopy() bool {
 	if e.PID <= 0 || !bootcTmpName.MatchString(e.Exe) {
 		return false
@@ -247,8 +264,14 @@ func (a *Agent) reportExec(e *ExecInfo) {
 	a.bg.Add(1)
 	go func() {
 		defer a.bg.Done()
-		if sha := scan(); sha != "" {
+		sha := scan()
+		if sha != "" {
 			d["exe_sha256"] = sha
+		}
+		// bootc's copy may have exited before signals() could hash it; the
+		// scan opened it at once, so its hash decides here.
+		if e.bootcCopyByHash(sig, sha) {
+			return
 		}
 		a.tagContainerID(d, cid)
 		a.emit(proto.NewEvent("process.exec", d))

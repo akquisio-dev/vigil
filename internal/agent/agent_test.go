@@ -326,6 +326,18 @@ func TestBootcCopyIsSparedOnlyWhenIdentical(t *testing.T) {
 			t.Errorf("%d %q %q: got %q, want %q", c.e.PID, c.e.Exe, c.e.Cmdline, got, c.want)
 		}
 	}
+	// Gone before signals() could hash it: the scan's hash decides.
+	gone := ExecInfo{PID: 12, Exe: "/tmp/.tmpQgGVAF", Deleted: true, Cmdline: "bootc upgrade --check"}
+	sig := gone.signals()
+	if !gone.bootcCopyByHash(sig, real) {
+		t.Errorf("exited bootc copy with the real hash not spared: %v", sig)
+	}
+	if gone.bootcCopyByHash(sig, "0000") || gone.bootcCopyByHash(sig, "") {
+		t.Error("spared with a wrong or missing hash")
+	}
+	if gone.bootcCopyByHash(append(sig, "cmd_reverse_shell"), real) {
+		t.Error("spared despite another signal")
+	}
 }
 
 func TestExecSignals(t *testing.T) {
