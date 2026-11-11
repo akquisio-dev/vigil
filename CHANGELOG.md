@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.39.0
 
 - Event log: a server killed in the middle of a write (for example by the out-of-memory killer) no longer forks the log when it starts again. Before, reading stopped at the cut line, so every new record was chained to the record before it instead of the last one on disk; a restart loop added a fork on every restart and the same record numbers again. Reading now goes on to the end, the next record starts on a new line, and a line that cannot be read only warns (a lost record behind it still breaks the next hash). The backup checks the chain the same way.
 - `vigil-server chain accept -reason TEXT` accepts the breaks a chain has, with the server stopped. Each is pinned to the bytes of its line in `events/ACCEPTED`, a `chain.accepted` record keeps the reason, and the new rule `chain.accepted` (high) raises an alert, again whenever `events/ACCEPTED` changes. Any other break stays `chain.broken`. See [operations](docs/operations.md#accepting-a-known-break).
