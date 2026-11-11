@@ -552,6 +552,11 @@ var ruleDocs = map[string]ruleDoc{
 		"Disk corruption.",
 		"Assume someone edited the log on the server. Compare with the daily chain anchors sent to your notifiers.",
 	},
+	"chain.accepted": {
+		"Someone ran `vigil-server chain accept` with the server stopped: the breaks the chain had then are listed in `events/ACCEPTED`, each pinned to the exact bytes of its line, and a `chain.accepted` record with the reason sits in the log. Any later break, or a change to an accepted line, is `chain.broken` again.",
+		"A known cause such as a server killed again and again by the out-of-memory killer, which before v0.39.0 forked the log on every restart.",
+		"Read the reason in the `chain.accepted` record and confirm with whoever ran it. If nobody did, treat it like `chain.broken`: compare with the daily chain anchors sent to your notifiers.",
+	},
 	"selftest.failed": {
 		"A self test left its harmless traces on a host (a comment-only file in the crontab spool or `/etc/cron.d`, a copy of `sleep` started from `/tmp`, an sshd log line written by the agent), and at least one of them was not detected, or the agent did not run the test at all.",
 		"A watch list without the cron directories, the process collector turned off, an agent older than the self test feature.",

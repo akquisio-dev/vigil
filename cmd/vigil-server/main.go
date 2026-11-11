@@ -28,6 +28,7 @@ const usage = `usage:
   vigil-server incident list [-config ...] [-all]
   vigil-server incident show [-config ...] INC-0042
   vigil-server verify      [-config ...]
+  vigil-server chain accept [-config ...] -reason TEXT
   vigil-server token       [-config ...]
   vigil-server notify test [-config ...] [-name NOTIFIER]
   vigil-server backup       [-config ...] [-out FILE|-] [-to PUBLIC_KEY | -plain]
@@ -58,7 +59,7 @@ func main() {
 		restoreCmd(args)
 		return
 	}
-	if cmd == "user" || cmd == "notify" || cmd == "incident" {
+	if cmd == "user" || cmd == "notify" || cmd == "incident" || cmd == "chain" {
 		if len(args) == 0 {
 			fail()
 		}
@@ -70,6 +71,7 @@ func main() {
 	verify := fs.Bool("verify", false, "version: compare this binary with the published release")
 	only := fs.String("name", "", "notify test: only this notifier")
 	allInc := fs.Bool("all", false, "incident list: also the closed ones")
+	reason := fs.String("reason", "", "chain accept: why the breaks are accepted")
 	fs.Parse(args)
 
 	switch cmd {
@@ -100,6 +102,29 @@ func main() {
 			log.Fatalf("BROKEN: %s", st.ChainError)
 		}
 		fmt.Printf("ok, %d records, head %s\n", seq, head)
+		if st.Accepted > 0 {
+			fmt.Printf("%d accepted breaks (%s)\n", st.Accepted, "events/ACCEPTED")
+		}
+		if st.ChainWarning != "" {
+			fmt.Println("warning:", st.ChainWarning)
+		}
+	case "chain":
+		if sub != "accept" {
+			fail()
+		}
+		by := "cli"
+		if u := os.Getenv("SUDO_USER"); u != "" {
+			by = "cli:" + u
+		}
+		n, err := server.AcceptChainBreaks(mustConfig(*cfgPath), by, *reason)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if n == 0 {
+			fmt.Println("the chain has no breaks; nothing accepted")
+		} else {
+			fmt.Printf("accepted %d breaks; the chain verifies again\n", n)
+		}
 	case "notify":
 		if sub != "test" {
 			fail()

@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/akquisio-dev/vigil/internal/proto"
+	"strconv"
 )
 
 var Version = "dev"
@@ -89,7 +90,7 @@ func New(cfg *Config) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	store, err := OpenStore(filepath.Join(cfg.DataDir, "events"), cfg.RecentEvents)
+	store, err := OpenStoreLimit(filepath.Join(cfg.DataDir, "events"), cfg.RecentEvents, cfg.RecentBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -153,7 +154,7 @@ func (s *Server) Run(ctx context.Context) error {
 	// vulnerability feed (vuln_lookup) allocates a lot of short-lived
 	// garbage; a soft limit makes the collector run before the cap is near.
 	if os.Getenv("GOMEMLIMIT") == "" {
-		debug.SetMemoryLimit(160 << 20)
+		debug.SetMemoryLimit(256 << 20)
 	}
 	// A restore must never swap the data directory under a running server.
 	unlock, err := lockDataDir(s.cfg.DataDir)
@@ -165,6 +166,10 @@ func (s *Server) Run(ctx context.Context) error {
 	if !s.store.ChainOK {
 		s.chainBroken(s.store.ChainError)
 	}
+	if w := s.store.ChainWarning; w != "" {
+		log.Printf("event chain: %s", w)
+	}
+	s.chainAcceptedCheck()
 	s.record("server", "", "", proto.NewEvent("server.started", map[string]any{"version": Version}))
 	go s.refreshIntel()
 	go s.refreshGeo()
@@ -384,6 +389,25 @@ func (s *Server) daily() {
 		seq, head := s.store.Head()
 		s.notify(message{Severity: "info", Text: fmt.Sprintf("vigil chain anchor %s\nseq %d\nsha256 %s", time.Now().UTC().Format("2006-01-02"), seq, head)}, true)
 	}
+}
+
+// chainAcceptedCheck raises chain.accepted once for each acceptance made on
+// the command line while the server was stopped.
+func (s *Server) chainAcceptedCheck() {
+	n := s.store.Accepted
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if n == s.state.ChainAccepted {
+		return
+	}
+	var fresh []*Alert
+	if n > s.state.ChainAccepted {
+		c := strconv.Itoa(n)
+		fresh = s.raise([]finding{{Rule: "chain.accepted", Key: "chain.accepted|" + c, Params: map[string]string{"count": c}}}, "", 0)
+	}
+	s.state.ChainAccepted = n
+	s.saveLocked()
+	s.notifyAlerts(fresh)
 }
 
 func (s *Server) chainBroken(msg string) {

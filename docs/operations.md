@@ -597,6 +597,15 @@ The first port snapshot of a host is its baseline. Afterwards:
 - **Allow process** allows every port of that program with the same protocol
   and scope. Use it for programs with random ports.
 
+Every opened or closed socket is reported at once (`port.opened`,
+`port.closed`). The whole list (`port.snapshot`) goes out when the agent
+starts and then at most every 15 minutes, so a program that opens many
+short-lived sockets does not fill the log with copies of it. A virtual
+machine with user mode networking (`qemu -netdev user`) is such a program: it
+binds an unconnected UDP socket on `0.0.0.0` for every outgoing UDP flow and
+closes it after about four minutes; **Allow process** on its `udp` alerts
+keeps them quiet.
+
 ## Upgrading
 
 ### Agents from the dashboard
@@ -648,6 +657,33 @@ vigil-server verify -config /etc/vigil/server.json
 The server also verifies the chain on start, once a day and when you press
 **Verify now** in the settings. A break raises `chain.broken` with the file and
 line.
+
+A line that cannot be read is a write cut off when the server was killed (for
+example by the out-of-memory killer). It is not a break by itself: if a record
+was lost with it, the next line does not chain and that is the break. `verify`
+and the settings show such lines as a warning. The next server starts the next
+record on a new line.
+
+### Accepting a known break
+
+Before v0.39.0 a server that was killed in the middle of a write and started
+again chained its records to the record before the cut line, not to the last
+one on disk. A restart loop therefore forked the log on every restart. Once
+you know that this, and not an edit, is the cause, accept the breaks with the
+server stopped:
+
+```sh
+systemctl stop vigil-server
+vigil-server chain accept -config /etc/vigil/server.json -reason "OOM loop on 2026-11-10"
+systemctl start vigil-server
+```
+
+Every break the chain has at that moment is written to `events/ACCEPTED`, each
+pinned to the file, the line and the SHA-256 of that line, and a
+`chain.accepted` record with the reason goes into the log. On start the server
+raises `chain.accepted` (high). Any break after that, an edit of an accepted
+line or a removed `events/ACCEPTED` is `chain.broken` again. Backups carry the
+file, and a backup is only written from a chain that verifies.
 
 ## Backups
 
@@ -736,5 +772,5 @@ host reported.
 ## Resource limits
 
 The systemd units cap the agent at 96 MB of memory (reclaiming caches from
-64 MB on) and 15 % CPU with idle I/O priority, and the server at 256 MB and 50 % CPU. Adjust them in a drop-in if a
+64 MB on) and 15 % CPU with idle I/O priority, and the server at 512 MB and 50 % CPU. Adjust them in a drop-in if a
 host needs more.

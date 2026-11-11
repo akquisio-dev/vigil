@@ -65,7 +65,14 @@ one log line, then removes both files.
 the previous one. Changing, inserting or removing a record breaks every
 following hash. With `anchor_daily`, the chain head is posted outside the
 server once a day, so even a full rewrite of the chain by a root attacker on
-the server conflicts with the anchors already sent.
+the server conflicts with the anchors already sent. A break can be accepted
+(`vigil-server chain accept`, only on the server's command line with the server
+stopped, with a reason): it is pinned to the bytes of each broken line, leaves
+a `chain.accepted` record and raises a `chain.accepted` alert, so accepting is
+never silent. Root on the server can do it, but root there can rewrite the
+whole chain anyway; the daily anchors are the defence against both. A line
+that cannot be read only warns, because a lost record behind it still breaks
+the next hash.
 
 **The dashboard resists credential attacks.** Passkeys (WebAuthn, with user
 verification required, origin, relying party and signature counter checked)

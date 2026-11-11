@@ -133,6 +133,7 @@ var rules = map[string]ruleDef{
 	"malware.yara":               {"high", "T1204.002", "YARA rule {rules} matches {path} ({source})", "YARA-Regel {rules} trifft auf {path} ({source})"},
 	"forward.failed":             {"high", "", "Forwarding {forwarder} ({type}) has failed for 10 minutes: {error}", "Weiterleitung {forwarder} ({type}) scheitert seit 10 Minuten: {error}"},
 	"chain.broken":               {"critical", "T1565.001", "Event chain broken: {error}", "Ereigniskette gebrochen: {error}"},
+	"chain.accepted":             {"high", "T1565.001", "{count} chain breaks were accepted on the command line", "{count} Brüche der Ereigniskette wurden über die Kommandozeile akzeptiert"},
 	"selftest.failed":            {"high", "T1562.001", "Self test on {host} failed: {missing}", "Selbsttest auf {host} fehlgeschlagen: {missing}"},
 	"server.backup_stale":        {"high", "T1490", "No new backup in {dir} for {age}", "Keine neue Sicherung in {dir} seit {age}"},
 	"intel.stale":                {"medium", "", "Threat list {source} not updated for {age}: {error}", "Bedrohungsliste {source} seit {age} nicht aktualisiert: {error}"},
@@ -313,7 +314,10 @@ func (s *Server) evaluate(a *AgentRec, r *Record) []finding {
 			}
 			a.BaselineSet = true
 		}
+	case "port.closed":
+		portListRemove(a, str(d, "key"))
 	case "port.opened":
+		portListAdd(a, d)
 		if !a.BaselineSet || portExpected(a, d) {
 			break
 		}
@@ -795,4 +799,29 @@ func strSlice(v any) []string {
 		}
 	}
 	return out
+}
+
+// portListAdd and portListRemove keep a host's port list current between
+// two snapshots: since v0.39.0 an agent sends the whole list at most every
+// 15 minutes, and every change at once as port.opened or port.closed.
+func portListAdd(a *AgentRec, d map[string]any) {
+	k := str(d, "key")
+	if k == "" {
+		return
+	}
+	for _, p := range a.Ports {
+		if str(p, "key") == k {
+			return
+		}
+	}
+	a.Ports = append(a.Ports, d)
+}
+
+func portListRemove(a *AgentRec, key string) {
+	for i, p := range a.Ports {
+		if str(p, "key") == key {
+			a.Ports = append(a.Ports[:i:i], a.Ports[i+1:]...)
+			return
+		}
+	}
 }

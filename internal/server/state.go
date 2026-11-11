@@ -164,10 +164,13 @@ type State struct {
 	SelfTests    []*SelfTest    `json:"selftests,omitempty"`
 	Snapshots    []*SnapshotReq `json:"snapshot_requests,omitempty"`
 	// Shares are what partners may fetch; Sources are the feeds we fetch.
-	Shares      []*ShareRec  `json:"shares,omitempty"`
-	Sources     []*SourceRec `json:"sources,omitempty"`
-	LastAnchor  time.Time    `json:"last_anchor"`
-	LastSummary time.Time    `json:"last_summary,omitempty"`
+	Shares     []*ShareRec  `json:"shares,omitempty"`
+	Sources    []*SourceRec `json:"sources,omitempty"`
+	LastAnchor time.Time    `json:"last_anchor"`
+	// ChainAccepted is how many accepted chain breaks the server has seen,
+	// so a new acceptance raises chain.accepted once.
+	ChainAccepted int       `json:"chain_accepted,omitempty"`
+	LastSummary   time.Time `json:"last_summary,omitempty"`
 }
 
 const maxAlerts = 5000

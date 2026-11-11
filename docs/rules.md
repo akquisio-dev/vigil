@@ -2,7 +2,7 @@
 
 # Detection rules
 
-vigil ships 112 rules. Every alert carries the rule id, so an alert can be looked up here.
+vigil ships 113 rules. Every alert carries the rule id, so an alert can be looked up here.
 
 Severity decides who is woken up: each notifier has a `min_severity`, `high` by default.
 
@@ -32,6 +32,7 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 | [`backup.missing`](#backup-missing) | high | [T1490](https://attack.mitre.org/techniques/T1490/) |
 | [`backup.stale`](#backup-stale) | high | [T1490](https://attack.mitre.org/techniques/T1490/) |
 | [`canary.tampered`](#canary-tampered) | high | [T1070.004](https://attack.mitre.org/techniques/T1070/004/) |
+| [`chain.accepted`](#chain-accepted) | high | [T1565.001](https://attack.mitre.org/techniques/T1565/001/) |
 | [`container.docker_socket`](#container-docker_socket) | high | [T1611](https://attack.mitre.org/techniques/T1611/) |
 | [`container.privileged`](#container-privileged) | high | [T1611](https://attack.mitre.org/techniques/T1611/) |
 | [`file.cron`](#file-cron) | high | [T1053.003](https://attack.mitre.org/techniques/T1053/003/) |
@@ -1314,6 +1315,18 @@ Severity decides who is woken up: each notifier has a `min_severity`, `high` by 
 **Known false positives:** Planned restarts and updates. Announce them with a maintenance window in the dashboard.
 
 **What to do:** Check who stopped it if no maintenance was planned.
+
+### `chain.accepted` {#chain-accepted}
+
+**Severity:** high · **ATT&CK:** [T1565.001](https://attack.mitre.org/techniques/T1565/001/)
+
+**Alert:** `{count} chain breaks were accepted on the command line`
+
+**Fires when:** Someone ran `vigil-server chain accept` with the server stopped: the breaks the chain had then are listed in `events/ACCEPTED`, each pinned to the exact bytes of its line, and a `chain.accepted` record with the reason sits in the log. Any later break, or a change to an accepted line, is `chain.broken` again.
+
+**Known false positives:** A known cause such as a server killed again and again by the out-of-memory killer, which before v0.39.0 forked the log on every restart.
+
+**What to do:** Read the reason in the `chain.accepted` record and confirm with whoever ran it. If nobody did, treat it like `chain.broken`: compare with the daily chain anchors sent to your notifiers.
 
 ### `container.docker_socket` {#container-docker_socket}
 

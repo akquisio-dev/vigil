@@ -659,3 +659,17 @@ func TestAllowProcessResolvesPortAlertsOfEarlierRuns(t *testing.T) {
 		}
 	}
 }
+
+func TestPortListFollowsOpenedAndClosed(t *testing.T) {
+	a := &AgentRec{}
+	portListAdd(a, map[string]any{"key": "socket/udp/0.0.0.0:41000", "port": 41000})
+	portListAdd(a, map[string]any{"key": "socket/udp/0.0.0.0:41000", "port": 41000})
+	portListAdd(a, map[string]any{"key": "socket/tcp/0.0.0.0:22", "port": 22})
+	if len(a.Ports) != 2 {
+		t.Fatalf("ports %v", a.Ports)
+	}
+	portListRemove(a, "socket/udp/0.0.0.0:41000")
+	if len(a.Ports) != 1 || str(a.Ports[0], "key") != "socket/tcp/0.0.0.0:22" {
+		t.Fatalf("ports %v", a.Ports)
+	}
+}

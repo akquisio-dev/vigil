@@ -802,7 +802,8 @@ func (s *Server) handleCanaryDelete(w http.ResponseWriter, r *http.Request, sess
 
 func (s *Server) handleChain(w http.ResponseWriter, r *http.Request, sess *session) {
 	seq, head := s.store.Head()
-	writeJSON(w, map[string]any{"ok": s.store.ChainOK, "error": s.store.ChainError, "seq": seq, "head": head, "verified_at": s.store.VerifiedAt})
+	writeJSON(w, map[string]any{"ok": s.store.ChainOK, "error": s.store.ChainError, "warning": s.store.ChainWarning,
+		"accepted": s.store.Accepted, "seq": seq, "head": head, "verified_at": s.store.VerifiedAt})
 }
 
 func (s *Server) handleChainVerify(w http.ResponseWriter, r *http.Request, sess *session) {

@@ -42,6 +42,8 @@ type Agent struct {
 	sshConns      map[string]int // "ip port" -> connection state, per batch
 	canaryPaths   map[string]string
 	portsSent     bool
+	portsDirty    bool      // the port list changed since the last snapshot
+	portsSnapAt   time.Time // when the last port.snapshot went out
 	lastSeq       int64
 	cursor        string
 	flushNow      chan struct{}

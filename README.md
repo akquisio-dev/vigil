@@ -219,8 +219,8 @@ them.
 - Short-lived readers of a canary (`cat`, `head`) are often gone before vigil
   can read their executable path; the process name, user and parent chain
   are still reported.
-- The dashboard shows the most recent events from memory (`recent_events`);
-  older events stay on disk in the log files.
+- The dashboard shows the most recent events from memory (`recent_events`,
+  `recent_bytes`); older events stay on disk in the log files.
 - A root attacker on a host can stop its agent. vigil cannot prevent that,
   it makes sure you hear about it.
 

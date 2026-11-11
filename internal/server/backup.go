@@ -67,11 +67,11 @@ func backupCache(rel string) bool {
 	return strings.HasPrefix(path.Base(rel), ".")
 }
 
-// chainCheck follows the event hash chain across files as they stream by.
+// chainCheck follows the event hash chain across files as they stream by,
+// with the same rules as the store (see chainVerifier).
 type chainCheck struct {
-	prev string
+	v    chainVerifier
 	seq  uint64
-	err  error
 	part []byte
 	file string
 	line int
@@ -91,16 +91,8 @@ func (c *chainCheck) Write(p []byte) (int, error) {
 
 func (c *chainCheck) lineDone(b []byte) {
 	c.line++
-	if c.err != nil {
-		return
-	}
-	var cl chainLine
-	if err := json.Unmarshal(b, &cl); err != nil {
-		c.err = fmt.Errorf("%s:%d: unreadable line", c.file, c.line)
-		return
-	}
-	if cl.Prev != c.prev || chainHash(cl.Prev, cl.Rec) != cl.Hash {
-		c.err = fmt.Errorf("%s:%d: hash chain broken", c.file, c.line)
+	cl, ok := c.v.line(c.file, c.line, b)
+	if !ok {
 		return
 	}
 	var r struct {
@@ -109,15 +101,21 @@ func (c *chainCheck) lineDone(b []byte) {
 	if json.Unmarshal(cl.Rec, &r) == nil && r.Seq > c.seq {
 		c.seq = r.Seq
 	}
-	c.prev = cl.Hash
+}
+
+func (c *chainCheck) err() error {
+	if c.v.err != "" {
+		return errors.New(c.v.err)
+	}
+	return nil
 }
 
 func (c *chainCheck) next(file string) error {
-	if len(c.part) > 0 && c.err == nil {
-		c.err = fmt.Errorf("%s: last line incomplete", c.file)
+	if len(c.part) > 0 && c.v.err == "" {
+		c.v.err = fmt.Sprintf("%s: last line incomplete", c.file)
 	}
 	c.part, c.file, c.line = nil, file, 0
-	return c.err
+	return c.err()
 }
 
 // BackupOptions says where a backup goes.
@@ -216,9 +214,14 @@ func WriteBackup(cfg *Config, opt BackupOptions, w io.Writer) (*BackupManifest, 
 		}
 	}
 	cc := &chainCheck{}
+	acc, err := loadAccepted(filepath.Join(cfg.DataDir, "events"))
+	if err != nil {
+		return nil, err
+	}
+	cc.v.accepted = acc
 	anchor := filepath.Join(cfg.DataDir, "events", "ANCHOR")
 	if raw, err := os.ReadFile(anchor); err == nil {
-		cc.prev = strings.TrimSpace(string(raw))
+		cc.v.prev = strings.TrimSpace(string(raw))
 		if err := add("data/events/ANCHOR", anchor, -1, nil); err != nil {
 			return nil, err
 		}
@@ -237,7 +240,7 @@ func WriteBackup(cfg *Config, opt BackupOptions, w io.Writer) (*BackupManifest, 
 	if err := cc.next(""); err != nil {
 		return nil, fmt.Errorf("event chain in the copy: %w", err)
 	}
-	m.ChainSeq, m.ChainHead = cc.seq, cc.prev
+	m.ChainSeq, m.ChainHead = cc.seq, cc.v.prev
 
 	if opt.ConfigPath != "" {
 		abs, _ := filepath.Abs(opt.ConfigPath)
@@ -468,7 +471,17 @@ func readBackup(r io.Reader, key *ecdh.PrivateKey, fn func(name string, r io.Rea
 				return nil, backupErr(err)
 			}
 			hs.Write(raw)
-			cc.prev = strings.TrimSpace(string(raw))
+			cc.v.prev = strings.TrimSpace(string(raw))
+			src = bytes.NewReader(raw)
+		} else if h.Name == "data/events/"+acceptedFile {
+			raw, err := io.ReadAll(io.LimitReader(tr, 64<<20))
+			if err != nil {
+				return nil, backupErr(err)
+			}
+			hs.Write(raw)
+			if cc.v.accepted, err = parseAccepted(raw); err != nil {
+				return nil, err
+			}
 			src = bytes.NewReader(raw)
 		} else if isEvents {
 			if err := cc.next(path.Base(h.Name)); err != nil {
@@ -509,7 +522,7 @@ func readBackup(r io.Reader, key *ecdh.PrivateKey, fn func(name string, r io.Rea
 			return nil, fmt.Errorf("%s does not match the manifest", f.Path)
 		}
 	}
-	if cc.prev != m.ChainHead || cc.seq != m.ChainSeq {
+	if cc.v.prev != m.ChainHead || cc.seq != m.ChainSeq {
 		return nil, errors.New("event chain head does not match the manifest")
 	}
 	return m, nil

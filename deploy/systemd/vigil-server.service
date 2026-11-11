@@ -38,7 +38,7 @@ CapabilityBoundingSet=
 AmbientCapabilities=
 UMask=0077
 
-MemoryMax=256M
+MemoryMax=512M
 CPUQuota=50%
 
 [Install]

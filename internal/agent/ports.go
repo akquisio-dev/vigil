@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/akquisio-dev/vigil/internal/proto"
 )
@@ -218,6 +219,9 @@ func (a *Agent) scanPorts() {
 		}
 	}
 	if !changed && a.portsSent {
+		if a.portsDirty && time.Since(a.portsSnapAt) >= portSnapshotEvery {
+			a.emitPortSnapshot(a.state.Ports)
+		}
 		return
 	}
 
@@ -259,13 +263,30 @@ func (a *Agent) scanPorts() {
 			}
 		}
 	}
+	a.state.Ports = list
+	if !a.portsSent || time.Since(a.portsSnapAt) >= portSnapshotEvery {
+		a.emitPortSnapshot(list)
+	} else {
+		a.portsDirty = true
+	}
+	a.portsSent = true
+}
+
+// portSnapshotEvery spaces out the whole port list. Every change is
+// reported at once as port.opened or port.closed, which is what detection
+// reads; the list only keeps the server's view in step. Without the spacing
+// a program that opens short-lived UDP sockets (a VM with user mode
+// networking opens one for every DNS query) sent the whole list thousands
+// of times a day.
+const portSnapshotEvery = 15 * time.Minute
+
+func (a *Agent) emitPortSnapshot(list []Port) {
 	snap := make([]any, len(list))
 	for i, p := range list {
 		snap[i] = portData(p)
 	}
 	a.emit(proto.NewEvent("port.snapshot", map[string]any{"ports": snap}))
-	a.state.Ports = list
-	a.portsSent = true
+	a.portsSnapAt, a.portsDirty = time.Now(), false
 }
 
 func portData(p Port) map[string]any {

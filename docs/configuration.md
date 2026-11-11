@@ -171,6 +171,7 @@ it came from the proxy.
 | `retention_days` | 90 | days of event log to keep |
 | `deadman_seconds` | 120 | silence before an agent counts as gone |
 | `recent_events` | 20000 | events held in memory for the dashboard |
+| `recent_bytes` | 16777216 | the same window capped by encoded size (16 MiB); whole inventories (port lists, packages, scans) are held only as a marker with the size of each list |
 | `session_hours` | 12 | dashboard session lifetime |
 | `anchor_daily` | false | post the head of the event chain to all notifiers once a day |
 | `selftest_days` | 7 | run a self test on every host this often and send the result to all notifiers; `-1` turns the schedule off |

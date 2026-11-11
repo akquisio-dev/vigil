@@ -68,7 +68,11 @@ type Config struct {
 	RetentionDays  int `json:"retention_days"`
 	DeadmanSeconds int `json:"deadman_seconds"`
 	RecentEvents   int `json:"recent_events"`
-	SessionHours   int `json:"session_hours"`
+	// RecentBytes caps the in-memory event window by encoded size as well
+	// (default 16 MiB): a few busy hosts can fill 20000 records with large
+	// events and the server's memory with them.
+	RecentBytes  int `json:"recent_bytes"`
+	SessionHours int `json:"session_hours"`
 
 	// Backup is where `vigil-server backup` seals the server's data. The
 	// server raises server.backup_stale when the newest backup there gets old.
@@ -195,6 +199,9 @@ func LoadConfig(path string) (*Config, error) {
 	}
 	if c.DeadmanSeconds <= 0 {
 		c.DeadmanSeconds = 120
+	}
+	if c.RecentBytes <= 0 {
+		c.RecentBytes = 16 << 20
 	}
 	if c.RecentEvents <= 0 {
 		c.RecentEvents = 20000
