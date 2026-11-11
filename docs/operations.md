@@ -680,7 +680,8 @@ systemctl start vigil-server
 
 Every break the chain has at that moment is written to `events/ACCEPTED`, each
 pinned to the file, the line and the SHA-256 of that line, and a
-`chain.accepted` record with the reason goes into the log. On start the server
+`chain.accepted` record with the reason goes into the log. On start, and on
+every later verification that finds `events/ACCEPTED` changed, the server
 raises `chain.accepted` (high). Any break after that, an edit of an accepted
 line or a removed `events/ACCEPTED` is `chain.broken` again. Backups carry the
 file, and a backup is only written from a chain that verifies.

@@ -167,10 +167,10 @@ type State struct {
 	Shares     []*ShareRec  `json:"shares,omitempty"`
 	Sources    []*SourceRec `json:"sources,omitempty"`
 	LastAnchor time.Time    `json:"last_anchor"`
-	// ChainAccepted is how many accepted chain breaks the server has seen,
-	// so a new acceptance raises chain.accepted once.
-	ChainAccepted int       `json:"chain_accepted,omitempty"`
-	LastSummary   time.Time `json:"last_summary,omitempty"`
+	// ChainAcceptedSum is the SHA-256 of the accepted chain breaks the
+	// server saw last, so every change to them raises chain.accepted.
+	ChainAcceptedSum string    `json:"chain_accepted_sum,omitempty"`
+	LastSummary      time.Time `json:"last_summary,omitempty"`
 }
 
 const maxAlerts = 5000

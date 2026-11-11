@@ -812,5 +812,6 @@ func (s *Server) handleChainVerify(w http.ResponseWriter, r *http.Request, sess 
 	if !ok {
 		s.chainBroken(msg)
 	}
+	s.chainAcceptedCheck()
 	s.handleChain(w, r, sess)
 }

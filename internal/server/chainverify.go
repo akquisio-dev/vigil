@@ -33,15 +33,18 @@ type AcceptedBreak struct {
 
 func (b AcceptedBreak) key() string { return fmt.Sprintf("%s:%d:%s", b.File, b.Line, b.SHA256) }
 
-func loadAccepted(dir string) (map[string]bool, error) {
+// loadAccepted reads the accepted breaks and the SHA-256 of the file.
+func loadAccepted(dir string) (map[string]bool, string, error) {
 	raw, err := os.ReadFile(filepath.Join(dir, acceptedFile))
 	if errors.Is(err, os.ErrNotExist) {
-		return nil, nil
+		return nil, "", nil
 	}
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
-	return parseAccepted(raw)
+	sum := sha256.Sum256(raw)
+	m, err := parseAccepted(raw)
+	return m, hex.EncodeToString(sum[:]), err
 }
 
 func parseAccepted(raw []byte) (map[string]bool, error) {
@@ -171,7 +174,7 @@ func (s *Store) AcceptBreaks(by, reason string) (int, error) {
 
 // scanBreaks walks the chain once more and returns its unaccepted breaks.
 func (s *Store) scanBreaks() ([]AcceptedBreak, bool, error) {
-	acc, err := loadAccepted(s.dir)
+	acc, _, err := loadAccepted(s.dir)
 	if err != nil {
 		return nil, false, err
 	}

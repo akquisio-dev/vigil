@@ -222,3 +222,67 @@ func TestRingSlimAndByteCap(t *testing.T) {
 		t.Fatalf("ring: %d records, last %d, %d bytes", len(g.recs), g.recs[len(g.recs)-1].Seq, g.bytes)
 	}
 }
+
+func openAlerts(s *Server, rule string) int {
+	n := 0
+	for _, al := range s.state.Alerts {
+		if al.Rule == rule && al.Status == "open" {
+			n++
+		}
+	}
+	return n
+}
+
+// Re-pinning an accepted line keeps the number of entries; it still alerts.
+func TestChangedAcceptedListAlerts(t *testing.T) {
+	dir, _ := forkedStore(t)
+	st, _ := OpenStore(dir, 100)
+	st.AcceptBreaks("test", "fork")
+	st.file.Close()
+	st, _ = OpenStore(dir, 100)
+	s := &Server{cfg: &Config{DataDir: t.TempDir()}, state: &State{}, store: st}
+	s.chainAcceptedCheck()
+	if openAlerts(s, "chain.accepted") != 1 {
+		t.Fatal("no alert for the acceptance")
+	}
+	s.chainAcceptedCheck()
+	if openAlerts(s, "chain.accepted") != 1 {
+		t.Fatal("alerted twice for the same list")
+	}
+	p := filepath.Join(dir, acceptedFile)
+	raw, _ := os.ReadFile(p)
+	os.WriteFile(p, bytes.Replace(raw, []byte(`"by":"test"`), []byte(`"by":"mallory"`), 1), 0o600)
+	st.Verify()
+	s.chainAcceptedCheck()
+	if openAlerts(s, "chain.accepted") != 2 {
+		t.Fatal("edited list with the same count raised no alert")
+	}
+}
+
+func TestRemoveStaleTemp(t *testing.T) {
+	dir := t.TempDir()
+	os.MkdirAll(filepath.Join(dir, "intel"), 0o700)
+	os.MkdirAll(filepath.Join(dir, "vuln"), 0o700)
+	stale := []string{".state-1036749706", ".metrics-42", ".users-7", "intel/mb-1551839805.zip", "vuln/.osv-99"}
+	keep := []string{"state.json", ".state-mine", ".health", "intel/feodo.txt", "intel/mb-x.zip"}
+	for _, f := range append(append([]string{}, stale...), keep...) {
+		os.WriteFile(filepath.Join(dir, f), []byte("x"), 0o600)
+	}
+	removeStaleTemp(dir)
+	for _, f := range stale {
+		if _, err := os.Stat(filepath.Join(dir, f)); err == nil {
+			t.Errorf("%s left", f)
+		}
+	}
+	for _, f := range keep {
+		if _, err := os.Stat(filepath.Join(dir, f)); err != nil {
+			t.Errorf("%s removed", f)
+		}
+	}
+}
+
+func TestSoftMemoryLimit(t *testing.T) {
+	if softMemoryLimit(0) != 160<<20 || softMemoryLimit(256<<20) != 256<<20*6/10 || softMemoryLimit(512<<20) != 512<<20*6/10 {
+		t.Fatal("soft limit")
+	}
+}

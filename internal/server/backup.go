@@ -214,7 +214,7 @@ func WriteBackup(cfg *Config, opt BackupOptions, w io.Writer) (*BackupManifest, 
 		}
 	}
 	cc := &chainCheck{}
-	acc, err := loadAccepted(filepath.Join(cfg.DataDir, "events"))
+	acc, _, err := loadAccepted(filepath.Join(cfg.DataDir, "events"))
 	if err != nil {
 		return nil, err
 	}

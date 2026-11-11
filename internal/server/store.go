@@ -63,9 +63,11 @@ type Store struct {
 	// runs on across them: a write cut off by a crash, which loses no
 	// record from the chain. It does not make the chain unhealthy.
 	ChainWarning string
-	// Accepted counts breaks an operator accepted (see AcceptBreaks).
-	Accepted   int
-	VerifiedAt time.Time
+	// Accepted counts breaks an operator accepted (see AcceptBreaks), and
+	// AcceptedSum is the SHA-256 of the list ("" without one).
+	Accepted    int
+	AcceptedSum string
+	VerifiedAt  time.Time
 
 	appendErr string // last failed write, cleared by the next good one
 
@@ -120,7 +122,8 @@ func (s *Store) anchor() string {
 // server that stopped at the bad line would chain every new record to an
 // old one and fork the log on each restart.
 func (s *Store) verifyAndLoad() {
-	acc, accErr := loadAccepted(s.dir)
+	acc, sum, accErr := loadAccepted(s.dir)
+	s.AcceptedSum = sum
 	v := &chainVerifier{prev: s.anchor(), accepted: acc}
 	var g ring
 	readErr := ""

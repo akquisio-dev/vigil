@@ -150,11 +150,11 @@ func (s *Server) saveLocked() {
 }
 
 func (s *Server) Run(ctx context.Context) error {
-	// The packaged unit caps memory at 256 MB. Parsing a release's
-	// vulnerability feed (vuln_lookup) allocates a lot of short-lived
-	// garbage; a soft limit makes the collector run before the cap is near.
+	// Parsing a release's vulnerability feed (vuln_lookup) allocates a lot
+	// of short-lived garbage; a soft limit makes the collector run before
+	// the unit's memory cap is near.
 	if os.Getenv("GOMEMLIMIT") == "" {
-		debug.SetMemoryLimit(256 << 20)
+		debug.SetMemoryLimit(softMemoryLimit(cgroupMemoryMax()))
 	}
 	// A restore must never swap the data directory under a running server.
 	unlock, err := lockDataDir(s.cfg.DataDir)
@@ -162,6 +162,7 @@ func (s *Server) Run(ctx context.Context) error {
 		return err
 	}
 	defer unlock()
+	removeStaleTemp(s.cfg.DataDir)
 	s.started = time.Now()
 	if !s.store.ChainOK {
 		s.chainBroken(s.store.ChainError)
@@ -385,29 +386,86 @@ func (s *Server) daily() {
 	if ok, msg := s.store.Verify(); !ok {
 		s.chainBroken(msg)
 	}
+	s.chainAcceptedCheck()
 	if s.cfg.AnchorDaily {
 		seq, head := s.store.Head()
 		s.notify(message{Severity: "info", Text: fmt.Sprintf("vigil chain anchor %s\nseq %d\nsha256 %s", time.Now().UTC().Format("2006-01-02"), seq, head)}, true)
 	}
 }
 
-// chainAcceptedCheck raises chain.accepted once for each acceptance made on
-// the command line while the server was stopped.
+// chainAcceptedCheck raises chain.accepted whenever the list of accepted
+// breaks is not the one the server saw last: a new acceptance, and also an
+// edit that keeps the number of entries.
 func (s *Server) chainAcceptedCheck() {
-	n := s.store.Accepted
+	sum, n := s.store.AcceptedSum, s.store.Accepted
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if n == s.state.ChainAccepted {
+	if sum == s.state.ChainAcceptedSum {
 		return
 	}
 	var fresh []*Alert
-	if n > s.state.ChainAccepted {
+	if sum != "" {
 		c := strconv.Itoa(n)
-		fresh = s.raise([]finding{{Rule: "chain.accepted", Key: "chain.accepted|" + c, Params: map[string]string{"count": c}}}, "", 0)
+		fresh = s.raise([]finding{{Rule: "chain.accepted", Key: "chain.accepted|" + sum, Params: map[string]string{"count": c}}}, "", 0)
 	}
-	s.state.ChainAccepted = n
+	s.state.ChainAcceptedSum = sum
 	s.saveLocked()
 	s.notifyAlerts(fresh)
+}
+
+// removeStaleTemp deletes the temporary files of writes that a killed
+// server left behind. It runs with the data directory lock held, so no
+// write of this server is in flight. Only the exact patterns of the
+// server's own temporary files are removed.
+func removeStaleTemp(dataDir string) {
+	n := 0
+	for _, pat := range []string{".state-*", ".metrics-*", ".users-*", "vuln/.osv-*", "intel/mb-*.zip"} {
+		m, _ := filepath.Glob(filepath.Join(dataDir, pat))
+		for _, f := range m {
+			prefix, _, _ := strings.Cut(filepath.Base(pat), "*")
+			rest := strings.TrimSuffix(strings.TrimPrefix(filepath.Base(f), prefix), ".zip")
+			if _, err := strconv.ParseUint(rest, 10, 64); err != nil {
+				continue // not a name os.CreateTemp gave
+			}
+			if fi, err := os.Lstat(f); err == nil && fi.Mode().IsRegular() && os.Remove(f) == nil {
+				n++
+			}
+		}
+	}
+	if n > 0 {
+		log.Printf("removed %d temporary files left by an earlier run", n)
+	}
+}
+
+// cgroupMemoryMax reads the memory cap of the server's cgroup (v2), 0 if
+// there is none.
+func cgroupMemoryMax() int64 {
+	raw, err := os.ReadFile("/proc/self/cgroup")
+	if err != nil {
+		return 0
+	}
+	for _, line := range strings.Split(string(raw), "\n") {
+		if p, ok := strings.CutPrefix(line, "0::"); ok {
+			b, err := os.ReadFile(filepath.Join("/sys/fs/cgroup", p, "memory.max"))
+			if err != nil {
+				return 0
+			}
+			v, err := strconv.ParseInt(strings.TrimSpace(string(b)), 10, 64)
+			if err != nil {
+				return 0 // "max"
+			}
+			return v
+		}
+	}
+	return 0
+}
+
+// softMemoryLimit is 60 % of the cap, or 160 MB without one, as before.
+func softMemoryLimit(capBytes int64) int64 {
+	if capBytes <= 0 {
+		return 160 << 20
+	}
+	return capBytes * 6 / 10
 }
 
 func (s *Server) chainBroken(msg string) {
