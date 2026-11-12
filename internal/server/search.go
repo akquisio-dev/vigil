@@ -274,7 +274,7 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request, sess *sess
 		cw.Write([]string{"time", "received", "host", "source", "type", "seq", "data"})
 		for _, v := range views {
 			data, _ := json.Marshal(v.Event.Data)
-			cw.Write([]string{recordTime(v.Record).Format(time.RFC3339Nano), v.Time.Format(time.RFC3339Nano), v.Host, v.Source,
+			cw.Write([]string{recordTime(v.Record).Format(time.RFC3339Nano), v.Time.Format(time.RFC3339Nano), csvSafe(v.Host), csvSafe(v.Source),
 				csvSafe(v.Event.Type), strconv.FormatUint(v.Seq, 10), csvSafe(string(data))})
 		}
 		cw.Flush()
