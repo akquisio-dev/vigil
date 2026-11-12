@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+Fixes from a code audit of v0.39.0.
+
+- Agent, `remove_key`: the `authorized_keys` file is reached without following symlinks and opened once; what was read is what gets rewritten. Before, the owner of the file could swap it for a symlink between the read and the write and have the agent, as root, write the remaining keys into another file such as root's `authorized_keys`. Only hosts with `response` enabled and `remove_key` allowed were affected. A path with a symlinked directory is now refused, as is a file with hard links.
+- Agent, SSH log: a user name like `x from 192.0.2.1 port 1` no longer passes for the address of a failed login. sshd logs the name as the client sent it; address and port are now always the last ones of the line. Before, anyone could make failed logins appear to come from an address of their choice (attacker statistics, block lists, `block_ip` playbooks, feeds to partners). Needs the agent update.
+- Agent, self-update: the installer hashes the copy it installs, so the binary that was checked is the binary that runs.
+- Dashboard login: an address that is blocked for too many attempts is written to the event log once per 15 minutes, not with every request. Before, anyone who could reach the login could fill the log and push real events out of the window the dashboard shows. The same for forged agent requests.
+- Event log: a write that fails (full disk) no longer moves the head of the chain in memory. Before, the next record was chained to one that never reached the disk, and a harmless fault ended as `chain.broken`. The anchor of a pruned day is written atomically.
+- Server: rules run with the state lock released by `defer`; a panic over unexpected agent data fails that one request instead of leaving the server locked.
+- Alerts: when the list is full (5000), closed alerts leave first; an open alert is only dropped when nothing else is left. Before, a flood of new alerts could push an open one out.
+- Accounts: a role in `users.json` that is not `viewer`, `analyst` or `admin` counts as viewer (was admin). An account without a role, from before roles existed, stays admin.
+- With `agent_listen`, the agent API no longer reads `X-Forwarded-For`; no proxy stands in front of that listener.
+- CSV export: host and source are guarded against spreadsheet formulas like the other columns. Expired sessions and old rate limit entries are removed from memory. Reading the chain status no longer races with a verification.
+- CI: tests run with the race detector, a job checks for known Go vulnerabilities, and all actions are pinned to commits (the release workflow signs what agents install).
+
 ## v0.39.0
 
 - Event log: a server killed in the middle of a write (for example by the out-of-memory killer) no longer forks the log when it starts again. Before, reading stopped at the cut line, so every new record was chained to the record before it instead of the last one on disk; a restart loop added a fork on every restart and the same record numbers again. Reading now goes on to the end, the next record starts on a new line, and a line that cannot be read only warns (a lost record behind it still breaks the next hash). The backup checks the chain the same way.
