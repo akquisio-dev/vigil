@@ -13,8 +13,8 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-go@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
           go-version-file: go.mod
       - name: Use the toolchain from go.mod exactly
@@ -22,7 +22,7 @@ jobs:
       - run: go test ./...
       - name: Build binaries and packages
         run: deploy/release/build.sh "$GITHUB_REF_NAME"
-      - uses: sigstore/cosign-installer@v3
+      - uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
         with:
           # Agents check this bundle format themselves (internal/release);
           # a cosign that writes another format would break their updates.

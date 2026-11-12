@@ -12,8 +12,8 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-go@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
           go-version-file: go.mod
       - run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
@@ -23,7 +23,7 @@ jobs:
         # without signing in.
         run: |
           set +e
-          go test ./... 2>&1 | tee test.log
+          go test -race ./... 2>&1 | tee test.log
           status=${PIPESTATUS[0]}
           if [ "$status" -ne 0 ]; then
             msg=$(grep -B2 -A20 -e '--- FAIL' -e '^panic:' test.log | head -100 | sed 's/%/%25/g' | awk 'BEGIN{ORS="%0A"}{print}')
@@ -34,6 +34,18 @@ jobs:
         run: go run ./tools/gendocs -check
       - run: make build
 
+  # Known vulnerabilities in the Go release this builds with. vigil has no
+  # other dependencies. A finding here usually means: raise the toolchain
+  # line in go.mod.
+  vulncheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: go.mod
+      - run: go run golang.org/x/vuln/cmd/govulncheck@v1.1.4 ./...
+
   # Old releases against this build: the order of an update (agents first,
   # then the server) and a rollback of the server. Old binaries are checked
   # like an agent checks an update. Self update itself is not covered, the
@@ -41,10 +53,10 @@ jobs:
   mixed-versions:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
-      - uses: actions/setup-go@v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
           go-version-file: go.mod
       - run: make build
@@ -55,11 +67,11 @@ jobs:
   trial-install:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-go@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
           go-version-file: go.mod
-      - uses: sigstore/cosign-installer@v3
+      - uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
         with:
           cosign-release: v2.4.1
       - run: tools/trytest/release.sh v0.22.0
