@@ -86,6 +86,23 @@ func TestRemoveKey(t *testing.T) {
 	if _, err := removeAuthorizedKey(filepath.Join(dir, "../etc/passwd"), fp, dir); err == nil {
 		t.Fatal("only authorized_keys files")
 	}
+	// a symlink in place of the file, or of a directory on the way, is refused
+	other := filepath.Join(dir, "other")
+	os.Mkdir(other, 0o700)
+	os.WriteFile(filepath.Join(other, "real"), []byte(alice+"\n"+bob+"\n"), 0o600)
+	os.Symlink(filepath.Join(other, "real"), filepath.Join(other, "authorized_keys"))
+	if _, err := removeAuthorizedKey(filepath.Join(other, "authorized_keys"), fp, dir); err == nil {
+		t.Fatal("a symlink must not be followed")
+	}
+	os.Mkdir(filepath.Join(dir, "home"), 0o700)
+	os.WriteFile(filepath.Join(dir, "home", "authorized_keys"), []byte(alice+"\n"+bob+"\n"), 0o600)
+	os.Symlink(filepath.Join(dir, "home"), filepath.Join(dir, "link"))
+	if _, err := removeAuthorizedKey(filepath.Join(dir, "link", "authorized_keys"), fp, dir); err == nil {
+		t.Fatal("a symlinked directory must not be followed")
+	}
+	if b, _ := os.ReadFile(filepath.Join(dir, "home", "authorized_keys")); !strings.Contains(string(b), "bob") {
+		t.Fatal("the file behind the symlink was changed")
+	}
 }
 
 func TestKillProcess(t *testing.T) {

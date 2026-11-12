@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"os/exec"
@@ -279,11 +280,32 @@ func removeAuthorizedKey(file, fingerprint, stateDir string) (string, error) {
 	if clean != file || (base != "authorized_keys" && base != "authorized_keys2") || !under {
 		return "", errors.New("not an authorized_keys file")
 	}
-	fi, err := os.Lstat(clean)
+	// The file belongs to a user who may swap it, or a directory above
+	// it, for a symlink while the agent works as root. So the way there is
+	// walked without following symlinks, and the file is opened once: what
+	// was read is what gets rewritten, wherever the name points by then.
+	dfd, name, err := openParent(clean, false)
+	if err != nil {
+		return "", errors.New("file missing or behind a symlink")
+	}
+	fd, err := syscall.Openat(dfd, name, syscall.O_RDWR|syscall.O_NOFOLLOW|syscall.O_CLOEXEC|syscall.O_NONBLOCK, 0)
+	syscall.Close(dfd)
+	if err != nil {
+		return "", errors.New("file missing or not a regular file")
+	}
+	f := os.NewFile(uintptr(fd), clean)
+	defer f.Close()
+	fi, err := f.Stat()
 	if err != nil || !fi.Mode().IsRegular() {
 		return "", errors.New("file missing or not a regular file")
 	}
-	data, err := os.ReadFile(clean)
+	if st, ok := fi.Sys().(*syscall.Stat_t); ok && st.Nlink > 1 {
+		return "", errors.New("refusing a file with hard links")
+	}
+	if fi.Size() > 1<<20 {
+		return "", errors.New("file too large")
+	}
+	data, err := io.ReadAll(io.LimitReader(f, 1<<20))
 	if err != nil {
 		return "", err
 	}
@@ -316,7 +338,11 @@ func removeAuthorizedKey(file, fingerprint, stateDir string) (string, error) {
 	}
 	// Rewritten in place, so owner and mode stay as they are (the agent has
 	// no CAP_CHOWN); the backup above covers a failed write.
-	if err := os.WriteFile(clean, []byte(strings.Join(keep, "\n")), fi.Mode().Perm()); err != nil {
+	out := []byte(strings.Join(keep, "\n"))
+	if _, err := f.WriteAt(out, 0); err != nil {
+		return "", err
+	}
+	if err := f.Truncate(int64(len(out))); err != nil {
 		return "", err
 	}
 	return fmt.Sprintf("removed %s from %s (backup %s)", fingerprint, clean, backup), nil
