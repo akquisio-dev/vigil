@@ -12,12 +12,17 @@ import (
 	"time"
 )
 
-// Roles, weakest first. Accounts from before roles existed are admins.
+// Roles, weakest first. Accounts from before roles existed have no role
+// and are admins; a role that is set but unknown (a typo in users.json) is
+// the weakest one, never the strongest.
 var roleRank = map[string]int{"viewer": 1, "analyst": 2, "admin": 3}
 
 func roleOf(u *User) string {
-	if roleRank[u.Role] == 0 {
+	switch {
+	case u.Role == "":
 		return "admin"
+	case roleRank[u.Role] == 0:
+		return "viewer"
 	}
 	return u.Role
 }
