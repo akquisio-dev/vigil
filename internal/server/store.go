@@ -235,13 +235,19 @@ func (s *Store) appendLocked(recs []*Record) error {
 			s.needNL = true
 		}
 	}
+	// Sequence, head and window only move once the lines are on disk. A
+	// failed write (a full disk) would otherwise leave the head in memory
+	// ahead of the file, and the next record would chain to one that was
+	// never written: a break in the chain from a harmless fault.
 	var buf []byte
 	if s.needNL {
 		buf = append(buf, '\n')
 	}
-	for _, r := range recs {
-		s.seq++
-		r.Seq = s.seq
+	seq, head := s.seq, s.head
+	raws := make([]int, len(recs))
+	for i, r := range recs {
+		seq++
+		r.Seq = seq
 		if r.Time.IsZero() {
 			r.Time = now
 		}
@@ -249,18 +255,45 @@ func (s *Store) appendLocked(recs []*Record) error {
 		if err != nil {
 			return err
 		}
-		cl := chainLine{Prev: s.head, Rec: raw}
+		cl := chainLine{Prev: head, Rec: raw}
 		cl.Hash = chainHash(cl.Prev, raw)
 		line, _ := json.Marshal(cl)
 		buf = append(append(buf, line...), '\n')
-		s.head = cl.Hash
-		s.recent.add(ringSlim(*r), ringSize(r.Event.Type, len(raw)), s.max, s.maxBytes)
+		head = cl.Hash
+		raws[i] = len(raw)
 	}
-	if _, err := s.file.Write(buf); err != nil {
+	if n, err := s.file.Write(buf); err != nil {
+		if n > 0 {
+			// part of a line may be on disk: keep the next record off it
+			s.needNL = true
+		}
 		return err
 	}
 	s.needNL = false
+	s.seq, s.head = seq, head
+	for i, r := range recs {
+		s.recent.add(ringSlim(*r), ringSize(r.Event.Type, raws[i]), s.max, s.maxBytes)
+	}
 	return s.file.Sync()
+}
+
+// ChainStatus is the state of the chain as the last check left it.
+type ChainStatus struct {
+	OK          bool
+	Error       string
+	Warning     string
+	Accepted    int
+	AcceptedSum string
+	VerifiedAt  time.Time
+}
+
+// Chain reads the status under the lock; Verify rewrites it while requests
+// are served.
+func (s *Store) Chain() ChainStatus {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return ChainStatus{OK: s.ChainOK, Error: s.ChainError, Warning: s.ChainWarning,
+		Accepted: s.Accepted, AcceptedSum: s.AcceptedSum, VerifiedAt: s.VerifiedAt}
 }
 
 func (s *Store) Head() (uint64, string) {
@@ -325,7 +358,12 @@ func (s *Store) Prune(days int) error {
 		if err != nil {
 			return err
 		}
-		if err := os.WriteFile(filepath.Join(s.dir, "ANCHOR"), []byte(last+"\n"), 0o600); err != nil {
+		// Written beside and renamed, so a crash never leaves half an anchor.
+		anchor := filepath.Join(s.dir, "ANCHOR")
+		if err := os.WriteFile(anchor+".tmp", []byte(last+"\n"), 0o600); err != nil {
+			return err
+		}
+		if err := os.Rename(anchor+".tmp", anchor); err != nil {
 			return err
 		}
 		if err := os.Remove(f); err != nil {
