@@ -742,10 +742,30 @@ func (s *Server) raise(fs []finding, agentID string, seq uint64) []*Alert {
 		s.state.Alerts = append(s.state.Alerts, al)
 		fresh = append(fresh, al)
 	}
-	if over := len(s.state.Alerts) - maxAlerts; over > 0 {
-		s.state.Alerts = append([]*Alert{}, s.state.Alerts[over:]...)
-	}
+	s.state.Alerts = trimAlerts(s.state.Alerts, maxAlerts)
 	return fresh
+}
+
+// trimAlerts keeps at most max alerts. Closed ones go first, oldest first;
+// open ones only when nothing else is left. A flood of new alerts then
+// cannot push an open alert out of the list before anybody looked at it.
+func trimAlerts(alerts []*Alert, max int) []*Alert {
+	over := len(alerts) - max
+	if over <= 0 {
+		return alerts
+	}
+	kept := make([]*Alert, 0, max)
+	for _, al := range alerts {
+		if over > 0 && al.Status != "open" {
+			over--
+			continue
+		}
+		kept = append(kept, al)
+	}
+	if over > 0 {
+		kept = append([]*Alert{}, kept[over:]...)
+	}
+	return kept
 }
 
 // Params are kept as "k=v" lines so titles can be rendered per language.
