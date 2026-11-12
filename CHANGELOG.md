@@ -1,8 +1,8 @@
 # Changelog
 
-## Unreleased
+## v0.39.1
 
-Fixes from a code audit of v0.39.0.
+Fixes from a code audit of v0.39.0. Update the agents too: two of the fixes are in the agent.
 
 - Agent, `remove_key`: the `authorized_keys` file is reached without following symlinks and opened once; what was read is what gets rewritten. Before, the owner of the file could swap it for a symlink between the read and the write and have the agent, as root, write the remaining keys into another file such as root's `authorized_keys`. Only hosts with `response` enabled and `remove_key` allowed were affected. A path with a symlinked directory is now refused, as is a file with hard links.
 - Agent, SSH log: a user name like `x from 192.0.2.1 port 1` no longer passes for the address of a failed login. sshd logs the name as the client sent it; address and port are now always the last ones of the line. Before, anyone could make failed logins appear to come from an address of their choice (attacker statistics, block lists, `block_ip` playbooks, feeds to partners). Needs the agent update.
