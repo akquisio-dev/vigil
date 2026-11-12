@@ -170,7 +170,7 @@ func ApplyUpdate(cfg *Config, unit string) (err error) {
 		os.Remove(filepath.Join(dir, "request"))
 	}()
 
-	version, bin, err := release.CheckStaged("vigil-agent", dir)
+	version, _, err := release.CheckStaged("vigil-agent", dir)
 	if err != nil {
 		return err
 	}
@@ -191,7 +191,12 @@ func ApplyUpdate(cfg *Config, unit string) (err error) {
 	if err := copyFile(exe, exe+".prev"); err != nil {
 		return err
 	}
-	if err := swapIn(bin, exe); err != nil {
+	// The agent can write the update directory. The copy next to the
+	// binary is hashed as it is written, so what was checked is what runs.
+	if _, err := release.InstallStaged("vigil-agent", dir, exe+".new"); err != nil {
+		return err
+	}
+	if err := os.Rename(exe+".new", exe); err != nil {
 		return err
 	}
 	// The new binary is first run under its final name, never from the

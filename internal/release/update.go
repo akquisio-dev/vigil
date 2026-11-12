@@ -174,6 +174,55 @@ func CheckStaged(cmd, dir string) (version, binary string, err error) {
 	return version, binary, nil
 }
 
+// InstallStaged is CheckStaged for the installer: it copies the staged
+// binary to dst and checks the hash of the copy, so the bytes that were
+// checked are the bytes that get installed, whatever happens to the staged
+// file in between. dst must be in a directory only the installer writes.
+func InstallStaged(cmd, dir, dst string) (version string, err error) {
+	version, binary, err := CheckStaged(cmd, dir)
+	if err != nil {
+		return "", err
+	}
+	sums, err := os.ReadFile(filepath.Join(dir, StagedSums))
+	if err != nil {
+		return "", err
+	}
+	want, err := sumOf(sums, BinaryName(cmd, version))
+	if err != nil {
+		return "", err
+	}
+	in, err := os.Open(binary)
+	if err != nil {
+		return "", err
+	}
+	defer in.Close()
+	out, err := os.OpenFile(dst, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o755)
+	if err != nil {
+		return "", err
+	}
+	h := sha256.New()
+	_, err = io.Copy(io.MultiWriter(out, h), io.LimitReader(in, maxBinary+1))
+	if err == nil {
+		err = out.Sync()
+	}
+	if cerr := out.Close(); err == nil {
+		err = cerr
+	}
+	if err == nil {
+		err = os.Chmod(dst, 0o755)
+	}
+	if err == nil {
+		if got := hex.EncodeToString(h.Sum(nil)); got != want {
+			err = fmt.Errorf("staged binary changed while it was installed: sha256 %s, SHA256SUMS says %s", got, want)
+		}
+	}
+	if err != nil {
+		os.Remove(dst)
+		return "", err
+	}
+	return version, nil
+}
+
 // Clear removes what Stage writes, and nothing else.
 func Clear(dir string) {
 	for _, n := range []string{StagedReady, StagedVersion, StagedSums, StagedBundle, StagedBinary} {
