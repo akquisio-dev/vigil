@@ -17,8 +17,12 @@ import (
 
 var (
 	reAccepted = regexp.MustCompile(`^Accepted (\S+) for (\S+) from (\S+) port (\d+)(?: ssh2)?(?:: (\S+) (\S+))?`)
-	reFailed   = regexp.MustCompile(`^Failed (\S+) for (invalid user )?(\S*) from (\S+) port (\d+)`)
-	reInvalid  = regexp.MustCompile(`^Invalid user (\S*) from (\S+)(?: port (\d+))?`)
+	// sshd logs the name a client sends as it is, spaces included. A name
+	// like "x from 192.0.2.1 port 1" must not pass for the address: the
+	// name is matched greedily and the line to its end, so address and port
+	// are always the last ones, the ones sshd wrote.
+	reFailed  = regexp.MustCompile(`^Failed (\S+) for (invalid user )?(.*) from (\S+) port (\d+)(?: .*)?$`)
+	reInvalid = regexp.MustCompile(`^Invalid user (.*) from (\S+)(?: port (\d+))?(?: .*)?$`)
 	// With password logins off, attempts on existing accounts leave only
 	// this line when the client gives up (no "Failed" line at all).
 	reAuthClosed = regexp.MustCompile(`^(?:Connection closed by|Disconnected from|Connection reset by) authenticating user (\S+) (\S+) port (\d+)`)
@@ -185,6 +189,9 @@ func (a *Agent) handleSSH(msg, pid string, ts time.Time) {
 		user, ip, port, exists, kind = m[1], m[2], m[3], true, 3
 	} else {
 		return
+	}
+	if len(user) > 64 {
+		user = user[:64]
 	}
 	a.mu.Lock()
 	defer a.mu.Unlock()

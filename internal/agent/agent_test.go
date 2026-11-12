@@ -79,6 +79,19 @@ func TestSSHRegexes(t *testing.T) {
 	if m := reFailed.FindStringSubmatch("Failed password for invalid user admin from 198.51.100.9 port 4242 ssh2"); m == nil || m[3] != "admin" || m[2] == "" {
 		t.Fatalf("failed: %q", m)
 	}
+	// a name made to look like the end of the line never gives the address
+	if m := reInvalid.FindStringSubmatch("Invalid user x from 192.0.2.99 port 1 from 203.0.113.7 port 51234"); m == nil || m[2] != "203.0.113.7" || m[3] != "51234" {
+		t.Fatalf("invalid with a crafted name: %q", m)
+	}
+	if m := reFailed.FindStringSubmatch("Failed password for invalid user x from 192.0.2.99 port 1 from 203.0.113.7 port 51234 ssh2"); m == nil || m[4] != "203.0.113.7" || m[5] != "51234" {
+		t.Fatalf("failed with a crafted name: %q", m)
+	}
+	if m := reFailed.FindStringSubmatch("Failed publickey for root from 203.0.113.7 port 51234 ssh2: ED25519 SHA256:abc"); m == nil || m[3] != "root" || m[4] != "203.0.113.7" {
+		t.Fatalf("failed publickey: %q", m)
+	}
+	if m := reInvalid.FindStringSubmatch("Invalid user oracle from 192.0.2.1"); m == nil || m[1] != "oracle" || m[2] != "192.0.2.1" {
+		t.Fatalf("invalid without a port: %q", m)
+	}
 	if m := reSudo.FindStringSubmatch("    alice : TTY=pts/0 ; PWD=/home/alice ; USER=root ; COMMAND=/usr/bin/id"); m == nil || m[1] != "alice" || m[5] != "/usr/bin/id" {
 		t.Fatalf("sudo: %q", m)
 	}
