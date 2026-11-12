@@ -289,10 +289,15 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	ip := s.clientIP(r)
 	tok, sess, err := s.login(clip(req.User, 64), req.Password, strings.TrimSpace(req.Code), ip)
 	if err != nil {
-		s.audit(clip(req.User, 64), "admin.login_failed", map[string]any{"ip": ip, "reason": err.Error()})
 		status := http.StatusUnauthorized
 		if err == errLimited {
 			status = http.StatusTooManyRequests
+		}
+		// A blocked address is written to the log once per window, not with
+		// every request: nobody is signed in here, and each record costs a
+		// write to disk and a place in the window the dashboard shows.
+		if err != errLimited || s.limit.once("limited:"+ip) {
+			s.audit(clip(req.User, 64), "admin.login_failed", map[string]any{"ip": ip, "reason": err.Error()})
 		}
 		http.Error(w, err.Error(), status)
 		return
@@ -447,6 +452,7 @@ func (s *Server) handleOverview(w http.ResponseWriter, r *http.Request, sess *se
 		}
 	}
 	seq, head := s.store.Head()
+	chain := s.store.Chain()
 	days, _ := strconv.Atoi(r.URL.Query().Get("days"))
 	out := s.dashboard(now, window, in, days)
 	for k, v := range map[string]any{
@@ -454,7 +460,7 @@ func (s *Server) handleOverview(w http.ResponseWriter, r *http.Request, sess *se
 		"events_per_hour": hours, "ssh_failed_per_hour": sshFailed,
 		"hour_start": hourStart.Add(-23 * time.Hour),
 		"canaries":   canaries, "canaries_triggered": triggered, "suppressions": activeSuppressions,
-		"chain": map[string]any{"ok": s.store.ChainOK, "seq": seq, "head": head, "verified_at": s.store.VerifiedAt},
+		"chain": map[string]any{"ok": chain.OK, "seq": seq, "head": head, "verified_at": chain.VerifiedAt},
 	} {
 		out[k] = v
 	}
@@ -802,8 +808,9 @@ func (s *Server) handleCanaryDelete(w http.ResponseWriter, r *http.Request, sess
 
 func (s *Server) handleChain(w http.ResponseWriter, r *http.Request, sess *session) {
 	seq, head := s.store.Head()
-	writeJSON(w, map[string]any{"ok": s.store.ChainOK, "error": s.store.ChainError, "warning": s.store.ChainWarning,
-		"accepted": s.store.Accepted, "seq": seq, "head": head, "verified_at": s.store.VerifiedAt})
+	cs := s.store.Chain()
+	writeJSON(w, map[string]any{"ok": cs.OK, "error": cs.Error, "warning": cs.Warning,
+		"accepted": cs.Accepted, "seq": seq, "head": head, "verified_at": cs.VerifiedAt})
 }
 
 func (s *Server) handleChainVerify(w http.ResponseWriter, r *http.Request, sess *session) {

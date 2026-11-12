@@ -164,11 +164,10 @@ func (s *Server) Run(ctx context.Context) error {
 	defer unlock()
 	removeStaleTemp(s.cfg.DataDir)
 	s.started = time.Now()
-	if !s.store.ChainOK {
-		s.chainBroken(s.store.ChainError)
-	}
-	if w := s.store.ChainWarning; w != "" {
-		log.Printf("event chain: %s", w)
+	if cs := s.store.Chain(); !cs.OK {
+		s.chainBroken(cs.Error)
+	} else if cs.Warning != "" {
+		log.Printf("event chain: %s", cs.Warning)
 	}
 	s.chainAcceptedCheck()
 	s.record("server", "", "", proto.NewEvent("server.started", map[string]any{"version": Version}))
@@ -282,6 +281,9 @@ func (s *Server) loop(ctx context.Context) {
 		case <-pull.C:
 			go s.pullSources()
 		case <-beat.C:
+			s.limit.sweep()
+			s.forged.sweep()
+			s.expireSessions()
 			s.saveMetrics(false)
 			s.mapTick(time.Now())
 			s.expireSuppressions()
@@ -397,7 +399,8 @@ func (s *Server) daily() {
 // breaks is not the one the server saw last: a new acceptance, and also an
 // edit that keeps the number of entries.
 func (s *Server) chainAcceptedCheck() {
-	sum, n := s.store.AcceptedSum, s.store.Accepted
+	cs := s.store.Chain()
+	sum, n := cs.AcceptedSum, cs.Accepted
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if sum == s.state.ChainAcceptedSum {
@@ -521,7 +524,7 @@ func readBody(w http.ResponseWriter, r *http.Request) ([]byte, error) {
 }
 
 func (s *Server) handleEnroll(w http.ResponseWriter, r *http.Request) {
-	ip := s.clientIP(r)
+	ip := s.agentIP(r)
 	if s.limit.blocked("enroll:" + ip) {
 		http.Error(w, errLimited.Error(), http.StatusTooManyRequests)
 		return
@@ -569,7 +572,7 @@ func (s *Server) handleEnroll(w http.ResponseWriter, r *http.Request) {
 var eventType = regexp.MustCompile(`^[a-z][a-z0-9_]*(\.[a-z0-9_]+){1,3}$`)
 
 func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
-	ip := s.clientIP(r)
+	ip := s.agentIP(r)
 	body, err := readBody(w, r)
 	if err != nil {
 		http.Error(w, "body too large", http.StatusRequestEntityTooLarge)
@@ -645,7 +648,16 @@ func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	writeJSON(w, s.evaluateBatch(a, &b, recs, back))
+}
+
+// evaluateBatch runs the rules over a stored batch and builds the answer.
+// The lock is released by defer: a panic in a rule over unexpected agent
+// data then fails this one request (net/http recovers it) instead of
+// leaving the server's state locked for good.
+func (s *Server) evaluateBatch(a *AgentRec, b *proto.Batch, recs []*Record, back bool) proto.BatchResponse {
 	s.mu.Lock()
+	defer s.mu.Unlock()
 	if back {
 		s.resolve("agent.silent|"+a.ID+"|", "system")
 	}
@@ -674,17 +686,18 @@ func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 	for _, r := range runs {
 		s.notify(message{Severity: "high", Text: "vigil playbook: " + r}, true)
 	}
-	s.mu.Unlock()
-	writeJSON(w, resp)
+	return resp
 }
 
 // forgedRequest is rate limited per source so a flood of forged requests
 // does not turn into a flood of alerts.
 func (s *Server) forgedRequest(a *AgentRec, ip, reason string) {
-	s.record("server", "", a.ID, proto.NewEvent("agent.forged", map[string]any{"ip": ip, "reason": reason}))
+	// Checked before anything is written: whoever knows an agent id could
+	// otherwise fill the log with one record per request.
 	if s.forged.blocked("forged:"+ip) && reason != "replay" {
 		return
 	}
+	s.record("server", "", a.ID, proto.NewEvent("agent.forged", map[string]any{"ip": ip, "reason": reason}))
 	s.forged.fail("forged:" + ip)
 	s.mu.Lock()
 	fresh := s.raise([]finding{{Rule: "agent.forged", Key: "agent.forged|" + a.ID + "|" + ip, Params: map[string]string{"agent": a.Name, "ip": ip}}}, a.ID, 0)

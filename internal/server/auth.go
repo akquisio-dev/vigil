@@ -13,6 +13,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -160,6 +161,31 @@ func (l *limiter) fail(keys ...string) {
 	}
 }
 
+// once reports true the first time it is asked about key within a window.
+func (l *limiter) once(key string) bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	now := time.Now()
+	if t := l.fails[key]; len(t) > 0 && now.Sub(t[len(t)-1]) < limitWindow {
+		return false
+	}
+	l.fails[key] = []time.Time{now}
+	return true
+}
+
+// sweep forgets keys whose failures are all older than the window; without
+// it every address that ever failed would stay in memory.
+func (l *limiter) sweep() {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	now := time.Now()
+	for k, ts := range l.fails {
+		if len(ts) == 0 || now.Sub(ts[len(ts)-1]) >= limitWindow {
+			delete(l.fails, k)
+		}
+	}
+}
+
 func (l *limiter) reset(keys ...string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -248,4 +274,31 @@ func (s *Server) clientIP(r *http.Request) string {
 		host = host[:i]
 	}
 	return strings.Trim(host, "[]")
+}
+
+// agentIP is the address of a request to the agent API. With its own
+// listener (agent_listen) no proxy stands in front of it, so the header a
+// proxy would set is the sender's word and is not read.
+func (s *Server) agentIP(r *http.Request) string {
+	if s.cfg.AgentListen == "" {
+		return s.clientIP(r)
+	}
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
+	}
+	return host
+}
+
+// expireSessions drops sessions whose time is up; one that is never used
+// again would otherwise stay in memory until the server restarts.
+func (s *Server) expireSessions() {
+	now := time.Now()
+	s.smu.Lock()
+	defer s.smu.Unlock()
+	for k, sess := range s.sessions {
+		if now.After(sess.Expires) {
+			delete(s.sessions, k)
+		}
+	}
 }
